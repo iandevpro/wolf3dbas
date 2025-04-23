@@ -47,7 +47,6 @@ TYPE GameStateType
     chosenweapon AS INTEGER
     bestweapon AS INTEGER
     nextextra AS INTEGER
-    weaponstate(3) AS INTEGER
 END TYPE
 
 ' Actor Type
@@ -99,7 +98,7 @@ TYPE DoorType
     vertical AS INTEGER
     action AS INTEGER
     ticcount AS INTEGER
-    lock AS INTEGER
+    doorlock AS INTEGER
     flags AS INTEGER
 END TYPE
 
@@ -111,6 +110,7 @@ DIM SHARED walls(MAPSIZE, MAPSIZE) AS WallType
 DIM SHARED doors(MAXDOORS) AS DoorType
 DIM SHARED horizwall(MAXWALLTILES) AS INTEGER
 DIM SHARED vertwall(MAXWALLTILES) AS INTEGER
+DIM SHARED weaponstate(3) AS INTEGER  ' Array of 4 weapon states (0-3)
 
 ' Function Declarations
 DECLARE SUB InitGame ()
