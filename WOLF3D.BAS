@@ -10,12 +10,10 @@ CONST ANGLES = 360
 CONST TILEGLOBAL = 65536
 CONST MINDIST = 0.5
 CONST PI = 3.141592653589793
+CONST HEIGHTRATIO = 0.5
 
 ' Global Variables
-DIM SHARED focallength AS LONG
 DIM SHARED screenofs AS INTEGER
-DIM SHARED viewwidth AS INTEGER
-DIM SHARED viewheight AS INTEGER
 DIM SHARED centerx AS INTEGER
 DIM SHARED shootdelta AS INTEGER
 DIM SHARED scale AS LONG
@@ -57,7 +55,7 @@ SUB InitGame
     CALL BuildTables
     CALL SetupWalls
     CALL NewViewSize(15)  ' Default view size
-    
+
     ' Set initial game state
     startgame = 0
     loadedgame = 0
@@ -72,14 +70,14 @@ SUB BuildTables
     DIM anglestep AS SINGLE
     DIM tang AS DOUBLE
     DIM value AS LONG
-    
+
     ' Calculate fine tangents
     FOR i = 0 TO ANGLES/8 - 1
         tang = TAN((i + 0.5) / (ANGLES/2/PI))
         finetangent(i) = tang * TILEGLOBAL
         finetangent(ANGLES/4 - 1 - i) = (1/tang) * TILEGLOBAL
     NEXT i
-    
+
     ' Build sine/cosine tables
     angle = 0
     anglestep = PI/2/(ANGLES/4)
@@ -105,4 +103,61 @@ END SUB
 
 SUB GameLoop
     ' Main game loop - to be implemented
+END SUB
+
+SUB NewViewSize (width AS INTEGER)
+    ' Set view size and calculate projection constants
+    DIM newwidth AS INTEGER
+    DIM newheight AS INTEGER
+
+    ' Calculate view dimensions
+    newwidth = width * 16        ' Must be divisible by 16
+    newheight = width * 16 * HEIGHTRATIO  ' Must be even
+
+    ' Calculate center and other view parameters
+    centerx = newwidth \ 2 - 1
+    shootdelta = newwidth \ 10
+
+    ' Calculate projection constants
+    CALL CalcProjection(FOCALLENGTH)
+END SUB
+
+SUB CalcProjection (focal AS LONG)
+    DIM i AS INTEGER
+    DIM intang AS LONG
+    DIM angle AS SINGLE
+    DIM tang AS DOUBLE
+    DIM planedist AS DOUBLE
+    DIM globinhalf AS DOUBLE
+    DIM halfview AS INTEGER
+    DIM halfangle AS DOUBLE
+    DIM facedist AS DOUBLE
+
+    ' Store focal length
+    focallength = focal
+    facedist = focal + MINDIST
+    halfview = viewwidth \ 2  ' Half view in pixels
+
+    ' Calculate scale value for vertical height calculations
+    ' and sprite x calculations
+    scale = halfview * facedist \ (VIEWGLOBAL \ 2)
+
+    ' Calculate height numerator for posts distance to get posts height
+    ' The pixel height is height >> 2
+    heightnumerator = (TILEGLOBAL * scale) \ 64
+    minheightdiv = heightnumerator \ &H7FFF + 1
+
+    ' Calculate the angle offset from view angle of each pixel's ray
+    FOR i = 0 TO halfview - 1
+        ' Start 1/2 pixel over, so viewangle bisects two middle pixels
+        tang = i * VIEWGLOBAL / viewwidth / facedist
+        angle = ATN(tang)
+        intang = angle * (ANGLES \ 2) / PI
+        pixelangle(halfview - 1 - i) = intang
+        pixelangle(halfview + i) = -intang
+    NEXT i
+
+    ' If a point's abs(y/x) is greater than maxslope, the point is outside
+    ' the view area
+    maxslope = finetangent(pixelangle(0)) \ 256
 END SUB 
