@@ -29,6 +29,15 @@ DIM SHARED loadedgame AS INTEGER
 DIM SHARED virtualreality AS INTEGER
 DIM SHARED mouseadjustment AS INTEGER
 
+' File and Episode Variables
+DIM SHARED extension AS STRING * 4
+DIM SHARED configname AS STRING * 13
+DIM SHARED SaveName AS STRING * 13
+DIM SHARED PageFileName AS STRING * 13
+DIM SHARED audioname AS STRING * 13
+DIM SHARED demoname AS STRING * 13
+DIM SHARED EpisodeSelect(5) AS INTEGER
+
 ' Arrays
 DIM SHARED dirangle(8) AS INTEGER
 DIM SHARED sintable(ANGLES) AS LONG
@@ -42,6 +51,9 @@ DIM SHARED vertwall(MAXWALLTILES) AS INTEGER
 CLS
 PRINT "Wolfenstein 3D - QB64 Port"
 PRINT "Loading..."
+
+' Check for episode files
+CALL CheckForEpisodes
 
 ' Initialize game systems
 CALL InitGame
@@ -65,6 +77,48 @@ SUB InitGame
     loadedgame = 0
     virtualreality = 0
     mouseadjustment = 5
+
+    ' Initialize file names
+    configname = "CONFIG."
+    SaveName = "SAVE."
+    PageFileName = "PAGE."
+    audioname = "AUDIO."
+    demoname = "DEMO."
+END SUB
+
+SUB CheckForEpisodes
+    DIM fileExists AS INTEGER
+    DIM i AS INTEGER
+    DIM testFile AS STRING
+
+    ' Check for full version (WL6)
+    fileExists = 0
+    testFile = "VSWAP.WL6"
+    IF _FILEEXISTS(testFile) THEN fileExists = 1
+
+    IF fileExists THEN
+        extension = "WL6"
+        ' Enable all episodes
+        FOR i = 1 TO 5
+            EpisodeSelect(i) = 1
+        NEXT i
+    ELSE
+        ' Check for shareware version (WL1)
+        testFile = "VSWAP.WL1"
+        IF _FILEEXISTS(testFile) THEN
+            extension = "WL1"
+        ELSE
+            PRINT "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
+            END
+        END IF
+    END IF
+
+    ' Append extension to all file names
+    configname = configname + extension
+    SaveName = SaveName + extension
+    PageFileName = PageFileName + extension
+    audioname = audioname + extension
+    demoname = demoname + extension
 END SUB
 
 SUB BuildTables
