@@ -108,3 +108,6 @@ GO.BAT
 
 # misc
 .vscode/
+
+# fabien book, use as doc
+!fabien-wolf-book-doc
