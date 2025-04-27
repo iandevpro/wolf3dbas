@@ -106,3 +106,10 @@ AUDIOSDM.H
 
 # misc
 .vscode/
+
+# game files
+*.WL1
+*.WL3
+*.WL6
+*.WJ1
+*.WJ6
