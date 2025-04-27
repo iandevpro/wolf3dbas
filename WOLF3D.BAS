@@ -2,7 +2,6 @@
 ' Original by id Software, Port by Claude
 
 ' Constants
-CONST FOCALLENGTH = &H5700&    ' in global coordinates
 CONST VIEWGLOBAL = &H10000     ' globals visible flush to wall
 CONST VIEWWIDTH = 256          ' size of view window
 CONST VIEWHEIGHT = 144
@@ -11,8 +10,11 @@ CONST TILEGLOBAL = 65536
 CONST MINDIST = 0.5
 CONST PI = 3.141592653589793
 CONST HEIGHTRATIO = 0.5
+CONST MAXWALLTILES = 64
 
 ' Global Variables
+DIM SHARED FOCALLENGTH AS LONG
+FOCALLENGTH = &H5700&    ' in global coordinates
 DIM SHARED screenofs AS INTEGER
 DIM SHARED centerx AS INTEGER
 DIM SHARED shootdelta AS INTEGER
@@ -33,6 +35,8 @@ DIM SHARED sintable(ANGLES) AS LONG
 DIM SHARED costable(ANGLES) AS LONG
 DIM SHARED finetangent(ANGLES/4) AS LONG
 DIM SHARED pixelangle(VIEWWIDTH) AS INTEGER
+DIM SHARED horizwall(MAXWALLTILES) AS INTEGER
+DIM SHARED vertwall(MAXWALLTILES) AS INTEGER
 
 ' Main Program
 CLS
@@ -81,12 +85,12 @@ SUB BuildTables
     ' Build sine/cosine tables
     angle = 0
     anglestep = PI/2/(ANGLES/4)
-    FOR i = 0 TO ANGLES/4
+    FOR i = 0 TO ANGLES/4 - 1
         value = SIN(angle) * &H10000
         sintable(i) = value
-        sintable(i + ANGLES) = value
-        sintable(ANGLES/2 - i) = value
-        sintable(ANGLES - i) = value OR &H80000000
+        sintable(i + ANGLES/2) = value
+        sintable(ANGLES/2 - 1 - i) = value
+        sintable(ANGLES - 1 - i) = value OR &H80000000
         sintable(ANGLES/2 + i) = value OR &H80000000
         angle = angle + anglestep
     NEXT i
@@ -134,7 +138,7 @@ SUB CalcProjection (focal AS LONG)
     DIM facedist AS DOUBLE
 
     ' Store focal length
-    focallength = focal
+    FOCALLENGTH = focal
     facedist = focal + MINDIST
     halfview = viewwidth \ 2  ' Half view in pixels
 
