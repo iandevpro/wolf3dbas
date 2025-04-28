@@ -60,10 +60,50 @@ CALL InitGame
 
 ' Main game loop
 DO
-    CALL GameLoop
+    ' TODO: Implement main game loop
+    ' CALL GameLoop
+    _LIMIT 60  ' Limit to ~60 FPS
 LOOP UNTIL INKEY$ = CHR$(27)  ' ESC to quit
 
 END
+' SignonScreen - Displays the game's intro screen
+SUB SignonScreen
+    ' Set screen mode (320x200 - closest to original VGA mode)
+    SCREEN 13
+
+    ' Load the game palette
+    LoadGamePalette
+
+    IF NOT virtualreality THEN
+        ' Load and display intro screen
+        ' Note: We'll need to create/load introscn image data
+        DIM introscn(32000) AS INTEGER  ' 320x200 screen buffer
+        LoadIntroScreen introscn()
+
+        ' Display the intro screen
+        PUT (0, 0), introscn
+    END IF
+
+    ' Wait a bit to show the screen
+    _DELAY 1
+END SUB
+
+' LoadIntroScreen - Loads the intro screen data
+SUB LoadIntroScreen(buffer() AS INTEGER)
+    ' TODO: Load actual intro screen data
+    ' For now, draw a placeholder screen
+    CLS
+    COLOR 15
+    LOCATE 10, 15
+    PRINT "Wolfenstein 3D"
+    LOCATE 12, 15
+    PRINT "QB64 Port"
+    LOCATE 14, 15
+    PRINT "Press any key to continue..."
+
+    ' Get screen contents into buffer
+    GET (0, 0)-(319, 199), buffer
+END SUB
 
 ' Subroutines
 SUB InitGame
@@ -75,7 +115,7 @@ SUB InitGame
     ' Set initial game state
     startgame = 0
     loadedgame = 0
-    virtualreality = 0
+    virtualreality = 0 ' VR mode off by default
     mouseadjustment = 5
 
     ' Initialize file names
@@ -84,6 +124,9 @@ SUB InitGame
     PageFileName = "PAGE."
     audioname = "AUDIO."
     demoname = "DEMO."
+
+    ' Show signon screen
+    SignonScreen
 END SUB
 
 SUB CheckForEpisodes
