@@ -77,7 +77,7 @@ SUB SignonScreen
     IF NOT virtualreality THEN
         ' Load and display intro screen
         ' Note: We'll need to create/load introscn image data
-        DIM introscn(32000) AS INTEGER  ' 320x200 screen buffer
+        DIM introscn(64000) AS INTEGER  ' 320x200 screen buffer (320*200=64000 pixels)
         LoadIntroScreen introscn()
 
         ' Display the intro screen
