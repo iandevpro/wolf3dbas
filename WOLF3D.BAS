@@ -51,16 +51,20 @@ DIM SHARED vertwall(MAXWALLTILES) AS INTEGER
 
 ' Main Program
 CLS
+PRINT "Debug: Starting program"
 PRINT "Wolfenstein 3D - QB64 Port"
 PRINT "Loading..."
 
 ' Check for episode files
+PRINT "Debug: Checking for episodes"
 CALL CheckForEpisodes
 
 ' Initialize game systems
+PRINT "Debug: Initializing game systems"
 CALL InitGame
 
 ' Main game loop
+PRINT "Debug: Entering main loop"
 DO
     ' TODO: Implement main game loop
     ' CALL GameLoop
@@ -161,6 +165,7 @@ SUB CheckForEpisodes
             extension = "WL1"
         ELSE
             PRINT "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
+            PRINT "Please ensure VSWAP.WL1 or VSWAP.WL6 is in the current directory."
             END
         END IF
     END IF
