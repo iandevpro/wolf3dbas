@@ -1,6 +1,8 @@
 ' WOLF3D.BAS - QB64 Port of Wolfenstein 3D
 ' Original by id Software, Port by Claude
 
+ON ERROR GOTO ErrorHandler
+
 ' Constants
 CONST VIEWGLOBAL = &H10000     ' globals visible flush to wall
 CONST VIEWWIDTH = 256          ' size of view window
@@ -66,6 +68,13 @@ DO
 LOOP UNTIL INKEY$ = CHR$(27)  ' ESC to quit
 
 END
+
+ErrorHandler:
+PRINT "Error: "; ERR; " - Line: "; _ERRORLINE
+PRINT "Press any key to exit..."
+DO: LOOP UNTIL INKEY$ <> ""
+SYSTEM
+
 ' SignonScreen - Displays the game's intro screen
 SUB SignonScreen
     ' Set screen mode (320x200 - closest to original VGA mode)
