@@ -78,7 +78,7 @@ NEXT i
 PRINT #1, ""
 PRINT #1, "    ' Set the palette"
 PRINT #1, "    FOR i = 0 TO 255"
-PRINT #1, "        PALETTE i, gamepal(i)"
+PRINT #1, "        _PALETTECOLOR i, gamepal(i)"
 PRINT #1, "    NEXT i"
 PRINT #1, "END SUB"
 

@@ -261,4 +261,6 @@ SUB CalcProjection (focal AS LONG)
     ' If a point's abs(y/x) is greater than maxslope, the point is outside
     ' the view area
     maxslope = finetangent(pixelangle(0)) \ 256
-END SUB 
+END SUB
+
+'$INCLUDE:'GAMEPAL.BAS'

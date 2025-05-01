@@ -263,6 +263,6 @@ SUB LoadGamePalette
 
     ' Set the palette
     FOR i = 0 TO 255
-        PALETTE i, gamepal(i)
+        _PALETTECOLOR i, gamepal(i)
     NEXT i
 END SUB
