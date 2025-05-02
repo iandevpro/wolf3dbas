@@ -94,6 +94,8 @@ Sub SignonScreen
     If Not virtualreality Then
         ' Load signon screen from SIGNON.OBJ
         f = FreeFile
+        ' TODO - parse CHR files to generateGAMEPAL.BAS and SIGNON.BAS
+        ' objsc101.zip - Scans MS .OBJ files, reports types of records
         Open "OBJ\SIGNON.OBJ" For Binary As #f
         Get #f, , introscn()
         Close #f
@@ -136,7 +138,7 @@ Sub VL_MungePic (buffer() As _Unsigned _Byte, width As Integer, height As Intege
             For j = 0 To width - 1
                 If dst < 64000 And src < 64000 Then ' Check bounds
                     buffer(dst) = temp(src)
-                    Print dst, buffer(dst)
+                    ' Print dst, buffer(dst)
                     dst = dst + 1
                     src = src + 1
                 End If
@@ -159,7 +161,8 @@ Sub VL_MemToScreen (buffer() As _Unsigned _Byte, width As Integer, height As Int
             offset = i * width + j
             'IF offset < 64000 THEN  ' Check bounds
             PSet (j + x, i + y), buffer(offset)
-            Print j + x, i + y, buffer(offset)
+            'Circle (j + x, i + y), 10, buffer(offset)
+            'Print j + x, i + y, buffer(offset)
             'END IF
         Next j
     Next i
