@@ -1,129 +1,176 @@
+$Debug
 ' WOLF3D.BAS - QB64 Port of Wolfenstein 3D
 ' Original by id Software, Port by Claude
 
-ON ERROR GOTO ErrorHandler
+On Error GoTo ErrorHandler
 
 ' Constants
-CONST VIEWGLOBAL = &H10000     ' globals visible flush to wall
-CONST VIEWWIDTH = 256          ' size of view window
-CONST VIEWHEIGHT = 144
-CONST ANGLES = 360
-CONST TILEGLOBAL = 65536
-CONST MINDIST = 0.5
-CONST PI = 3.141592653589793
-CONST HEIGHTRATIO = 0.5
-CONST MAXWALLTILES = 64
+Const VIEWGLOBAL = &H10000 ' globals visible flush to wall
+Const VIEWWIDTH = 256 ' size of view window
+Const VIEWHEIGHT = 144
+Const ANGLES = 360
+Const TILEGLOBAL = 65536
+Const MINDIST = 0.5
+Const PI = 3.141592653589793
+Const HEIGHTRATIO = 0.5
+Const MAXWALLTILES = 64
 
 ' Global Variables
-DIM SHARED FOCALLENGTH AS LONG
-FOCALLENGTH = &H5700&    ' in global coordinates
-DIM SHARED screenofs AS INTEGER
-DIM SHARED centerx AS INTEGER
-DIM SHARED shootdelta AS INTEGER
-DIM SHARED scale AS LONG
-DIM SHARED maxslope AS LONG
-DIM SHARED heightnumerator AS LONG
-DIM SHARED minheightdiv AS INTEGER
+Dim Shared FOCALLENGTH As Long
+FOCALLENGTH = &H5700& ' in global coordinates
+Dim Shared screenofs As Integer
+Dim Shared centerx As Integer
+Dim Shared shootdelta As Integer
+Dim Shared scale As Long
+Dim Shared maxslope As Long
+Dim Shared heightnumerator As Long
+Dim Shared minheightdiv As Integer
 
 ' Game State Variables
-DIM SHARED startgame AS INTEGER
-DIM SHARED loadedgame AS INTEGER
-DIM SHARED virtualreality AS INTEGER
-DIM SHARED mouseadjustment AS INTEGER
+Dim Shared startgame As Integer
+Dim Shared loadedgame As Integer
+Dim Shared virtualreality As Integer
+Dim Shared mouseadjustment As Integer
 
 ' File and Episode Variables
-DIM SHARED extension AS STRING * 4
-DIM SHARED configname AS STRING * 13
-DIM SHARED SaveName AS STRING * 13
-DIM SHARED PageFileName AS STRING * 13
-DIM SHARED audioname AS STRING * 13
-DIM SHARED demoname AS STRING * 13
-DIM SHARED EpisodeSelect(5) AS INTEGER
+Dim Shared extension As String * 4
+Dim Shared configname As String * 13
+Dim Shared SaveName As String * 13
+Dim Shared PageFileName As String * 13
+Dim Shared audioname As String * 13
+Dim Shared demoname As String * 13
+Dim Shared EpisodeSelect(5) As Integer
 
 ' Arrays
-DIM SHARED dirangle(8) AS INTEGER
-DIM SHARED sintable(ANGLES) AS LONG
-DIM SHARED costable(ANGLES) AS LONG
-DIM SHARED finetangent(ANGLES/4) AS LONG
-DIM SHARED pixelangle(VIEWWIDTH) AS INTEGER
-DIM SHARED horizwall(MAXWALLTILES) AS INTEGER
-DIM SHARED vertwall(MAXWALLTILES) AS INTEGER
+Dim Shared dirangle(8) As Integer
+Dim Shared sintable(ANGLES) As Long
+Dim Shared costable(ANGLES) As Long
+Dim Shared finetangent(ANGLES / 4) As Long
+Dim Shared pixelangle(VIEWWIDTH) As Integer
+Dim Shared horizwall(MAXWALLTILES) As Integer
+Dim Shared vertwall(MAXWALLTILES) As Integer
 
 ' Main Program
-CLS
-PRINT "Debug: Starting program"
-PRINT "Wolfenstein 3D - QB64 Port"
-PRINT "Loading..."
+Cls
+Print "Debug: Starting program"
+Print "Wolfenstein 3D - QB64 Port"
+Print "Loading..."
 
 ' Check for episode files
-PRINT "Debug: Checking for episodes"
-CALL CheckForEpisodes
+Print "Debug: Checking for episodes"
+Call CheckForEpisodes
 
 ' Initialize game systems
-PRINT "Debug: Initializing game systems"
-CALL InitGame
+Print "Debug: Initializing game systems"
+Call InitGame
 
 ' Main game loop
-PRINT "Debug: Entering main loop"
-DO
+Print "Debug: Entering main loop"
+Do
     ' TODO: Implement main game loop
     ' CALL GameLoop
-    _LIMIT 60  ' Limit to ~60 FPS
-LOOP UNTIL INKEY$ = CHR$(27)  ' ESC to quit
+    _Limit 60 ' Limit to ~60 FPS
+Loop Until InKey$ = Chr$(27) ' ESC to quit
 
-END
+End
 
 ErrorHandler:
-PRINT "Error: "; ERR; " - Line: "; _ERRORLINE
-PRINT "Press any key to exit..."
-DO: LOOP UNTIL INKEY$ <> ""
-SYSTEM
+Print "Error: "; Err; " - Line: "; _ErrorLine
+Print "Press any key to exit..."
+Do: Loop Until InKey$ <> ""
+System
 
 ' SignonScreen - Displays the game's intro screen
-SUB SignonScreen
+Sub SignonScreen
+    Dim introscn(63999) As _Unsigned _Byte ' Buffer for signon screen (320x200)
+    Dim f As Integer
+
     ' Set screen mode (320x200 - closest to original VGA mode)
-    SCREEN 13
+    Screen 13
 
     ' Load the game palette
     LoadGamePalette
 
-    IF NOT virtualreality THEN
-        ' Load and display intro screen
-        ' Note: We'll need to create/load introscn image data
-        DIM introscn(64000) AS INTEGER  ' 320x200 screen buffer (320*200=64000 pixels)
-        LoadIntroScreen introscn()
+    If Not virtualreality Then
+        ' Load signon screen from SIGNON.OBJ
+        f = FreeFile
+        Open "OBJ\SIGNON.OBJ" For Binary As #f
+        Get #f, , introscn()
+        Close #f
 
-        ' Display the intro screen
-        PUT (0, 0), introscn
-    END IF
+        ' Munge the picture (convert from planar to chunky format)
+        Call VL_MungePic(introscn(), 320, 200)
+
+        ' Display the screen
+        CALL VL_MemToScreen(introscn(), 320, 200, 0, 0)
+    End If
 
     ' Wait a bit to show the screen
-    _DELAY 1
-END SUB
+    _Delay 1
+    Do: Loop Until InKey$ <> ""
+End Sub
 
-' LoadIntroScreen - Loads the intro screen data
-SUB LoadIntroScreen(buffer() AS INTEGER)
-    ' TODO: Load actual intro screen data
-    ' For now, draw a placeholder screen
-    CLS
-    COLOR 15
-    LOCATE 10, 15
-    PRINT "Wolfenstein 3D"
-    LOCATE 12, 15
-    PRINT "QB64 Port"
-    LOCATE 14, 15
-    PRINT "Press any key to continue..."
+' VL_MungePic - Converts planar VGA data to chunky format
+Sub VL_MungePic (buffer() As _Unsigned _Byte, width As Integer, height As Integer)
+    Dim i As Long
+    Dim j As Long
+    Dim plane As Integer
+    Dim temp(63999) As _Unsigned _Byte ' Fixed size to match buffer
+    Dim src As Long
+    Dim dst As Long
+    Dim planeSize As Long
 
-    ' Get screen contents into buffer
-    GET (0, 0)-(319, 199), buffer
-END SUB
+    ' Calculate size of each plane
+    planeSize = width * height \ 4 ' Each plane is 1/4 of total size
+
+    ' Copy original buffer to temp
+    For i = 0 To 63999
+        temp(i) = buffer(i)
+    Next i
+
+    ' Convert planar to chunky format
+    For plane = 0 To 3
+        src = plane * planeSize ' Start of current plane
+        dst = 0
+        For i = 0 To height - 1
+            For j = 0 To width - 1
+                If dst < 64000 And src < 64000 Then ' Check bounds
+                    buffer(dst) = temp(src)
+                    Print dst, buffer(dst)
+                    dst = dst + 1
+                    src = src + 1
+                End If
+            Next j
+        Next i
+    Next plane
+    Do: Loop Until InKey$ <> ""
+
+End Sub
+
+' VL_MemToScreen - Copies buffer to screen
+Sub VL_MemToScreen (buffer() As _Unsigned _Byte, width As Integer, height As Integer, x As Integer, y As Integer)
+    Dim i As Long
+    Dim j As Long
+    Dim offset As Long
+
+    ' Copy buffer to screen
+    For i = 0 To height - 1
+        For j = 0 To width - 1
+            offset = i * width + j
+            'IF offset < 64000 THEN  ' Check bounds
+            PSet (j + x, i + y), buffer(offset)
+            Print j + x, i + y, buffer(offset)
+            'END IF
+        Next j
+    Next i
+End Sub
 
 ' Subroutines
-SUB InitGame
+Sub InitGame
     ' Initialize game systems
-    CALL BuildTables
-    CALL SetupWalls
-    CALL NewViewSize(15)  ' Default view size
+    Call BuildTables
+    Call SetupWalls
+    Call NewViewSize(15) ' Default view size
 
     ' Set initial game state
     startgame = 0
@@ -140,35 +187,35 @@ SUB InitGame
 
     ' Show signon screen
     SignonScreen
-END SUB
+End Sub
 
-SUB CheckForEpisodes
-    DIM fileExists AS INTEGER
-    DIM i AS INTEGER
-    DIM testFile AS STRING
+Sub CheckForEpisodes
+    Dim fileExists As Integer
+    Dim i As Integer
+    Dim testFile As String
 
     ' Check for full version (WL6)
     fileExists = 0
     testFile = "VSWAP.WL6"
-    IF _FILEEXISTS(testFile) THEN fileExists = 1
+    If _FileExists(testFile) Then fileExists = 1
 
-    IF fileExists THEN
+    If fileExists Then
         extension = "WL6"
         ' Enable all episodes
-        FOR i = 1 TO 5
+        For i = 1 To 5
             EpisodeSelect(i) = 1
-        NEXT i
-    ELSE
+        Next i
+    Else
         ' Check for shareware version (WL1)
         testFile = "VSWAP.WL1"
-        IF _FILEEXISTS(testFile) THEN
+        If _FileExists(testFile) Then
             extension = "WL1"
-        ELSE
-            PRINT "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
-            PRINT "Please ensure VSWAP.WL1 or VSWAP.WL6 is in the current directory."
-            END
-        END IF
-    END IF
+        Else
+            Print "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
+            Print "Please ensure VSWAP.WL1 or VSWAP.WL6 is in the current directory."
+            End
+        End If
+    End If
 
     ' Append extension to all file names
     configname = configname + extension
@@ -176,82 +223,82 @@ SUB CheckForEpisodes
     PageFileName = PageFileName + extension
     audioname = audioname + extension
     demoname = demoname + extension
-END SUB
+End Sub
 
-SUB BuildTables
+Sub BuildTables
     ' Build sine/cosine tables
-    DIM i AS INTEGER
-    DIM angle AS SINGLE
-    DIM anglestep AS SINGLE
-    DIM tang AS DOUBLE
-    DIM value AS LONG
+    Dim i As Integer
+    Dim angle As Single
+    Dim anglestep As Single
+    Dim tang As Double
+    Dim value As Long
 
     ' Calculate fine tangents
-    FOR i = 0 TO ANGLES/8 - 1
-        tang = TAN((i + 0.5) / (ANGLES/2/PI))
+    For i = 0 To ANGLES / 8 - 1
+        tang = Tan((i + 0.5) / (ANGLES / 2 / PI))
         finetangent(i) = tang * TILEGLOBAL
-        finetangent(ANGLES/4 - 1 - i) = (1/tang) * TILEGLOBAL
-    NEXT i
+        finetangent(ANGLES / 4 - 1 - i) = (1 / tang) * TILEGLOBAL
+    Next i
 
     ' Build sine/cosine tables
     angle = 0
-    anglestep = PI/2/(ANGLES/4)
-    FOR i = 0 TO ANGLES/4 - 1
-        value = SIN(angle) * &H10000
+    anglestep = PI / 2 / (ANGLES / 4)
+    For i = 0 To ANGLES / 4 - 1
+        value = Sin(angle) * &H10000
         sintable(i) = value
-        sintable(i + ANGLES/2) = value
-        sintable(ANGLES/2 - 1 - i) = value
-        sintable(ANGLES - 1 - i) = value OR &H80000000
-        sintable(ANGLES/2 + i) = value OR &H80000000
+        sintable(i + ANGLES / 2) = value
+        sintable(ANGLES / 2 - 1 - i) = value
+        sintable(ANGLES - 1 - i) = value Or &H80000000
+        sintable(ANGLES / 2 + i) = value Or &H80000000
         angle = angle + anglestep
-    NEXT i
-END SUB
+    Next i
+End Sub
 
-SUB SetupWalls
+Sub SetupWalls
     ' Initialize wall tile mappings
-    DIM i AS INTEGER
-    FOR i = 1 TO 63  ' MAXWALLTILES - 1
+    Dim i As Integer
+    For i = 1 To 63 ' MAXWALLTILES - 1
         horizwall(i) = (i - 1) * 2
         vertwall(i) = (i - 1) * 2 + 1
-    NEXT i
-END SUB
+    Next i
+End Sub
 
-SUB GameLoop
+Sub GameLoop
     ' Main game loop - to be implemented
-END SUB
+End Sub
 
-SUB NewViewSize (width AS INTEGER)
+Sub NewViewSize (width As Integer)
     ' Set view size and calculate projection constants
-    DIM newwidth AS INTEGER
-    DIM newheight AS INTEGER
+    Dim newwidth As Integer
+    Dim newheight As Integer
 
     ' Calculate view dimensions
-    newwidth = width * 16        ' Must be divisible by 16
-    newheight = width * 16 * HEIGHTRATIO  ' Must be even
+    newwidth = width * 16 ' Must be divisible by 16
+    newheight = width * 16 * HEIGHTRATIO ' Must be even
 
     ' Calculate center and other view parameters
     centerx = newwidth \ 2 - 1
     shootdelta = newwidth \ 10
 
     ' Calculate projection constants
-    CALL CalcProjection(FOCALLENGTH)
-END SUB
+    Call CalcProjection(FOCALLENGTH)
+End Sub
 
-SUB CalcProjection (focal AS LONG)
-    DIM i AS INTEGER
-    DIM intang AS LONG
-    DIM angle AS SINGLE
-    DIM tang AS DOUBLE
-    DIM planedist AS DOUBLE
-    DIM globinhalf AS DOUBLE
-    DIM halfview AS INTEGER
-    DIM halfangle AS DOUBLE
-    DIM facedist AS DOUBLE
+Sub CalcProjection (focal As Long)
+    Dim i As Integer
+    Dim intang As Long
+    Dim angle As Single
+    Dim tang As Double
+    Dim planedist As Double
+    Dim globinhalf As Double
+    Dim halfview As Integer
+    Dim halfangle As Double
+    Dim facedist As Double
 
     ' Store focal length
     FOCALLENGTH = focal
     facedist = focal + MINDIST
-    halfview = viewwidth \ 2  ' Half view in pixels
+    halfview = VIEWWIDTH \ 2 ' Half view in pixels
 
     ' Calculate scale value for vertical height calculations
     ' and sprite x calculations
@@ -263,18 +310,18 @@ SUB CalcProjection (focal AS LONG)
     minheightdiv = heightnumerator \ &H7FFF + 1
 
     ' Calculate the angle offset from view angle of each pixel's ray
-    FOR i = 0 TO halfview - 1
+    For i = 0 To halfview - 1
         ' Start 1/2 pixel over, so viewangle bisects two middle pixels
-        tang = i * VIEWGLOBAL / viewwidth / facedist
-        angle = ATN(tang)
+        tang = i * VIEWGLOBAL / VIEWWIDTH / facedist
+        angle = Atn(tang)
         intang = angle * (ANGLES \ 2) / PI
         pixelangle(halfview - 1 - i) = intang
         pixelangle(halfview + i) = -intang
-    NEXT i
+    Next i
 
     ' If a point's abs(y/x) is greater than maxslope, the point is outside
     ' the view area
     maxslope = finetangent(pixelangle(0)) \ 256
-END SUB
+End Sub
 
 '$INCLUDE:'GAMEPAL.BAS'
