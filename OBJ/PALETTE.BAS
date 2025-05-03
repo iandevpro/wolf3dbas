@@ -3,8 +3,6 @@
 
 ' Constants
 CONST PALETTE_SIZE = 768      ' 256 colors * 3 bytes per color
-CONST OBJ_HEADER_SIZE = 125   ' Size of OBJ file header to skip
-CONST TOTAL_FILE_SIZE = 893   ' Total size of GAMEPAL.OBJ including header
 
 ' Variables
 DIM SHARED colorPalette(255) AS LONG  ' Array to hold converted palette colors
@@ -17,17 +15,15 @@ PRINT "Wolfenstein 3D Palette Extractor"
 PRINT "-------------------------------"
 
 ' Open and read the palette file
-OPEN "GAMEPAL.OBJ" FOR BINARY AS #1
-IF LOF(1) <> TOTAL_FILE_SIZE THEN
-    PRINT "Error: GAMEPAL.OBJ is not the correct size!"
-    PRINT "Expected:"; TOTAL_FILE_SIZE; "bytes"
+OPEN "gamepal.bin" FOR BINARY AS #1
+IF LOF(1) <> PALETTE_SIZE THEN
+    PRINT "Error: gamepal.bin is not the correct size!"
+    PRINT "Expected:"; PALETTE_SIZE; "bytes"
     PRINT "Found:"; LOF(1); "bytes"
     CLOSE #1
     END
 END IF
 
-' Skip OBJ header
-SEEK #1, OBJ_HEADER_SIZE + 1  ' +1 because SEEK is 1-based in BASIC
 GET #1, , buffer()
 CLOSE #1
 
@@ -60,9 +56,9 @@ PRINT "Palette displayed. Press any key to generate GAMEPAL.BAS..."
 DO: LOOP UNTIL INKEY$ <> ""
 
 ' Save palette data as QB64 code
-OPEN "GAMEPAL.BAS" FOR OUTPUT AS #1
+OPEN "gamepal.bas" FOR OUTPUT AS #1
 PRINT #1, "' GAMEPAL.BAS - Wolfenstein 3D Palette Data"
-PRINT #1, "' Generated from GAMEPAL.OBJ"
+PRINT #1, "' Generated from gamepal.bin"
 PRINT #1, ""
 PRINT #1, "SUB LoadGamePalette"
 PRINT #1, "    DIM gamepal(255) AS LONG"
