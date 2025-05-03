@@ -96,7 +96,7 @@ Sub SignonScreen
         f = FreeFile
         ' TODO - parse CHR files to generateGAMEPAL.BAS and SIGNON.BAS
         ' objsc101.zip - Scans MS .OBJ files, reports types of records
-        Open "OBJ\SIGNON.OBJ" For Binary As #f
+        Open "OBJ\signon.bin" For Binary As #f
         Get #f, , introscn()
         Close #f
 
