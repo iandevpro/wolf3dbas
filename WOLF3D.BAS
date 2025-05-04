@@ -101,7 +101,8 @@ Sub SignonScreen
         Close #f
 
         ' Munge the picture (convert from planar to chunky format)
-        Call VL_MungePic(introscn(), 320, 200)
+        ' It seems, VL_MungePic is not needed, as we are using the Screen 13 mode
+        ' Call VL_MungePic(introscn(), 320, 200)
 
         ' Display the screen
         CALL VL_MemToScreen(introscn(), 320, 200, 0, 0)
