@@ -31,12 +31,14 @@ CLOSE #1
 FOR i = 0 TO 255
     ' Each color is 3 bytes: R,G,B
     ' VGA uses 6-bit color values (0-63)
-    r = buffer(i * 3) \ 4     ' Convert from 0-255 to 0-63
-    g = buffer(i * 3 + 1) \ 4
-    b = buffer(i * 3 + 2) \ 4
+    ' previously there was a conversion to 0-63 (divide by 4), but now we are using the original values
+    ' since they are already in the 0-63 range
+    r = buffer(i * 3)
+    g = buffer(i * 3 + 1)
+    b = buffer(i * 3 + 2)
     
     ' Convert to QB64 color format
-    colorPalette(i) = _RGB32(r * 4, g * 4, b * 4)  ' Scale back to 0-255
+    colorPalette(i) = _RGB32(r, g, b) 'Previously there was a multiplier by 4 ' Scale back to 0-255
     ' colorPaletteCombined(i) = r + 256 * g + 65546 * b
 NEXT i
 
@@ -65,10 +67,10 @@ PRINT #1, "    DIM gamepal(255) AS LONG"
 PRINT #1, ""
 
 FOR i = 0 TO 255
-    r = buffer(i * 3) \ 4
-    g = buffer(i * 3 + 1) \ 4
-    b = buffer(i * 3 + 2) \ 4
-    PRINT #1, "    gamepal(" + STR$(i) + ") = _RGB32(" + STR$(r * 4) + ", " + STR$(g * 4) + ", " + STR$(b * 4) + ")"
+    r = buffer(i * 3)
+    g = buffer(i * 3 + 1)
+    b = buffer(i * 3 + 2)
+    PRINT #1, "    gamepal(" + STR$(i) + ") = _RGB32(" + STR$(r) + ", " + STR$(g) + ", " + STR$(b) + ")"
 NEXT i
 
 PRINT #1, ""
