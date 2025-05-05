@@ -111,6 +111,65 @@ Sub SignonScreen
     ' Wait a bit to show the screen
     _Delay 1
     Do: Loop Until InKey$ <> ""
+    IntroScreen
+    Do: Loop Until InKey$ <> ""
+End Sub
+
+' IntroScreen - Displays memory bars and hardware detection
+Sub IntroScreen
+    Const MAINCOLOR = &H6C
+    Const EMSCOLOR = &H6C
+    Const XMSCOLOR = &H6C
+    Const FILLCOLOR = 14
+
+    Dim memory As Long, emshere As Long, xmshere As Long
+    Dim i As Integer
+    Dim main(9) As Integer
+    Dim ems(9) As Integer
+    Dim xms(9) As Integer
+
+    ' Initialize memory arrays
+    main(0) = 32: main(1) = 64: main(2) = 96: main(3) = 128: main(4) = 160
+    main(5) = 192: main(6) = 224: main(7) = 256: main(8) = 288: main(9) = 320
+    ems(0) = 100: ems(1) = 200: ems(2) = 300: ems(3) = 400: ems(4) = 500
+    ems(5) = 600: ems(6) = 700: ems(7) = 800: ems(8) = 900: ems(9) = 1000
+    xms(0) = 100: xms(1) = 200: xms(2) = 300: xms(3) = 400: xms(4) = 500
+    xms(5) = 600: xms(6) = 700: xms(7) = 800: xms(8) = 900: xms(9) = 1000
+
+    ' Hardcoded values as specified
+    memory = 640
+    emshere = 1000
+    xmshere = 1000
+
+    ' DRAW MAIN MEMORY
+    For i = 0 To 9
+        If memory >= main(i) Then
+            Line (49, 163 - 8 * i)-(54, 163 - 8 * i + 4), MAINCOLOR - i, BF
+        End If
+    Next i
+
+    ' DRAW EMS MEMORY
+    For i = 0 To 9
+        If emshere >= ems(i) Then
+            Line (89, 163 - 8 * i)-(94, 163 - 8 * i + 4), EMSCOLOR - i, BF
+        End If
+    Next i
+
+    ' DRAW XMS MEMORY
+    For i = 0 To 9
+        If xmshere >= xms(i) Then
+            Line (129, 163 - 8 * i)-(134, 163 - 8 * i + 4), XMSCOLOR - i, BF
+        End If
+    Next i
+
+    ' FILL BOXES for hardware detection
+    ' Mouse
+    Line (164, 82)-(175, 83), FILLCOLOR, BF
+
+    ' Joystick (not present in our simplified version)
+
+    ' Sound Blaster
+    Line (164, 151)-(175, 152), FILLCOLOR, BF
 End Sub
 
 ' VL_MungePic - Converts planar VGA data to chunky format
