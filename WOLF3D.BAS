@@ -68,7 +68,7 @@ Call InitGame
 Print "Debug: Entering main loop"
 Do
     ' TODO: Implement main game loop
-    ' CALL GameLoop
+    CALL GameLoop
     _Limit 60 ' Limit to ~60 FPS
 Loop Until InKey$ = Chr$(27) ' ESC to quit
 
@@ -326,10 +326,6 @@ Sub SetupWalls
     Next i
 End Sub
 
-Sub GameLoop
-    ' Main game loop - to be implemented
-End Sub
-
 Sub NewViewSize (width As Integer)
     ' Set view size and calculate projection constants
     Dim newwidth As Integer
@@ -388,3 +384,4 @@ Sub CalcProjection (focal As Long)
 End Sub
 
 '$INCLUDE:'GAMEPAL.BAS'
+'$INCLUDE:'WL_GAME.BM'
