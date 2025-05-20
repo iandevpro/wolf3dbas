@@ -407,7 +407,25 @@ Sub DemoLoop
     end if
 
     ' main game cycle
+    If NOT DEMOTEST Then
+        If NOT UPLOAD Then
+            If NOT GOODTIMES And NOT SPEAR And NOT JAPAN Then
+                If Not NoWait Then
+                    'Call NonShareware()
+                End If
+            Else
+                If NOT GOODTIMES And NOT SPEARDEMO Then
+                    'Call CopyProtection()
+                End If
+            End If
+        End If
+    End If
 
+    'Call StartCPMusic(INTROSONG)
+
+    If NOT JAPAN And Not NoWait Then
+        'Call PG13()
+    End If
 End Sub
 
 
