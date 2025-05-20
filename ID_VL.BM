@@ -1,0 +1,67 @@
+' ID_VL.BM (Basic Module)
+
+'CONST FALSE = 0
+'CONST TRUE = -1
+
+DIM palette1(767) AS INTEGER
+DIM palette2(767) AS INTEGER
+DIM screenfaded AS INTEGER
+
+SUB VL_WaitVBL (num_vbls AS INTEGER)
+    REM Simulate waiting for VBlank in QB64 Basic
+    ' This is a placeholder. Implement actual VBlank wait if needed.
+END SUB
+
+SUB VL_GetPalette (palette() AS INTEGER)
+    REM Simulate getting the current palette in QB64 Basic
+    ' This is a placeholder. Implement actual palette retrieval if needed.
+END SUB
+
+SUB c_fmemcpy (dest(), src() AS INTEGER, num_bytes AS INTEGER)
+    REM Simulate memory copy in QB64 Basic
+    ' This is a placeholder. Implement actual memory copy if needed.
+    FOR i = 0 TO num_bytes - 1
+        dest(i) = src(i)
+    NEXT i
+END SUB
+
+SUB VL_SetPalette (palette() AS INTEGER)
+    REM Simulate setting the palette in QB64 Basic
+    ' This is a placeholder. Implement actual palette setting if needed.
+END SUB
+
+SUB VL_FillPalette (red AS INTEGER, green AS INTEGER, blue AS INTEGER)
+    REM Simulate filling the entire palette with a single color in QB64 Basic
+    ' This is a placeholder. Implement actual palette fill if needed.
+    FOR i = 0 TO 767
+        palette1(i) = RGB(red, green, blue)
+    NEXT i
+END SUB
+
+SUB VL_FadeOut (start AS INTEGER, end AS INTEGER, red AS INTEGER, green AS INTEGER, blue AS INTEGER, steps AS INTEGER)
+    VL_WaitVBL 1
+    VL_GetPalette palette1()
+    _fmemcpy palette2(), palette1(), 768
+
+    FOR i = 0 TO steps - 1
+        origptr = palette1(start)
+        newptr = palette2(start)
+        FOR j = start TO end
+            orig = *origptr
+            delta = red - orig
+            *newptr = orig + (delta * i) \ steps
+            origptr += 3
+            newptr += 3
+        NEXT j
+
+        VL_WaitVBL 1
+        VL_SetPalette palette2()
+    NEXT i
+
+    VL_FillPalette red, green, blue
+    screenfaded = TRUE
+END SUB
+
+' Example usage:
+REM Call the fade out function
+'VL_FadeOut 0, 255, 255, 0, 0, 64

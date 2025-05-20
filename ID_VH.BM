@@ -1,0 +1,6 @@
+'#define VW_FadeOut()	VL_FadeOut(0,255,0,0,0,30);
+SUB VW_FadeOut()
+    VL_FadeOut(0,255,0,0,0,30)
+END SUB
+
+'$INCLUDE:'ID_VL.BM'
