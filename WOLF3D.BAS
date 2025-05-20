@@ -4,6 +4,18 @@ $Debug
 
 On Error GoTo ErrorHandler
 
+' IFDEF defines
+Const tedlevel = 0 ' Stub, not implemented
+CONST DEMOTEST = 0 'FALSE
+CONST UPLOAD = 0' FALSE
+CONST GOODTIMES = 0
+CONST JAPAN = 0
+CONST GERMANY = 0
+CONST UPLOAD = 0
+CONST SPEARDEMO = 0
+CONST SPEAR = 0
+CONST NOWAIT = 0
+
 ' Constants
 Const VIEWGLOBAL = &H10000 ' globals visible flush to wall
 Const VIEWWIDTH = 256 ' size of view window
@@ -382,6 +394,22 @@ Sub CalcProjection (focal As Long)
     ' the view area
     maxslope = finetangent(pixelangle(0)) \ 256
 End Sub
+
+' DemoLoop - Main menu and demo attract loop
+Sub DemoLoop
+    Static LastDemo As Integer
+    Dim done As Integer
+    Dim skipLoop As Integer
+
+    ' TEDLEVEL: Launch directly into a specific level (stubbed)
+    If tedlevel Then
+        '
+    end if
+
+    ' main game cycle
+
+End Sub
+
 
 '$INCLUDE:'GAMEPAL.BAS'
 '$INCLUDE:'WL_GAME.BM'
