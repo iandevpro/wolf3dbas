@@ -1,0 +1,39 @@
+CONST SPANISH = 0
+
+SUB NonShareware()
+'    VW_FadeOut()
+
+'   ClearMScreen()
+'   DrawStripes(10)
+'
+'   CA_CacheGrChunk STARTFONT + 1
+'   fontnumber = 1
+'
+'   SETFONTCOLOR READHCOLOR, BKGDCOLOR
+'   PrintX = 110
+'   PrintY = 15
+'
+'   IF SPANISH THEN
+'       US_Print "Atencion"
+'   ELSE
+'       US_Print "Attention"
+'   END IF
+'
+'   SETFONTCOLOR HIGHLIGHT, BKGDCOLOR
+'   WindowX = PrintX = 40
+'   PrintY = 60
+'   IF SPANISH THEN
+'       US_Print "Este juego NO es gratis y\n"
+'       US_Print "NO es Shareware; favor de\n"
+'       US_Print "no distribuirlo.\n\n"
+'   ELSE
+'       US_Print "This game is NOT shareware.\n"
+'       US_Print "Please do not distribute it.\n"
+'       US_Print "Thanks.\n\n"
+'   END IF
+'   US_Print "        Id Software"
+'
+'   VW_UpdateScreen()
+'   VW_FadeIn()
+'   IN_Ack()
+END SUB

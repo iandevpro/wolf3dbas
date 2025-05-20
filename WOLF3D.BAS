@@ -411,7 +411,7 @@ Sub DemoLoop
         If NOT UPLOAD Then
             If NOT GOODTIMES And NOT SPEAR And NOT JAPAN Then
                 If Not NoWait Then
-                    'Call NonShareware()
+                    Call NonShareware()
                 End If
             Else
                 If NOT GOODTIMES And NOT SPEARDEMO Then
@@ -431,3 +431,4 @@ End Sub
 
 '$INCLUDE:'GAMEPAL.BAS'
 '$INCLUDE:'WL_GAME.BM'
+'$INCLUDE:'WL_INTER.BM'
