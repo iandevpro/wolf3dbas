@@ -115,7 +115,8 @@ Sub SignonScreen
 
     ' Load the game palette
     LoadGamePalette
-    NonShareware
+    ' TODO - other calls in NonShareware
+    ' NonShareware
     If Not virtualreality Then
         ' Load signon screen from SIGNON.OBJ
         f = FreeFile
@@ -136,8 +137,11 @@ Sub SignonScreen
     ' Wait a bit to show the screen
     _Delay 1
     Do: Loop Until InKey$ <> ""
+    'VL_FadeOut 200,255,100,100,100,30
+    Do: Loop Until InKey$ <> ""
     IntroScreen
     Do: Loop Until InKey$ <> ""
+    'VL_FadeOut 0,255,0,0,0,30
 End Sub
 
 ' IntroScreen - Displays memory bars and hardware detection
