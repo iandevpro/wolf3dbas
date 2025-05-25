@@ -5,6 +5,11 @@ $Debug
 On Error GoTo ErrorHandler
 
 ' IFDEF defines
+
+'$INCLUDE: 'ID_VL.BI'
+'$INCLUDE: 'ID_VH.BI'
+'$INCLUDE: 'WL_INTER.BI'
+
 Const tedlevel = 0 ' Stub, not implemented
 CONST DEMOTEST = 0 'FALSE
 CONST UPLOAD = 0' FALSE
@@ -78,9 +83,11 @@ Call InitGame
 
 ' Main game loop
 Print "Debug: Entering main loop"
+Do: Loop Until InKey$ <> ""
 Do
     ' TODO: Implement main game loop
     CALL GameLoop
+
     _Limit 60 ' Limit to ~60 FPS
 Loop Until InKey$ = Chr$(27) ' ESC to quit
 
@@ -92,6 +99,11 @@ Print "Press any key to exit..."
 Do: Loop Until InKey$ <> ""
 System
 
+'include modules
+'$INCLUDE:'GAMEPAL.BAS'
+'$INCLUDE:'WL_GAME.BM'
+'$INCLUDE:'WL_INTER.BM'
+
 ' SignonScreen - Displays the game's intro screen
 Sub SignonScreen
     Dim introscn(63999) As _Unsigned _Byte ' Buffer for signon screen (320x200)
@@ -102,7 +114,7 @@ Sub SignonScreen
 
     ' Load the game palette
     LoadGamePalette
-
+    NonShareware
     If Not virtualreality Then
         ' Load signon screen from SIGNON.OBJ
         f = FreeFile
@@ -395,6 +407,8 @@ Sub CalcProjection (focal As Long)
     maxslope = finetangent(pixelangle(0)) \ 256
 End Sub
 
+
+
 ' DemoLoop - Main menu and demo attract loop
 Sub DemoLoop
     Static LastDemo As Integer
@@ -411,7 +425,7 @@ Sub DemoLoop
         If NOT UPLOAD Then
             If NOT GOODTIMES And NOT SPEAR And NOT JAPAN Then
                 If Not NoWait Then
-                    Call NonShareware()
+                    Call NonShareware
                 End If
             Else
                 If NOT GOODTIMES And NOT SPEARDEMO Then
@@ -427,8 +441,3 @@ Sub DemoLoop
         'Call PG13()
     End If
 End Sub
-
-
-'$INCLUDE:'GAMEPAL.BAS'
-'$INCLUDE:'WL_GAME.BM'
-'$INCLUDE:'WL_INTER.BM'

@@ -1,8 +1,7 @@
-CONST SPANISH = 0
+'$INCLUDE:'ID_VH.BM'
 
-SUB NonShareware()
-    Call VW_FadeOut()
-
+SUB NonShareware
+    Call VW_FadeOut
 '   ClearMScreen()
 '   DrawStripes(10)
 '
@@ -38,4 +37,3 @@ SUB NonShareware()
 '   IN_Ack()
 END SUB
 
-'$INCLUDE:'ID_VH.BM'
