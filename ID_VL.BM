@@ -3,24 +3,35 @@
 'CONST FALSE = 0
 'CONST TRUE = -1
 
-DIM palette1(255) AS LONG
-DIM palette2(255) AS LONG
+DIM shared palette1(255) AS Long
+DIM shared palette2(255) AS Long
 DIM screenfaded AS INTEGER
 
 SUB VL_WaitVBL (num_vbls AS INTEGER)
     REM Simulate waiting for VBlank in QB64 Basic
     ' This is a placeholder. Implement actual VBlank wait if needed.
+    ' ignore num_vbls
+
+    _LIMIT 60
+
+    ' or use the following
+    ' https://github-wiki-see.page/m/QB64Official/qb64/wiki/WAIT
+    ' Either statement can be used to try to reduce screen flickering.
+    ' If both statements are used, try changing the order.
+    ' WAIT &H3DA, 8 ' finishes whenever the screen isn't being written to
+    ' WAIT &H3DA, 8, 8 ' finishes whenever the screen is being written to
 END SUB
 
-SUB VL_GetPalette (palette() AS LONG)
+Sub VL_GetPalette (palette_array() As Long)
     REM Simulate getting the current palette in QB64 Basic
     ' This is a placeholder. Implement actual palette retrieval if needed.
     FOR i = 0 TO 255
-        palette(i) = _PALETTECOLOR(i, 0)
+        ' Syntax: color32Value& = _PALETTECOLOR(attributeNumber%, imgHandle&)'
+        palette_array(i) = _PALETTECOLOR(i, 0)
     NEXT i
 END SUB
 
-SUB c_fmemcpy (dest(), src() AS LONG, num_bytes AS INTEGER)
+SUB c_fmemcpy (dest() AS LONG, src() AS LONG, num_bytes AS INTEGER)
     REM Simulate memory copy in QB64 Basic
     ' This is a placeholder. Implement actual memory copy if needed.
     FOR i = 0 TO num_bytes - 1
@@ -28,36 +39,31 @@ SUB c_fmemcpy (dest(), src() AS LONG, num_bytes AS INTEGER)
     NEXT i
 END SUB
 
-SUB VL_SetPalette (palette() AS LONG)
+SUB VL_SetPalette (palette_array() AS LONG)
     REM Simulate setting the palette in QB64 Basic
     ' This is a placeholder. Implement actual palette setting if needed.
     FOR i = 0 TO 255
-        _PALETTECOLOR i, palette(i)
+        _PALETTECOLOR i, palette_array(i)
     NEXT i
 END SUB
 
 SUB VL_FillPalette (red AS INTEGER, green AS INTEGER, blue AS INTEGER)
     REM Simulate filling the entire palette with a single color in QB64 Basic
     ' This is a placeholder. Implement actual palette fill if needed.
-    FOR i = 0 TO 767
-        palette1(i) = RGB(red, green, blue)
+    FOR i = 0 TO 255
+        _PALETTECOLOR i, RGB(red, green, blue)
     NEXT i
 END SUB
 
-SUB VL_FadeOut (start AS INTEGER, end AS INTEGER, red AS INTEGER, green AS INTEGER, blue AS INTEGER, steps AS INTEGER)
+SUB VL_FadeOut (start AS INTEGER, finish AS INTEGER, red AS INTEGER, green AS INTEGER, blue AS INTEGER, steps AS INTEGER)
     VL_WaitVBL 1
     VL_GetPalette palette1()
-    _fmemcpy palette2(), palette1(), 768
+
+    c_fmemcpy palette2(), palette1(), 256
 
     FOR i = 0 TO steps - 1
-        origptr = palette1(start)
-        newptr = palette2(start)
-        FOR j = start TO end
-            orig = *origptr
-            delta = red - orig
-            *newptr = orig + (delta * i) \ steps
-            origptr += 3
-            newptr += 3
+        FOR j = start TO finish
+            palette2(j) = RGB(_RED(palette1(j)) + (red - _RED(palette1(j))) * i / steps, _GREEN(palette1(j)) + (green - _GREEN(palette1(j))) * i / steps, _BLUE(palette1(j)) + (blue - _BLUE(palette1(j))) * i / steps)
         NEXT j
 
         VL_WaitVBL 1
