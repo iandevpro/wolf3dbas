@@ -44,26 +44,33 @@ SUB VL_FillPalette (red AS INTEGER, green AS INTEGER, blue AS INTEGER)
     REM Simulate filling the entire palette with a single color in QB64 Basic
     ' This is a placeholder. Implement actual palette fill if needed.
     FOR i = 0 TO 255
-        _PALETTECOLOR i, RGB(red, green, blue)
+        _PALETTECOLOR i, _RGB32(red, green, blue)
     NEXT i
 END SUB
 
-SUB VL_FadeOut (start AS INTEGER, finish AS INTEGER, red AS INTEGER, green AS INTEGER, blue AS INTEGER, steps AS INTEGER)
+SUB VL_FadeOut (start AS INTEGER, finish AS INTEGER, red AS LONG, green AS LONG, blue AS LONG, steps AS INTEGER)
     VL_WaitVBL 1
     VL_GetPalette palette1()
+    for i = 0 to 16
+        print i, palette1(i), "  ";
+    next i
 
     c_fmemcpy palette2(), palette1(), 256
 
     FOR i = 0 TO steps - 1
         FOR j = start TO finish
-            palette2(j) = RGB(_RED(palette1(j)) + (red - _RED(palette1(j))) * i / steps, _GREEN(palette1(j)) + (green - _GREEN(palette1(j))) * i / steps, _BLUE(palette1(j)) + (blue - _BLUE(palette1(j))) * i / steps)
+            Print j, palette1(j)
+            'rrr = _RED32(palette1(j))
+            'ggg = _GREEN32(palette1(j))
+            'bbb = _BLUE32(palette1(j))
+            palette2(j) = _RGB32(_RED32(palette1(j)) + (red - _RED32(palette1(j))) * i / steps, _GREEN32(palette1(j)) + (green - _GREEN32(palette1(j))) * i / steps, _BLUE32(palette1(j)) + (blue - _BLUE32(palette1(j))) * i / steps)
         NEXT j
 
         VL_WaitVBL 1
         VL_SetPalette palette2()
     NEXT i
 
-    ' error VL_FillPalette red, green, blue
+    VL_FillPalette red, green, blue
     screenfaded = TRUE
 END SUB
 
