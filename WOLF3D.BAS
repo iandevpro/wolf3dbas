@@ -81,15 +81,17 @@ Call CheckForEpisodes
 Print "Debug: Initializing game systems"
 Call InitGame
 
-' Main game loop
-Print "Debug: Entering main loop"
-Do: Loop Until InKey$ <> ""
-Do
-    ' TODO: Implement main game loop
-    Call GameLoop
+Call DemoLoop
 
-    _Limit 60 ' Limit to ~60 FPS
-Loop Until InKey$ = Chr$(27) ' ESC to quit
+' Main game loop
+'Print "Debug: Entering main loop"
+'Do: Loop Until InKey$ <> ""
+'Do
+'' TODO: Implement main game loop
+'Call GameLoop
+
+'_Limit 60 ' Limit to ~60 FPS
+'Loop Until InKey$ = Chr$(27) ' ESC to quit
 
 End
 
