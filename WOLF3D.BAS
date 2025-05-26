@@ -11,15 +11,15 @@ On Error GoTo ErrorHandler
 '$INCLUDE: 'WL_INTER.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
-CONST DEMOTEST = 0 'FALSE
-CONST UPLOAD = 0' FALSE
-CONST GOODTIMES = 0
-CONST JAPAN = 0
-CONST GERMANY = 0
-CONST UPLOAD = 0
-CONST SPEARDEMO = 0
-CONST SPEAR = 0
-CONST NOWAIT = 0
+Const DEMOTEST = 0 'FALSE
+Const UPLOAD = 0 ' FALSE
+Const GOODTIMES = 0
+Const JAPAN = 0
+Const GERMANY = 0
+Const UPLOAD = 0
+Const SPEARDEMO = 0
+Const SPEAR = 0
+Const NOWAIT = 0
 
 ' Constants
 Const VIEWGLOBAL = &H10000 ' globals visible flush to wall
@@ -86,7 +86,7 @@ Print "Debug: Entering main loop"
 Do: Loop Until InKey$ <> ""
 Do
     ' TODO: Implement main game loop
-    CALL GameLoop
+    Call GameLoop
 
     _Limit 60 ' Limit to ~60 FPS
 Loop Until InKey$ = Chr$(27) ' ESC to quit
@@ -95,7 +95,7 @@ End
 
 ErrorHandler:
 Print "Error: "; Err; " - Line: "; _ErrorLine
-Print "_INCLERRORFILE$: "; _INCLERRORFILE$; "_INCLERRORLINE:"; _INCLERRORLINE
+Print "_INCLERRORFILE$: "; _InclErrorFile$; "_INCLERRORLINE:"; _InclErrorLine
 Print "Press any key to exit..."
 Do: Loop Until InKey$ <> ""
 System
@@ -131,7 +131,7 @@ Sub SignonScreen
         ' Call VL_MungePic(introscn(), 320, 200)
 
         ' Display the screen
-        CALL VL_MemToScreen(introscn(), 320, 200, 0, 0)
+        Call VL_MemToScreen(introscn(), 320, 200, 0, 0)
     End If
 
     ' Wait a bit to show the screen
@@ -423,17 +423,17 @@ Sub DemoLoop
     ' TEDLEVEL: Launch directly into a specific level (stubbed)
     If tedlevel Then
         '
-    end if
+    End If
 
     ' main game cycle
-    If NOT DEMOTEST Then
-        If NOT UPLOAD Then
-            If NOT GOODTIMES And NOT SPEAR And NOT JAPAN Then
-                If Not NoWait Then
+    If Not DEMOTEST Then
+        If Not UPLOAD Then
+            If Not GOODTIMES And Not SPEAR And Not JAPAN Then
+                If Not NOWAIT Then
                     Call NonShareware
                 End If
             Else
-                If NOT GOODTIMES And NOT SPEARDEMO Then
+                If Not GOODTIMES And Not SPEARDEMO Then
                     'Call CopyProtection()
                 End If
             End If
@@ -442,7 +442,7 @@ Sub DemoLoop
 
     'Call StartCPMusic(INTROSONG)
 
-    If NOT JAPAN And Not NoWait Then
+    If Not JAPAN And Not NOWAIT Then
         'Call PG13()
     End If
 End Sub

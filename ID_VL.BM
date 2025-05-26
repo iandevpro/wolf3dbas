@@ -1,11 +1,11 @@
 ' ID_VL.BM (Basic Module)
 
-SUB VL_WaitVBL (num_vbls AS INTEGER)
-    REM Simulate waiting for VBlank in QB64 Basic
+Sub VL_WaitVBL (num_vbls As Integer)
+    Rem Simulate waiting for VBlank in QB64 Basic
     ' This is a placeholder. Implement actual VBlank wait if needed.
     ' ignore num_vbls
 
-    _LIMIT 60
+    _Limit 60
 
     ' or use the following
     ' https://github-wiki-see.page/m/QB64Official/qb64/wiki/WAIT
@@ -13,42 +13,42 @@ SUB VL_WaitVBL (num_vbls AS INTEGER)
     ' If both statements are used, try changing the order.
     ' WAIT &H3DA, 8 ' finishes whenever the screen isn't being written to
     ' WAIT &H3DA, 8, 8 ' finishes whenever the screen is being written to
-END SUB
+End Sub
 
 Sub VL_GetPalette (palette_array() As Long)
-    REM Simulate getting the current palette in QB64 Basic
+    Rem Simulate getting the current palette in QB64 Basic
     ' This is a placeholder. Implement actual palette retrieval if needed.
-    FOR i = 0 TO 255
+    For i = 0 To 255
         ' Syntax: color32Value& = _PALETTECOLOR(attributeNumber%, imgHandle&)'
-        palette_array(i) = _PALETTECOLOR(i, 0)
-    NEXT i
-END SUB
+        palette_array(i) = _PaletteColor(i, 0)
+    Next i
+End Sub
 
-SUB c_fmemcpy (dest() AS LONG, src() AS LONG, num_bytes AS INTEGER)
-    REM Simulate memory copy in QB64 Basic
+Sub c_fmemcpy (dest() As Long, src() As Long, num_bytes As Integer)
+    Rem Simulate memory copy in QB64 Basic
     ' This is a placeholder. Implement actual memory copy if needed.
-    FOR i = 0 TO num_bytes - 1
+    For i = 0 To num_bytes - 1
         dest(i) = src(i)
-    NEXT i
-END SUB
+    Next i
+End Sub
 
-SUB VL_SetPalette (palette_array() AS LONG)
-    REM Simulate setting the palette in QB64 Basic
+Sub VL_SetPalette (palette_array() As Long)
+    Rem Simulate setting the palette in QB64 Basic
     ' This is a placeholder. Implement actual palette setting if needed.
-    FOR i = 0 TO 255
-        _PALETTECOLOR i, palette_array(i)
-    NEXT i
-END SUB
+    For i = 0 To 255
+        _PaletteColor i, palette_array(i)
+    Next i
+End Sub
 
-SUB VL_FillPalette (red AS INTEGER, green AS INTEGER, blue AS INTEGER)
-    REM Simulate filling the entire palette with a single color in QB64 Basic
+Sub VL_FillPalette (red As Integer, green As Integer, blue As Integer)
+    Rem Simulate filling the entire palette with a single color in QB64 Basic
     ' This is a placeholder. Implement actual palette fill if needed.
-    FOR i = 0 TO 255
-        _PALETTECOLOR i, _RGB32(red, green, blue)
-    NEXT i
-END SUB
+    For i = 0 To 255
+        _PaletteColor i, _RGB32(red, green, blue)
+    Next i
+End Sub
 
-SUB VL_FadeOut (start AS INTEGER, finish AS INTEGER, red AS LONG, green AS LONG, blue AS LONG, steps AS INTEGER)
+Sub VL_FadeOut (start As Integer, finish As Integer, red As Long, green As Long, blue As Long, steps As Integer)
     VL_WaitVBL 1
     VL_GetPalette palette1()
 

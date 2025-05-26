@@ -3,61 +3,61 @@
 '$INCLUDE: 'wl_def.bi'
 
 ' Input Constants
-CONST KEY_UP = 18432
-CONST KEY_DOWN = 20480
-CONST KEY_LEFT = 19200
-CONST KEY_RIGHT = 19712
-CONST KEY_ESC = 27
-CONST KEY_SPACE = 32
-CONST KEY_ENTER = 13
-CONST KEY_1 = 49
-CONST KEY_2 = 50
-CONST KEY_3 = 51
-CONST KEY_4 = 52
-CONST KEY_5 = 53
-CONST KEY_6 = 54
-CONST KEY_7 = 55
-CONST KEY_8 = 56
-CONST KEY_9 = 57
-CONST KEY_0 = 48
-CONST KEY_F1 = 15104
-CONST KEY_F2 = 15360
-CONST KEY_F3 = 15616
-CONST KEY_F4 = 15872
-CONST KEY_F5 = 16128
-CONST KEY_F6 = 16384
-CONST KEY_F7 = 16640
-CONST KEY_F8 = 16896
-CONST KEY_F9 = 17152
-CONST KEY_F10 = 17408
+Const KEY_UP = 18432
+Const KEY_DOWN = 20480
+Const KEY_LEFT = 19200
+Const KEY_RIGHT = 19712
+Const KEY_ESC = 27
+Const KEY_SPACE = 32
+Const KEY_ENTER = 13
+Const KEY_1 = 49
+Const KEY_2 = 50
+Const KEY_3 = 51
+Const KEY_4 = 52
+Const KEY_5 = 53
+Const KEY_6 = 54
+Const KEY_7 = 55
+Const KEY_8 = 56
+Const KEY_9 = 57
+Const KEY_0 = 48
+Const KEY_F1 = 15104
+Const KEY_F2 = 15360
+Const KEY_F3 = 15616
+Const KEY_F4 = 15872
+Const KEY_F5 = 16128
+Const KEY_F6 = 16384
+Const KEY_F7 = 16640
+Const KEY_F8 = 16896
+Const KEY_F9 = 17152
+Const KEY_F10 = 17408
 
 ' Mouse Button Constants
-CONST MOUSE_LEFT = 1
-CONST MOUSE_RIGHT = 2
-CONST MOUSE_MIDDLE = 4
+Const MOUSE_LEFT = 1
+Const MOUSE_RIGHT = 2
+Const MOUSE_MIDDLE = 4
 
 ' Joystick Constants
-CONST JOY_LEFT = 1
-CONST JOY_RIGHT = 2
-CONST JOY_UP = 4
-CONST JOY_DOWN = 8
-CONST JOY_BUTTON1 = 16
-CONST JOY_BUTTON2 = 32
+Const JOY_LEFT = 1
+Const JOY_RIGHT = 2
+Const JOY_UP = 4
+Const JOY_DOWN = 8
+Const JOY_BUTTON1 = 16
+Const JOY_BUTTON2 = 32
 
 ' Input Variables
-DIM SHARED keyStates(0 TO 255) AS INTEGER
-DIM SHARED mouseX AS INTEGER
-DIM SHARED mouseY AS INTEGER
-DIM SHARED mouseButtons AS INTEGER
-DIM SHARED mouseEnabled AS INTEGER
-DIM SHARED joystickEnabled AS INTEGER
-DIM SHARED lastKey AS INTEGER
-DIM SHARED lastMouseX AS INTEGER
-DIM SHARED lastMouseY AS INTEGER
-DIM SHARED lastMouseButtons AS INTEGER
-DIM SHARED lastJoystickX AS INTEGER
-DIM SHARED lastJoystickY AS INTEGER
-DIM SHARED lastJoystickButtons AS INTEGER
+Dim Shared keyStates(0 To 255) As Integer
+Dim Shared mouseX As Integer
+Dim Shared mouseY As Integer
+Dim Shared mouseButtons As Integer
+Dim Shared mouseEnabled As Integer
+Dim Shared joystickEnabled As Integer
+Dim Shared lastKey As Integer
+Dim Shared lastMouseX As Integer
+Dim Shared lastMouseY As Integer
+Dim Shared lastMouseButtons As Integer
+Dim Shared lastJoystickX As Integer
+Dim Shared lastJoystickY As Integer
+Dim Shared lastJoystickButtons As Integer
 
 ' Function Declarations
 DECLARE SUB InitInput
@@ -75,4 +75,4 @@ DECLARE FUNCTION GetMouseState AS INTEGER
 DECLARE FUNCTION GetJoystickState AS INTEGER
 DECLARE SUB CalibrateJoystick
 DECLARE FUNCTION IsInputDeviceEnabled (deviceType AS INTEGER) AS INTEGER
-DECLARE SUB EnableInputDevice (deviceType AS INTEGER, enable AS INTEGER) 
+DECLARE SUB EnableInputDevice (deviceType AS INTEGER, enable AS INTEGER)
