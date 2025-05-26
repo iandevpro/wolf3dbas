@@ -1,0 +1,10 @@
+name: New rule
+version: 0.0.1
+schema: v1
+rules:
+  - Always give concise responses
+  - We are porting Wolfenstein 3D source C code to QB64 Basic on x64 bit Windows operating system.
+  - Wolfenstein 3D was working with direct writing to the memory of a graphics card, which is not possible in QB64.
+  - There is a possibility to write to the back buffer of the screen and load image on the screen.
+  - When generating code, use a CamelCase naming for the reserved words, like "Sub", "End", "For", etc.
+  - When generating code for #define, #ifdef - use "$Let MY_DEFINE = 1" and "$If MY_DEFINE = DEFINED", "$If MY_DEFINE = UNDEFINED", "$End If" syntax
