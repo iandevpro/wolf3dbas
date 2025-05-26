@@ -1,23 +1,27 @@
 ' ID_VH.H - #define VW_FadeOut()    VL_FadeOut(0,255,0,0,0,30);
-Sub VW_FadeOut
-    VL_FadeOut 0, 255, 0, 0, 0, 30
-End Sub
+$If INCLUDE_ID_VH_BM = UNDEFINED Then
+    $Let INCLUDE_ID_VH_BM = 1
 
-' Function to fill a rectangle with specified dimensions and color
-Sub VWB_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
-    ' Mark the update block (simplified; assume it returns TRUE for this example)
-    If TRUE Then ' Replace with actual condition or function call as needed
-        ' Draw the rectangle outline with LINE
-        Line (x, y)-(x + width - 1, y + height - 1), color_bar
+    Sub VW_FadeOut
+        VL_FadeOut 0, 255, 0, 0, 0, 30
+    End Sub
 
-        ' Fill the rectangle with a loop to simulate VW_Bar functionality
-        Dim i As Integer, j As Integer
-        For i = x To x + width - 1
-            For j = y To y + height - 1
-                buffer(i + j * UPDATEWIDE) = color_bar
-            Next j
-        Next i
-    End If
-End Sub
+    ' Function to fill a rectangle with specified dimensions and color
+    Sub VWB_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
+        ' Mark the update block (simplified; assume it returns TRUE for this example)
+        If TRUE Then ' Replace with actual condition or function call as needed
+            ' Draw the rectangle outline with LINE
+            Line (x, y)-(x + width - 1, y + height - 1), color_bar
+
+            ' Fill the rectangle with a loop to simulate VW_Bar functionality
+            Dim i As Integer, j As Integer
+            For i = x To x + width - 1
+                For j = y To y + height - 1
+                    buffer(i + j * UPDATEWIDE) = color_bar
+                Next j
+            Next i
+        End If
+    End Sub
 
 '$INCLUDE:'ID_VL.BM'
+$End If

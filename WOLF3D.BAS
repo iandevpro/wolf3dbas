@@ -12,16 +12,16 @@ On Error GoTo ErrorHandler
 '$INCLUDE: 'WL_MENU.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
-Const DEMOTEST = 0 'FALSE
-Const UPLOAD = 0 ' FALSE
-Const GOODTIMES = 0
-Const JAPAN = 0
-Const GERMANY = 0
-Const UPLOAD = 0
-Const SPEARDEMO = 0
-'Const SPEAR = 0
+' Const DEMOTEST = 0 'FALSE
+' Const UPLOAD = 0 ' FALSE
+' Const GOODTIMES = 0
+' Const JAPAN = 0
+' Const GERMANY = 0
+' Const SPEARDEMO = 0
+' Const SPEAR = 0
 ' $LET is equivalent to #define for usage with #ifdef'
-$Let SPEAR = 0
+' $Let SPEAR = 0
+
 Const NOWAIT = 0
 
 ' Constants
@@ -435,23 +435,31 @@ Sub DemoLoop
     End If
 
     ' main game cycle
-    If Not DEMOTEST Then
-        If Not UPLOAD Then
-            If Not GOODTIMES And Not SPEAR And Not JAPAN Then
-                If Not NOWAIT Then
-                    Call NonShareware
-                End If
-            Else
-                If Not GOODTIMES And Not SPEARDEMO Then
-                    'Call CopyProtection()
-                End If
+    $If DEMOTEST = UNDEFINED Then
+        $If UPLOAD = UNDEFINED Then
+            $If GOODTIMES = UNDEFINED Then
+                $If SPEAR = UNDEFINED Then
+                    $If JAPAN = UNDEFINED Then
+                        If Not NOWAIT Then
+                            Call NonShareware
+                        End If
+                    $End If
+                $Else
+                    $If GOODTIMES = UNDEFINED Then
+                        $If SPEARDEMO = UNDEFINED Then
+                                Call CopyProtection()
+                        $End If
+                    $End If
+                $End If
+            $End If
+        $End If
+        'Call StartCPMusic(INTROSONG)
+
+        $If JAPAN = UNDEFINED Then
+            If Not NOWAIT Then
+                'Call PG13()
             End If
-        End If
-    End If
-
-    'Call StartCPMusic(INTROSONG)
-
-    If Not JAPAN And Not NOWAIT Then
-        'Call PG13()
-    End If
+        $End If
+    $End If
+    ' Line 1486, while 1 ...
 End Sub
