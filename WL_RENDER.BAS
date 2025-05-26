@@ -24,7 +24,7 @@
 'DIM SHARED walltexpos(VIEWWIDTH) AS INTEGER
 
 '' Initialize rendering system
-'SUB InitRender
+'Sub InitRender
 '' Initialize variables
 'viewangle = 0
 'viewx = 0
@@ -35,10 +35,10 @@
     
 '' Calculate projection constants
 'CALL CalcProjection(FOCALLENGTH)
-'END SUB
+'End Sub
 
 '' Calculate projection constants
-'SUB CalcProjection (focal AS LONG)
+'Sub CalcProjection (focal AS LONG)
 'DIM i AS INTEGER
 'DIM angle AS SINGLE
 'DIM tang AS DOUBLE
@@ -66,10 +66,10 @@
     
 '' Calculate maximum slope
 'maxslope = finetangent(pixelangle(0)) \ 256
-'END SUB
+'End Sub
 
 '' Render the 3D view
-'SUB RenderView
+'Sub RenderView
 'DIM x AS INTEGER
 'DIM y AS INTEGER
 'DIM angle AS INTEGER
@@ -95,7 +95,7 @@
 'IF height > MAXWALLHEIGHT THEN height = MAXWALLHEIGHT
 'ELSE
 'height = MAXWALLHEIGHT
-'END IF
+'End If
         
 '' Store wall information
 'wallheight(x) = height
@@ -108,10 +108,10 @@
     
 '' Update screen
 'CALL UpdateScreen
-'END SUB
+'End Sub
 
 '' Cast a ray and return wall information
-'SUB CastRay (angle AS INTEGER, distance AS LONG, texture AS INTEGER, texpos AS INTEGER)
+'Sub CastRay (angle AS INTEGER, distance AS LONG, texture AS INTEGER, texpos AS INTEGER)
 'DIM x AS INTEGER
 'DIM y AS INTEGER
 'DIM xstep AS INTEGER
@@ -136,13 +136,13 @@
 'xintercept = ((x + 1) * TILEGLOBAL - viewx) * sintable(angle + ANGLES/2) \ TILEGLOBAL
 'ELSE
 'xintercept = (x * TILEGLOBAL - viewx) * sintable(angle + ANGLES/2) \ TILEGLOBAL
-'END IF
+'End If
     
 'IF ystep > 0 THEN
 'yintercept = ((y + 1) * TILEGLOBAL - viewy) * costable(angle + ANGLES/2) \ TILEGLOBAL
 'ELSE
 'yintercept = (y * TILEGLOBAL - viewy) * costable(angle + ANGLES/2) \ TILEGLOBAL
-'END IF
+'End If
     
 '' DDA algorithm
 'DO
@@ -154,8 +154,8 @@
 'distance = ABS(xintercept)
 'texture = walls(x, y).tiletype
 'texpos = (viewy + (xintercept * costable(angle)) \ TILEGLOBAL) AND (TILEWIDTH - 1)
-'EXIT SUB
-'END IF
+'EXIT Sub
+'End If
 'ELSE
 '' Check y intersection
 'y = y + ystep
@@ -164,14 +164,14 @@
 'distance = ABS(yintercept)
 'texture = walls(x, y).tiletype
 'texpos = (viewx + (yintercept * sintable(angle)) \ TILEGLOBAL) AND (TILEWIDTH - 1)
-'EXIT SUB
-'END IF
-'END IF
+'EXIT Sub
+'End If
+'End If
 'LOOP UNTIL distance > MAXDIST
-'END SUB
+'End Sub
 
 '' Move view position
-'SUB MoveView (angle AS INTEGER, distance AS LONG)
+'Sub MoveView (angle AS INTEGER, distance AS LONG)
 'DIM newx AS LONG
 'DIM newy AS LONG
     
@@ -183,10 +183,10 @@
 'IF walls(newx \ TILEGLOBAL, newy \ TILEGLOBAL).tiletype = 0 THEN
 'viewx = newx
 'viewy = newy
-'END IF
-'END SUB
+'End If
+'End Sub
 
 '' Rotate view angle
-'SUB RotateView (angle AS INTEGER)
+'Sub RotateView (angle AS INTEGER)
 'viewangle = (viewangle + angle) AND (ANGLES - 1)
-'END SUB
+'End Sub

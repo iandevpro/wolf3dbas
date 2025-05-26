@@ -20,7 +20,7 @@ DIM SHARED mouseEnabled AS INTEGER
 DIM SHARED joystickEnabled AS INTEGER
 
 ' Initialize input system
-SUB InitInput
+Sub InitInput
     ' Initialize variables
     ERASE keyStates
     mouseX = 0
@@ -34,18 +34,18 @@ SUB InitInput
         mouseEnabled = 1
     ELSE
         mouseEnabled = 0
-    END IF
+    End If
     
     ' Set up joystick if available
     IF _JOYSTICK(1) THEN
         joystickEnabled = 1
     ELSE
         joystickEnabled = 0
-    END IF
-END SUB
+    End If
+End Sub
 
 ' Update input state
-SUB UpdateInput
+Sub UpdateInput
     DIM k AS INTEGER
     
     ' Update keyboard state
@@ -55,7 +55,7 @@ SUB UpdateInput
             keyStates(k AND 255) = 1
         ELSE
             keyStates((-k) AND 255) = 0
-        END IF
+        End If
     LOOP
     
     ' Update mouse state if enabled
@@ -64,61 +64,61 @@ SUB UpdateInput
         mouseX = _MOUSEX
         mouseY = _MOUSEY
         mouseButtons = _MOUSEBUTTON(1) OR (_MOUSEBUTTON(2) * 2) OR (_MOUSEBUTTON(3) * 4)
-    END IF
-END SUB
+    End If
+End Sub
 
 ' Check if a key is pressed
-FUNCTION KeyPressed (keyCode AS INTEGER) AS INTEGER
+Function KeyPressed (keyCode AS INTEGER) AS INTEGER
     KeyPressed = keyStates(keyCode)
-END FUNCTION
+End Function
 
 ' Get mouse position
-SUB GetMousePosition (x AS INTEGER, y AS INTEGER)
+Sub GetMousePosition (x AS INTEGER, y AS INTEGER)
     x = mouseX
     y = mouseY
-END SUB
+End Sub
 
 ' Get mouse button state
-FUNCTION MouseButtonPressed (button AS INTEGER) AS INTEGER
+Function MouseButtonPressed (button AS INTEGER) AS INTEGER
     MouseButtonPressed = (mouseButtons AND button) <> 0
-END FUNCTION
+End Function
 
 ' Get joystick position
-SUB GetJoystickPosition (x AS INTEGER, y AS INTEGER)
+Sub GetJoystickPosition (x AS INTEGER, y AS INTEGER)
     IF joystickEnabled THEN
         x = _JOYSTICK(1) \ 1000
         y = _JOYSTICK(2) \ 1000
     ELSE
         x = 0
         y = 0
-    END IF
-END SUB
+    End If
+End Sub
 
 ' Get joystick button state
-FUNCTION JoystickButtonPressed (button AS INTEGER) AS INTEGER
+Function JoystickButtonPressed (button AS INTEGER) AS INTEGER
     IF joystickEnabled THEN
         JoystickButtonPressed = _JOYSTICK(button + 4)
     ELSE
         JoystickButtonPressed = 0
-    END IF
-END FUNCTION
+    End If
+End Function
 
 ' Wait for a key press
-FUNCTION WaitKey AS INTEGER
+Function WaitKey AS INTEGER
     DIM k AS INTEGER
     
     DO
         k = _KEYHIT
         IF k > 0 THEN
             WaitKey = k AND 255
-            EXIT FUNCTION
-        END IF
+            EXIT Function
+        End If
         _LIMIT 60
     LOOP
-END FUNCTION
+End Function
 
 ' Clear all input states
-SUB ClearInput
+Sub ClearInput
     ERASE keyStates
     mouseButtons = 0
-END SUB 
+End Sub 

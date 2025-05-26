@@ -261,7 +261,7 @@ Sub VL_MemToScreen (buffer() As _Unsigned _Byte, width As Integer, height As Int
             PSet (j + x, i + y), buffer(offset)
             'Circle (j + x, i + y), 10, buffer(offset)
             'Print j + x, i + y, buffer(offset)
-            'END IF
+            'End If
         Next j
     Next i
 End Sub

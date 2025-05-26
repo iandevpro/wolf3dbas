@@ -14,7 +14,7 @@ DIM SHARED walltextures(MAXWALLTILES, TILEWIDTH, TILEHEIGHT) AS INTEGER
 DIM SHARED sprites(MAXACTORS, 64, 64) AS INTEGER
 
 ' Initialize graphics system
-SUB InitGraphics
+Sub InitGraphics
     ' Set up graphics mode
     SCREEN _NEWIMAGE(SCREENWIDTH, SCREENHEIGHT, 256)
     
@@ -29,10 +29,10 @@ SUB InitGraphics
     
     ' Load sprites
     CALL LoadSprites
-END SUB
+End Sub
 
 ' Load default VGA palette
-SUB LoadPalette
+Sub LoadPalette
     DIM i AS INTEGER
     DIM r, g, b AS INTEGER
     
@@ -46,10 +46,10 @@ SUB LoadPalette
         palette(i, 2) = b
         _PALETTECOLOR i, _RGB32(r * 4, g * 4, b * 4)
     NEXT i
-END SUB
+End Sub
 
 ' Load wall textures (placeholder - will need to load actual textures)
-SUB LoadWallTextures
+Sub LoadWallTextures
     DIM i, x, y AS INTEGER
     
     ' Create some basic test textures
@@ -61,10 +61,10 @@ SUB LoadWallTextures
             NEXT x
         NEXT y
     NEXT i
-END SUB
+End Sub
 
 ' Load sprites (placeholder - will need to load actual sprites)
-SUB LoadSprites
+Sub LoadSprites
     DIM i, x, y AS INTEGER
     
     ' Create some basic test sprites
@@ -76,10 +76,10 @@ SUB LoadSprites
             NEXT x
         NEXT y
     NEXT i
-END SUB
+End Sub
 
 ' Draw a vertical line
-SUB DrawVerticalLine (x AS INTEGER, y1 AS INTEGER, y2 AS INTEGER, color AS INTEGER)
+Sub DrawVerticalLine (x AS INTEGER, y1 AS INTEGER, y2 AS INTEGER, color AS INTEGER)
     DIM y AS INTEGER
     DIM starty, endy AS INTEGER
     
@@ -89,17 +89,17 @@ SUB DrawVerticalLine (x AS INTEGER, y1 AS INTEGER, y2 AS INTEGER, color AS INTEG
     ELSE
         starty = y1
         endy = y2
-    END IF
+    End If
     
     FOR y = starty TO endy
         IF y >= 0 AND y < SCREENHEIGHT THEN
             screenbuffer(y * SCREENWIDTH + x) = color
-        END IF
+        End If
     NEXT y
-END SUB
+End Sub
 
 ' Draw a wall slice
-SUB DrawWallSlice (x AS INTEGER, y1 AS INTEGER, y2 AS INTEGER, texture AS INTEGER, texX AS INTEGER)
+Sub DrawWallSlice (x AS INTEGER, y1 AS INTEGER, y2 AS INTEGER, texture AS INTEGER, texX AS INTEGER)
     DIM y AS INTEGER
     DIM starty, endy AS INTEGER
     DIM texY AS INTEGER
@@ -111,19 +111,19 @@ SUB DrawWallSlice (x AS INTEGER, y1 AS INTEGER, y2 AS INTEGER, texture AS INTEGE
     ELSE
         starty = y1
         endy = y2
-    END IF
+    End If
     
     FOR y = starty TO endy
         IF y >= 0 AND y < SCREENHEIGHT THEN
             texY = ((y - starty) * TILEHEIGHT) \ (endy - starty)
             color = walltextures(texture, texX, texY)
             screenbuffer(y * SCREENWIDTH + x) = color
-        END IF
+        End If
     NEXT y
-END SUB
+End Sub
 
 ' Draw a sprite
-SUB DrawSprite (x AS INTEGER, y AS INTEGER, spriteNum AS INTEGER, scale AS INTEGER)
+Sub DrawSprite (x AS INTEGER, y AS INTEGER, spriteNum AS INTEGER, scale AS INTEGER)
     DIM sx, sy AS INTEGER
     DIM color AS INTEGER
     DIM scaledX, scaledY AS INTEGER
@@ -136,23 +136,23 @@ SUB DrawSprite (x AS INTEGER, y AS INTEGER, spriteNum AS INTEGER, scale AS INTEG
                 scaledY = y + (sy * scale) \ 64
                 IF scaledX >= 0 AND scaledX < SCREENWIDTH AND scaledY >= 0 AND scaledY < SCREENHEIGHT THEN
                     screenbuffer(scaledY * SCREENWIDTH + scaledX) = color
-                END IF
-            END IF
+                End If
+            End If
         NEXT sx
     NEXT sy
-END SUB
+End Sub
 
 ' Update screen with buffer contents
-SUB UpdateScreen
+Sub UpdateScreen
     DIM i AS INTEGER
     
     ' Copy buffer to screen
     FOR i = 0 TO SCREENWIDTH * SCREENHEIGHT - 1
         PSET (i MOD SCREENWIDTH, i \ SCREENWIDTH), screenbuffer(i)
     NEXT i
-END SUB
+End Sub
 
 ' Clear screen buffer
-SUB ClearScreen
+Sub ClearScreen
     ERASE screenbuffer
-END SUB 
+End Sub 

@@ -113,10 +113,10 @@ Dim Shared vertwall(MAXWALLTILES) As Integer
 Dim Shared weaponstate(3) As Integer ' Array of 4 weapon states (0-3)
 
 ' Function Declarations
-DECLARE SUB InitGame ()
-DECLARE SUB GameLoop ()
-DECLARE SUB BuildTables ()
-DECLARE SUB SetupWalls ()
-DECLARE SUB NewViewSize (width AS INTEGER)
-DECLARE SUB CalcProjection (focal AS LONG)
-DECLARE SUB Quit (error AS STRING)
+DECLARE Sub InitGame ()
+DECLARE Sub GameLoop ()
+DECLARE Sub BuildTables ()
+DECLARE Sub SetupWalls ()
+DECLARE Sub NewViewSize (width AS INTEGER)
+DECLARE Sub CalcProjection (focal AS LONG)
+DECLARE Sub Quit (error AS STRING)

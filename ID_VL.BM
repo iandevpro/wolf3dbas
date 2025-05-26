@@ -1,72 +1,75 @@
 ' ID_VL.BM (Basic Module)
+$If INCLUDE_ID_VL_BM = UNDEFINED Then
+    $Let INCLUDE_ID_VL_BM = 1
 
-Sub VL_WaitVBL (num_vbls As Integer)
-    Rem Simulate waiting for VBlank in QB64 Basic
-    ' This is a placeholder. Implement actual VBlank wait if needed.
-    ' ignore num_vbls
+    Sub VL_WaitVBL (num_vbls As Integer)
+        Rem Simulate waiting for VBlank in QB64 Basic
+        ' This is a placeholder. Implement actual VBlank wait if needed.
+        ' ignore num_vbls
 
-    _Limit 60
+        _Limit 60
 
-    ' or use the following
-    ' https://github-wiki-see.page/m/QB64Official/qb64/wiki/WAIT
-    ' Either statement can be used to try to reduce screen flickering.
-    ' If both statements are used, try changing the order.
-    ' WAIT &H3DA, 8 ' finishes whenever the screen isn't being written to
-    ' WAIT &H3DA, 8, 8 ' finishes whenever the screen is being written to
-End Sub
+        ' or use the following
+        ' https://github-wiki-see.page/m/QB64Official/qb64/wiki/WAIT
+        ' Either statement can be used to try to reduce screen flickering.
+        ' If both statements are used, try changing the order.
+        ' WAIT &H3DA, 8 ' finishes whenever the screen isn't being written to
+        ' WAIT &H3DA, 8, 8 ' finishes whenever the screen is being written to
+    End Sub
 
-Sub VL_GetPalette (palette_array() As Long)
-    Rem Simulate getting the current palette in QB64 Basic
-    ' This is a placeholder. Implement actual palette retrieval if needed.
-    For i = 0 To 255
-        ' Syntax: color32Value& = _PALETTECOLOR(attributeNumber%, imgHandle&)'
-        palette_array(i) = _PaletteColor(i, 0)
-    Next i
-End Sub
+    Sub VL_GetPalette (palette_array() As Long)
+        Rem Simulate getting the current palette in QB64 Basic
+        ' This is a placeholder. Implement actual palette retrieval if needed.
+        For i = 0 To 255
+            ' Syntax: color32Value& = _PALETTECOLOR(attributeNumber%, imgHandle&)'
+            palette_array(i) = _PaletteColor(i, 0)
+        Next i
+    End Sub
 
-Sub c_fmemcpy (dest() As Long, src() As Long, num_bytes As Integer)
-    Rem Simulate memory copy in QB64 Basic
-    ' This is a placeholder. Implement actual memory copy if needed.
-    For i = 0 To num_bytes - 1
-        dest(i) = src(i)
-    Next i
-End Sub
+    Sub c_fmemcpy (dest() As Long, src() As Long, num_bytes As Integer)
+        Rem Simulate memory copy in QB64 Basic
+        ' This is a placeholder. Implement actual memory copy if needed.
+        For i = 0 To num_bytes - 1
+            dest(i) = src(i)
+        Next i
+    End Sub
 
-Sub VL_SetPalette (palette_array() As Long)
-    Rem Simulate setting the palette in QB64 Basic
-    ' This is a placeholder. Implement actual palette setting if needed.
-    For i = 0 To 255
-        _PaletteColor i, palette_array(i)
-    Next i
-End Sub
+    Sub VL_SetPalette (palette_array() As Long)
+        Rem Simulate setting the palette in QB64 Basic
+        ' This is a placeholder. Implement actual palette setting if needed.
+        For i = 0 To 255
+            _PaletteColor i, palette_array(i)
+        Next i
+    End Sub
 
-Sub VL_FillPalette (red As Integer, green As Integer, blue As Integer)
-    Rem Simulate filling the entire palette with a single color in QB64 Basic
-    ' This is a placeholder. Implement actual palette fill if needed.
-    For i = 0 To 255
-        _PaletteColor i, _RGB32(red, green, blue)
-    Next i
-End Sub
+    Sub VL_FillPalette (red As Integer, green As Integer, blue As Integer)
+        Rem Simulate filling the entire palette with a single color in QB64 Basic
+        ' This is a placeholder. Implement actual palette fill if needed.
+        For i = 0 To 255
+            _PaletteColor i, _RGB32(red, green, blue)
+        Next i
+    End Sub
 
-Sub VL_FadeOut (start As Integer, finish As Integer, red As Long, green As Long, blue As Long, steps As Integer)
-    VL_WaitVBL 1
-    VL_GetPalette palette1()
-
-    c_fmemcpy palette2(), palette1(), 256
-
-    FOR i = 0 TO steps - 1
-        FOR j = start TO finish
-            palette2(j) = _RGB32(_RED32(palette1(j)) + (red - _RED32(palette1(j))) * i / steps, _GREEN32(palette1(j)) + (green - _GREEN32(palette1(j))) * i / steps, _BLUE32(palette1(j)) + (blue - _BLUE32(palette1(j))) * i / steps)
-        NEXT j
-
+    Sub VL_FadeOut (start As Integer, finish As Integer, red As Long, green As Long, blue As Long, steps As Integer)
         VL_WaitVBL 1
-        VL_SetPalette palette2()
-    NEXT i
+        VL_GetPalette palette1()
 
-    VL_FillPalette red, green, blue
-    screenfaded = TRUE
-END SUB
+        c_fmemcpy palette2(), palette1(), 256
+
+        FOR i = 0 TO steps - 1
+            FOR j = start TO finish
+                palette2(j) = _RGB32(_RED32(palette1(j)) + (red - _RED32(palette1(j))) * i / steps, _GREEN32(palette1(j)) + (green - _GREEN32(palette1(j))) * i / steps, _BLUE32(palette1(j)) + (blue - _BLUE32(palette1(j))) * i / steps)
+            NEXT j
+
+            VL_WaitVBL 1
+            VL_SetPalette palette2()
+        NEXT i
+
+        VL_FillPalette red, green, blue
+        screenfaded = TRUE
+    End Sub
 
 ' Example usage:
 REM Call the fade out function
 'VL_FadeOut 0, 255, 255, 0, 0, 64
+$End If

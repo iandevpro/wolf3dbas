@@ -1,1 +1,1 @@
-Declare SUB VW_FadeOut
+Declare Sub VW_FadeOut

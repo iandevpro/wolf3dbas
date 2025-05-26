@@ -11,7 +11,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             'img = _LOADIMAGE("path_to_C_BACKDROPPIC.png")
             'IF img THEN
             '_DRAWIMAGE (0, 0), img
-            'END IF
+            'End If
         $End If
     End Sub
 

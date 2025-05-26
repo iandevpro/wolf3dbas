@@ -60,19 +60,19 @@ Dim Shared lastJoystickY As Integer
 Dim Shared lastJoystickButtons As Integer
 
 ' Function Declarations
-DECLARE SUB InitInput
-DECLARE SUB UpdateInput
-DECLARE FUNCTION KeyPressed (keyCode AS INTEGER) AS INTEGER
-DECLARE SUB GetMousePosition (x AS INTEGER, y AS INTEGER)
-DECLARE FUNCTION MouseButtonPressed (button AS INTEGER) AS INTEGER
-DECLARE SUB GetJoystickPosition (x AS INTEGER, y AS INTEGER)
-DECLARE FUNCTION JoystickButtonPressed (button AS INTEGER) AS INTEGER
-DECLARE FUNCTION WaitKey AS INTEGER
-DECLARE SUB ClearInput
-DECLARE FUNCTION GetKeyState (keyCode AS INTEGER) AS INTEGER
-DECLARE SUB SetKeyState (keyCode AS INTEGER, state AS INTEGER)
-DECLARE FUNCTION GetMouseState AS INTEGER
-DECLARE FUNCTION GetJoystickState AS INTEGER
-DECLARE SUB CalibrateJoystick
-DECLARE FUNCTION IsInputDeviceEnabled (deviceType AS INTEGER) AS INTEGER
-DECLARE SUB EnableInputDevice (deviceType AS INTEGER, enable AS INTEGER)
+DECLARE Sub InitInput
+DECLARE Sub UpdateInput
+DECLARE Function KeyPressed (keyCode AS INTEGER) AS INTEGER
+DECLARE Sub GetMousePosition (x AS INTEGER, y AS INTEGER)
+DECLARE Function MouseButtonPressed (button AS INTEGER) AS INTEGER
+DECLARE Sub GetJoystickPosition (x AS INTEGER, y AS INTEGER)
+DECLARE Function JoystickButtonPressed (button AS INTEGER) AS INTEGER
+DECLARE Function WaitKey AS INTEGER
+DECLARE Sub ClearInput
+DECLARE Function GetKeyState (keyCode AS INTEGER) AS INTEGER
+DECLARE Sub SetKeyState (keyCode AS INTEGER, state AS INTEGER)
+DECLARE Function GetMouseState AS INTEGER
+DECLARE Function GetJoystickState AS INTEGER
+DECLARE Sub CalibrateJoystick
+DECLARE Function IsInputDeviceEnabled (deviceType AS INTEGER) AS INTEGER
+DECLARE Sub EnableInputDevice (deviceType AS INTEGER, enable AS INTEGER)
