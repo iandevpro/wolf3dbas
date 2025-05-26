@@ -9,6 +9,7 @@ On Error GoTo ErrorHandler
 '$INCLUDE: 'ID_VL.BI'
 '$INCLUDE: 'ID_VH.BI'
 '$INCLUDE: 'WL_INTER.BI'
+'$INCLUDE: 'WL_MENU.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 Const DEMOTEST = 0 'FALSE
@@ -18,7 +19,9 @@ Const JAPAN = 0
 Const GERMANY = 0
 Const UPLOAD = 0
 Const SPEARDEMO = 0
-Const SPEAR = 0
+'Const SPEAR = 0
+' $LET is equivalent to #define for usage with #ifdef'
+$Let SPEAR = 0
 Const NOWAIT = 0
 
 ' Constants
@@ -68,6 +71,9 @@ Dim Shared horizwall(MAXWALLTILES) As Integer
 Dim Shared vertwall(MAXWALLTILES) As Integer
 
 ' Main Program
+
+
+''
 Cls
 Print "Debug: Starting program"
 Print "Wolfenstein 3D - QB64 Port"
@@ -140,8 +146,9 @@ Sub SignonScreen
     _Delay 1
     Do: Loop Until InKey$ <> ""
     'VL_FadeOut 200,255,100,100,100,30
-    Do: Loop Until InKey$ <> ""
     IntroScreen
+    'Do: Loop Until InKey$ <> ""
+    'ClearMScreen
     Do: Loop Until InKey$ <> ""
     'VL_FadeOut 0,255,0,0,0,30
 End Sub

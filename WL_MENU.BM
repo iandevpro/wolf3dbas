@@ -1,0 +1,15 @@
+Sub ClearMScreen ()
+    $If SPEAR = 0 Then
+            ' Call VWB_Bar to fill the screen with BORDCOLOR
+            CALL VWB_Bar(0, 0, 320, 200, BORDCOLOR)
+            '    ELSE
+            '' Load and draw an image for C_BACKDROPPIC (adjust path as needed)
+            'DIM img AS INTEGER
+            'img = _LOADIMAGE("path_to_C_BACKDROPPIC.png")
+            'IF img THEN
+            '_DRAWIMAGE (0, 0), img
+            'END IF
+    $End If
+End Sub
+
+' transitively included via WL_MWENU.BM '$INCLUDE: 'ID_VH.BM'
