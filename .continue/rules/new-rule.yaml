@@ -10,3 +10,4 @@ rules:
   - When generating code, use a CamelCase naming for the reserved words, like "Sub", "End", "For", etc.
   - When generating code for #define, #ifdef - use "$Let MY_DEFINE = 1" and "$If MY_DEFINE = DEFINED", "$If MY_DEFINE = UNDEFINED", "$End If" syntax
   - Pointers in QB64 are of a type _OFFSET
+  - Do not use reserved word "color" for variable names
