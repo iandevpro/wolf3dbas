@@ -84,6 +84,7 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
 
         For i = y To height - 1
             For j = x To width - 1
+                ' TODO - in case of dropped performance, need to implement via memory writes to screen memory'
                 PSet (j + x, i + y), color_bar
             Next j
         Next i
