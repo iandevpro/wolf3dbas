@@ -72,4 +72,48 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
 ' Example usage:
 REM Call the fade out function
 'VL_FadeOut 0, 255, 255, 0, 0, 64
+
+    '=================
+'=
+'= VL_Bar
+'=
+'=================
+
+    Sub VL_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
+        Dim dest As _OFFSET
+        Dim leftmask As Byte, rightmask As Byte
+        Dim midbytes As Integer, linedelta As Integer
+
+        leftmask = leftmasks(x And 3)
+        rightmask = rightmasks((x + width - 1) And 3)
+        midbytes = ((x + width + 3) \ 4) - (x \ 4) - 2
+        linedelta = linewidth - (midbytes + 1)
+
+        dest = Ptr(SCREENSEG * &H10000 + bufferofs + ylookup(y) + x \ 4)
+
+        If midbytes < 0 Then
+            ' all in one byte
+            VGAMAPMASK(leftmask And rightmask)
+            For i As Integer = 0 To height - 1
+            ''    dest[i * linewidth] = color
+            Next i
+            VGAMAPMASK(15)
+            Exit Sub
+        End If
+
+        For i As Integer = 0 To height - 1
+            VGAMAPMASK(leftmask)
+            'dest[0] = color
+
+            VGAMAPMASK(15)
+            '_fmemset VarPtr(dest[1]), color, midbytes
+
+            VGAMAPMASK(rightmask)
+            'dest[midbytes + 1] = color
+
+            'dest += linedelta
+        Next i
+
+        VGAMAPMASK(15)
+    End Sub
 $End If
