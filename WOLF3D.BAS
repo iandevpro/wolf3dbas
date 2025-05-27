@@ -5,6 +5,8 @@ $Debug
 On Error GoTo ErrorHandler
 
 ' IFDEF defines
+Const FALSE = 0
+Const TRUE = -1
 
 '$INCLUDE: 'ID_VL.BI'
 '$INCLUDE: 'ID_VH.BI'

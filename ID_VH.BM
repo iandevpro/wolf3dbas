@@ -13,27 +13,13 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
         ' Mark the update block (simplified; assume it returns TRUE for this example)
         ' TODO - port VW_MarkUpdateBlock'
         If TRUE Then ' Replace with actual condition or function call as needed
-            Print "VWB_Bar2"
-            Do: Loop Until InKey$ <> ""
-            VW_Bar x,y,width,height,color_bar
-            Print "VWB_Bar3 - cleared"
-            Do: Loop Until InKey$ <> ""
+            VW_Bar x, y, width, height, color_bar
         End If
     End Sub
 
-    Sub VW_Bar (x,y,width,height,color_bar)
-        ' TODO - research if it is possible to do - #define VW_Bar			VL_Bar'
-        VL_Bar x,y,width,height,color_bar
-        ' Draw the rectangle outline with LINE
-        'Line (x, y)-(x + width - 1, y + height - 1), color_bar
-
-        ' Fill the rectangle with a loop to simulate VW_Bar functionality
-        ' Dim i As Integer, j As Integer
-        ' For i = x To x + width - 1
-        '     For j = y To y + height - 1
-        '         buffer(i + j * UPDATEWIDE) = color_bar
-        '     Next j
-        ' Next i
+    Sub VW_Bar (x, y, width, height, color_bar)
+        ' TODO - research if it is possible to do - #define VW_Bar          VL_Bar'
+        VL_Bar x, y, width, height, color_bar
     End Sub
  
 '$INCLUDE:'ID_VL.BM'
