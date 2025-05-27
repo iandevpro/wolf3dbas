@@ -15,5 +15,20 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $End If
     End Sub
 
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '= DRAW SCREEN TITLE STRIPES
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+
+    Sub DrawStripes (y As Integer)
+        $If SPEAR = UNDEFINED Then
+            VL_Bar 0, y, 320, 24, 0
+            VWB_Hlin 0, 319, y + 22, STRIPE
+        $Else
+                VL_Bar 0, y, 320, 22, 0
+                VWB_Hlin 0, 319, y + 23, 0
+        $End If
+    End Sub
 '$INCLUDE: 'ID_VH.BM'
 $End If

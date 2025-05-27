@@ -7,5 +7,6 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
             Const BORDCOLOR = &H99
     $Else
         Const BORDCOLOR = &H29
+        Const STRIPE = &H2C
     $End If
 $End If

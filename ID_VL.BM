@@ -75,6 +75,16 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
 
     '=================
     '=
+    '= VL_Hlin
+    '=
+    '=================
+
+    Sub VL_Hlin (x As Integer, y As Integer, width As Integer, color_bar As Integer)
+        Line (x, y)-(x + width - 1, y), color_bar
+    End Sub
+
+    '=================
+    '=
     '= VL_Bar
     '=
     '=================

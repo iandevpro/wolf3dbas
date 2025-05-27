@@ -21,6 +21,17 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
         ' TODO - research if it is possible to do - #define VW_Bar          VL_Bar'
         VL_Bar x, y, width, height, color_bar
     End Sub
- 
+
+    '=================
+    '=
+    '= VWB_Hlin
+    '=
+    '=================
+    Sub VWB_Hlin (x1 As Integer, x2 As Integer, y As Integer, color_bar As Integer)
+        ' If VW_MarkUpdateBlock(x1, y, x2, y) Then
+        If TRUE Then
+            VL_Hlin x1, x2, y, color_bar
+        End If
+    End Sub
 '$INCLUDE:'ID_VL.BM'
 $End If

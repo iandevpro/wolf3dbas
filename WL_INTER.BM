@@ -5,7 +5,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         'Call VW_FadeOut
         Call ClearMScreen
         Do: Loop Until InKey$ <> ""
-        '   DrawStripes(10)
+        DrawStripes 10
         '
         '   CA_CacheGrChunk STARTFONT + 1
         '   fontnumber = 1
