@@ -50,6 +50,9 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
         Next i
     End Sub
 
+    ' Example usage:
+    ' Call the fade out function
+    ' VL_FadeOut 0, 255, 255, 0, 0, 64
     Sub VL_FadeOut (start As Integer, finish As Integer, red As Long, green As Long, blue As Long, steps As Integer)
         VL_WaitVBL 1
         VL_GetPalette palette1()
@@ -69,16 +72,11 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
         screenfaded = TRUE
     End Sub
 
-' Example usage:
-REM Call the fade out function
-'VL_FadeOut 0, 255, 255, 0, 0, 64
-
     '=================
-'=
-'= VL_Bar
-'=
-'=================
-
+    '=
+    '= VL_Bar
+    '=
+    '=================
     Sub VL_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
         Dim dest As _OFFSET
         Dim leftmask As Byte, rightmask As Byte
