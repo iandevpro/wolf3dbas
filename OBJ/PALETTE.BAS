@@ -63,7 +63,8 @@ Print #1, "' GAMEPAL.BAS - Wolfenstein 3D Palette Data"
 Print #1, "' Generated from gamepal.bin"
 Print #1, ""
 Print #1, "Sub LoadGamePalette"
-Print #1, "    Dim gamepal(255) AS Long"
+Print #1, "    Dim gamepal(255) As Long"
+Print #1, "    Dim i As Integer"
 Print #1, ""
 
 For i = 0 To 255

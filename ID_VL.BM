@@ -19,6 +19,7 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     End Sub
 
     Sub VL_GetPalette (palette_array() As Long)
+        Dim i As Integer
         Rem Simulate getting the current palette in QB64 Basic
         ' This is a placeholder. Implement actual palette retrieval if needed.
         For i = 0 To 255
@@ -28,6 +29,7 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     End Sub
 
     Sub c_fmemcpy (dest() As Long, src() As Long, num_bytes As Integer)
+        Dim i As Integer
         Rem Simulate memory copy in QB64 Basic
         ' This is a placeholder. Implement actual memory copy if needed.
         For i = 0 To num_bytes - 1
@@ -36,6 +38,7 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     End Sub
 
     Sub VL_SetPalette (palette_array() As Long)
+        Dim i As Integer
         Rem Simulate setting the palette in QB64 Basic
         ' This is a placeholder. Implement actual palette setting if needed.
         For i = 0 To 255
@@ -44,6 +47,7 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     End Sub
 
     Sub VL_FillPalette (red As Integer, green As Integer, blue As Integer)
+        Dim i As Integer
         Rem Simulate filling the entire palette with a single color in QB64 Basic
         ' This is a placeholder. Implement actual palette fill if needed.
         For i = 0 To 255
@@ -55,6 +59,8 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     ' Call the fade out function
     ' VL_FadeOut 0, 255, 255, 0, 0, 64
     Sub VL_FadeOut (start As Integer, finish As Integer, red As Long, green As Long, blue As Long, steps As Integer)
+        Dim i As Integer
+        Dim j As Integer
         VL_WaitVBL 1
         VL_GetPalette palette1()
 
@@ -89,8 +95,8 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     '=
     '=================
     Sub VL_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
-        Dim i As Long
-        Dim j As Long
+        Dim i As Integer
+        Dim j As Integer
 
         For i = y To height - 1
             For j = x To width - 1

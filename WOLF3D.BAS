@@ -1,7 +1,8 @@
 $Debug
 ' WOLF3D.BAS - QB64 Port of Wolfenstein 3D
-' Original by id Software, Port by Claude
+' Original by id Software, Port by Ian Dichkovskyi
 
+OPTION _EXPLICIT
 On Error GoTo ErrorHandler
 
 ' IFDEF defines

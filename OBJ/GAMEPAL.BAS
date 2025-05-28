@@ -3,6 +3,7 @@
 
 Sub LoadGamePalette
     Dim gamepal(255) As Long
+    Dim i As Integer
 
     gamepal(0) = _RGB32(0, 0, 0)
     gamepal(1) = _RGB32(0, 0, 42)

@@ -45,12 +45,12 @@ Sub GameLoop
     Dim currenttic As Single
     Dim deltatic As Single
 
-    Do
+    'Do
         ' Calculate time delta
-        currenttic = Timer
-        deltatic = currenttic - lasttic
-        lasttic = currenttic
-        gametic = gametic + 1
+    '    currenttic = Timer
+    '    deltatic = currenttic - lasttic
+    '    lasttic = currenttic
+    '    gametic = gametic + 1
 
         ' Handle input
         'CALL UpdateInput
@@ -63,8 +63,8 @@ Sub GameLoop
         'CALL RenderView
 
         ' Limit frame rate
-        _Limit 60
-    Loop Until playstate <> ex_stillplaying
+    ''    _Limit 60
+    'Loop Until playstate <> ex_stillplaying
 End Sub
 
 ' Handle player input
