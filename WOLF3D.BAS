@@ -90,6 +90,7 @@ Call CheckForEpisodes
 Print "Debug: Initializing game systems"
 Call InitGame
 'Signon - memory
+' FinishSignon US_CPrint US_CPrintLine USL_DrawString VWB_DrawPropString VW_DrawPropString
 'PC-13
 'Wolfenstein 3D
 'Options
