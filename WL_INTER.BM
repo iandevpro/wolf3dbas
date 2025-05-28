@@ -6,6 +6,10 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         Call ClearMScreen
         Do: Loop Until InKey$ <> ""
         DrawStripes 10
+
+        ' TODO
+        ' Read, decompress directly to screen
+        ' CA_CacheScreen TITLEPIC
         '
         '   CA_CacheGrChunk STARTFONT + 1
         '   fontnumber = 1

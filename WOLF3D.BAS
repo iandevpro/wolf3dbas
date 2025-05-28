@@ -88,7 +88,10 @@ Call CheckForEpisodes
 ' Initialize game systems
 Print "Debug: Initializing game systems"
 Call InitGame
-
+'Signon - memory
+'PC-13
+'Wolfenstein 3D
+'Options
 Call DemoLoop
 
 ' Main game loop
@@ -326,6 +329,13 @@ Sub CheckForEpisodes
     PageFileName = PageFileName + extension
     audioname = audioname + extension
     demoname = demoname + extension
+    ' TODO
+    '#ifdef SPEAR
+    '#ifndef SPEARDEMO
+    '   if (!findfirst("*.SOD",&f,FA_ARCH))
+    '   {
+    '       strcpy(extension,"SOD");
+    '   }
 End Sub
 
 Sub BuildTables
