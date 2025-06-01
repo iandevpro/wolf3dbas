@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: [-I./origsrc/, -std=c89]
