@@ -2,6 +2,9 @@
 *.EXE
 .vscode/
 
+# misc editor
+tags
+
 # game files
 *.WL1
 *.WL3
