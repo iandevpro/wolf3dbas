@@ -2,7 +2,7 @@ $Debug
 ' WOLF3D.BAS - QB64 Port of Wolfenstein 3D
 ' Original by id Software, Port by Ian Dichkovskyi
 
-OPTION _EXPLICIT
+Option _Explicit
 On Error GoTo ErrorHandler
 
 ' IFDEF defines
@@ -13,6 +13,7 @@ Const TRUE = -1
 '$INCLUDE: 'ID_VH.BI'
 '$INCLUDE: 'WL_INTER.BI'
 '$INCLUDE: 'WL_MENU.BI'
+'$INCLUDE: 'ID_CA.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -119,6 +120,7 @@ System
 '$INCLUDE:'GAMEPAL.BAS'
 '$INCLUDE:'WL_GAME.BM'
 '$INCLUDE:'WL_INTER.BM'
+'$INCLUDE:'ID_CA.BM'
 
 ' SignonScreen - Displays the game's intro screen
 Sub SignonScreen
@@ -295,6 +297,7 @@ Sub InitGame
 
     ' Show signon screen
     SignonScreen
+    CA_Startup
 End Sub
 
 Sub CheckForEpisodes

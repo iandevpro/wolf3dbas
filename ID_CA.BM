@@ -1,0 +1,73 @@
+' ID_CA.C
+' simulate IFDEFs settings
+$If INCLUDE_ID_CA_BM = UNDEFINED Then
+    $Let INCLUDE_ID_CA_BM = 1
+
+    Sub CAL_SetupMapFile ()
+        ' Implementation of CAL_SetupMapFile in QB64 Basic
+        Print "Setting up map file..."
+
+    End Sub
+
+    Sub CAL_SetupGrFile ()
+        ' Implementation of CAL_SetupGrFile in QB64 Basic
+        Print "Setting up graphics file..."
+    End Sub
+
+    Sub CAL_SetupAudioFile ()
+        '     ' Implementation of CAL_SetupAudioFile in QB64 Basic
+        '
+        '     Dim handle AS INTEGER, length AS LONG, fname AS STRING * 13
+        '
+        '     ' Load maphead.ext (offsets and tileinfo for map file)
+        '     $If AUDIOHEADERLINKED = UNDEFINED Then
+        '         fname = aheadname & extension
+        '
+        '         If (handle = open(fname, O_RDONLY OR O_BINARY)) == -1 Then
+        '             CA_CannotOpen fname
+        '         End If
+        '
+        '         length = filelength(handle)
+        '         MM_GetPtr(memptr, length)
+        '         CA_FarRead handle, memptr, length
+        '         close(handle)
+        '
+        '     $Else
+        '         ' Linked audio header code
+        '         audiohuffman = (huffnode)&audiodict
+        '         CAL_OptimizeNodes(audiohuffman)
+        '         audiostarts = (long _seg *)FP_SEG(&audiohead)
+        '     $EndIf
+        '
+        '     ' Open the data file
+        '     $If NOT DEFINED AUDIOHEADERLINKED
+        '         fname = afilename & extension
+        '
+        '         If (audiohandle = open(fname, O_RDONLY OR O_BINARY)) == -1 Then
+        '             CA_CannotOpen fname
+        '         END IF
+        '     $ELSE
+        '         IF (audiohandle = open("AUDIO."EXTENSION", O_RDONLY OR O_BINARY)) == -1 THEN
+        '             Quit "Can't open AUDIO."EXTENSION"!"
+        '         END IF
+        '     $ENDIF
+        '
+    End Sub
+
+    Sub CA_Startup ()
+        $If PROFILE = DEFINED Then
+                CLOSE "PROFILE.TXT"
+                profilehandle = open("PROFILE.TXT", O_CREAT OR O_WRONLY OR O_TEXT)
+        $End If
+
+        CAL_SetupMapFile
+        CAL_SetupGrFile
+        CAL_SetupAudioFile
+
+        mapon = -1
+        ca_levelbit = 1
+        ca_levelnum = 0
+    End Sub
+
+'$INCLUDE: 'ID_CA.BI'
+$EndIf
