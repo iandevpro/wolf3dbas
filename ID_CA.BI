@@ -3,9 +3,38 @@
 $If INCLUDE_ID_CA_BI = UNDEFINED Then
     $Let INCLUDE_ID_CA_BI = 1
 
+    ' Constants
+    Const NUMMAPS = 60
+    Const MAPPLANES = 2
+
+    ' Map header fields as separate arrays (was maptype)
+    Dim Shared planestart(0 To NUMMAPS - 1, 0 To 2) As Long
+    Dim Shared planelength(0 To NUMMAPS - 1, 0 To 2) As Integer
+    Dim Shared mapwidth(0 To NUMMAPS - 1) As Integer
+    Dim Shared mapheight(0 To NUMMAPS - 1) As Integer
+    Dim Shared mapname(0 To NUMMAPS - 1) As String * 16
+
+    ' Map file fields (was mapfiletype)
+    Dim Shared RLEWtag As Integer
+    Dim Shared headeroffsets(0 To 99) As Long
+    ' tileinfo can be a separate dynamic array if needed
+    ' Dim Shared tileinfo() As Byte
+
+    ' Shared variables
     Dim Shared profilehandle As Integer
     Dim Shared mapon As Integer
     Dim Shared ca_levelbit As Integer
     Dim Shared ca_levelnum As Integer
+
+    ' Map related variables
+    Dim Shared tinf As _MEM  ' Pointer to tile info
+    Dim Shared mapsegs(MAPPLANES - 1) As _Offset  ' Array of pointers to map segments
+    ' mapheaderseg is no longer needed as a pointer array
+    Dim Shared maphandle As Integer  ' Handle to map file
+
+    ' File name variables
+    Dim Shared extension As String * 5
+    Dim Shared mheadname As String * 10
+    Dim Shared mfilename As String * 10
 
 $End If

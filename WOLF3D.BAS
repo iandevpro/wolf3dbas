@@ -57,7 +57,6 @@ Dim Shared virtualreality As Integer
 Dim Shared mouseadjustment As Integer
 
 ' File and Episode Variables
-Dim Shared extension As String * 4
 Dim Shared configname As String * 13
 Dim Shared SaveName As String * 13
 Dim Shared PageFileName As String * 13

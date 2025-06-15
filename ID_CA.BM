@@ -4,9 +4,107 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     $Let INCLUDE_ID_CA_BM = 1
 
     Sub CAL_SetupMapFile ()
-        ' Implementation of CAL_SetupMapFile in QB64 Basic
-        Print "Setting up map file..."
+        Dim i As Integer
+        Dim handle As Integer
+        Dim length As Long
+        ' pos - reserved keyword in QB64
+        Dim position As Long
+        Dim fname As String * 13
+        Dim tempwidth As Integer, tempheight As Integer
+        Dim tempname As String * 16
+        Dim tempplanestart(0 To 2) As Long
+        Dim tempplanelength(0 To 2) As Integer
+        Dim fileBytes() As _Unsigned _Byte
+        Dim tempMem As _MEM
 
+        ' Load maphead.ext (offsets and tileinfo for map file)
+        $If MAPHEADERLINKED = UNDEFINED Then
+            fname = mheadname + extension
+
+            handle = FreeFile
+            Open fname For Binary As #handle
+            If Err Then
+                CA_CannotOpen fname
+            End If
+
+            ' Get file length and allocate memory
+            length = LOF(handle)
+            tinf = _MemNew(length)
+            If tinf.SIZE = 0 Then
+                Close #handle
+                CA_CannotOpen "Memory allocation failed"
+            End If
+
+            ' Read file into a byte array, then copy to tinf
+            ReDim fileBytes(0 To length - 1) As _Unsigned _Byte
+            Get #handle, , fileBytes()
+            _MemPut tinf, tinf.OFFSET, fileBytes()
+            Close #handle
+        $Else
+            ' Linked map header code would go here
+            ' For now, we'll just set up a basic structure
+
+            ' TODO: probably need to remove this code, in the original
+            ' there was only 1 line
+            ' tinf = (byte _seg *)FP_SEG(&maphead);
+            tinf = _MemNew(4096) ' Arbitrary size for placeholder
+            If tinf.SIZE = 0 Then
+                CA_CannotOpen "Memory allocation failed"
+            End If
+        $End If
+
+        ' Open the data file
+        $If CARMACIZED = DEFINED Then
+            fname = "GAMEMAPS." + extension
+        $Else
+            fname = mfilename + extension
+        $End If
+
+        maphandle = FreeFile
+        Open fname For Binary As #maphandle
+        If Err Then
+            CA_CannotOpen fname
+        End If
+
+        ' Load all map headers
+        For i = 0 To NUMMAPS - 1
+            ' Get header offset from tile info
+            position = _MemGet(tinf, tinf.OFFSET + i * 4, Long)
+            If position < 0 Then  ' -1 indicates sparse map
+                _CONTINUE
+            End If
+
+            ' Seek to map header and read fields into arrays
+            Seek #maphandle, position + 1  ' QB64 uses 1-based file positions
+            Get #maphandle, , tempplanestart(0)
+            Get #maphandle, , tempplanestart(1)
+            Get #maphandle, , tempplanestart(2)
+            Get #maphandle, , tempplanelength(0)
+            Get #maphandle, , tempplanelength(1)
+            Get #maphandle, , tempplanelength(2)
+            Get #maphandle, , tempwidth
+            Get #maphandle, , tempheight
+            Get #maphandle, , tempname
+
+            planestart(i, 0) = tempplanestart(0)
+            planestart(i, 1) = tempplanestart(1)
+            planestart(i, 2) = tempplanestart(2)
+            planelength(i, 0) = tempplanelength(0)
+            planelength(i, 1) = tempplanelength(1)
+            planelength(i, 2) = tempplanelength(2)
+            mapwidth(i) = tempwidth
+            mapheight(i) = tempheight
+            mapname(i) = tempname
+        Next i
+
+        ' Allocate space for map planes (64x64 each)
+        For i = 0 To MAPPLANES - 1
+            tempMem = _MemNew(64 * 64 * 2)  ' 2 bytes per tile
+            If tempMem.SIZE = 0 Then
+                CA_CannotOpen "Memory allocation failed for map segment"
+            End If
+            mapsegs(i) = tempMem.OFFSET
+        Next i
     End Sub
 
     Sub CAL_SetupGrFile ()
@@ -69,5 +167,9 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ca_levelnum = 0
     End Sub
 
+    Sub CA_CannotOpen (fname As String)
+        Print "Error: Cannot open file: "; fname
+        End
+    End Sub
 '$INCLUDE: 'ID_CA.BI'
 $EndIf
