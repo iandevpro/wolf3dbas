@@ -6,59 +6,8 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     Sub CAL_SetupMapFile ()
         ' Implementation of CAL_SetupMapFile in QB64 Basic
         Print "Setting up map file..."
-        Dim i as Integer
-        Dim length, pos as Long
-	    DIM fname AS String * 13
-	    'screen _NEWIMAGE(320, 200, 8)
-	    ' CLS
 
-	    ' load maphead.ext (offsets and tileinfo for map file)
-
-    ' it looks like in the original sources
-    ' MAPHEADERLINKED is never defined
-    $If MAPHEADERLINKED = UNDEFINED Then
-	    fname = mheadname + extension$
-	    Open fname For Binary Access READ AS #1
-	    If ERR Then Call CA_CannotOpen(fname$): End If
-
-	    LOF(1) = length
-	    DIM tinf(length) AS STRING * 1
-	    BGET(1, 0%, tinf)
-	    CLOSE #1
-
-    $Else
-	    'tinf = maphead
-
-    $EndIf
-	    'open the data file
-    $If CARMACIZED = DEFINED Then
-	    fname$ = "GAMEMAPS." + extension$
-	    OPEN fname FOR BINARY ACCESS READ AS #2
-	    IF ERR THEN CALL CA_CannotOpen(fname$): END IF
-    $Else
-	    fname$ = mfilename + extension$
-
-	    OPEN fname FOR BINARY ACCESS READ AS #2
-	    IF ERR THEN CALL CA_CannotOpen(fname$): END IF
-
-    $EndIf
-	    DIM mapheader(NUMMAPS)
-
-	    ' load all map header
-	    FOR i = 0 TO NUMMAPS - 1
-	        pos = tinf.(i).
-		    if pos<0 then continue ' $FFFFFFFF start is a sparse map
-	        DIM mapheader (sizeof(maptype) as string * 1 )
-	        BGET(2, pos, mapheader)
-        NEXT i
-        DIM mapsegs(MAPPLANES * 64* 64)
-
-        ' allocate space for 3 64*64 planes
-        For I = O To MAPPLANES - 1
-	        Dim memptr(mapsegs(1) AS String * 1)
-        Next i
-
-        End Sub
+    End Sub
 
     Sub CAL_SetupGrFile ()
         ' Implementation of CAL_SetupGrFile in QB64 Basic
