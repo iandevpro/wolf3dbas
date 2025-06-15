@@ -2,6 +2,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
     $Let INCLUDE_WL_INTER_BM = 1
 
     Sub NonShareware
+        ' TODO: Uncomment VW_FadeOut
         'Call VW_FadeOut
         Call ClearMScreen
         Do: Loop Until InKey$ <> ""

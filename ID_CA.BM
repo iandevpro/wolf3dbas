@@ -15,7 +15,8 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim tempname As String * 16
         Dim tempplanestart(0 To 2) As Long
         Dim tempplanelength(0 To 2) As Integer
-        Dim fileBytes() As _Unsigned _Byte
+        ' QB64 editor removed () from Dim fileBytes() As _Unsigned _Byte
+        Dim fileBytes As _Unsigned _Byte
         Dim tempMem As _MEM
 
         ' Load maphead.ext (offsets and tileinfo for map file)
@@ -172,5 +173,8 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Print "Error: Cannot open file: "; fname
         End
     End Sub
-'$INCLUDE: 'ID_CA.BI'
+
+'$INCLUDE: 'ID_HEADS.BI'
+
 $EndIf
+

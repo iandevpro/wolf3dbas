@@ -9,6 +9,7 @@ On Error GoTo ErrorHandler
 Const FALSE = 0
 Const TRUE = -1
 
+'$INCLUDE: 'WL_DEF.BI'
 '$INCLUDE: 'ID_VL.BI'
 '$INCLUDE: 'ID_VH.BI'
 '$INCLUDE: 'WL_INTER.BI'
@@ -70,8 +71,8 @@ Dim Shared sintable(ANGLES) As Long
 Dim Shared costable(ANGLES) As Long
 Dim Shared finetangent(ANGLES / 4) As Long
 Dim Shared pixelangle(VIEWWIDTH) As Integer
-Dim Shared horizwall(MAXWALLTILES) As Integer
-Dim Shared vertwall(MAXWALLTILES) As Integer
+'Dim Shared horizwall(MAXWALLTILES) As Integer
+'Dim Shared vertwall(MAXWALLTILES) As Integer
 
 ' Main Program
 
