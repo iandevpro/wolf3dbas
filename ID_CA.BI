@@ -33,8 +33,13 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Dim Shared maphandle As Integer  ' Handle to map file
 
     ' File name variables
+    ' Declare AND initialize them here. In the original sources they were initialized in ID_CA.C
     Dim Shared extension As String * 5
-    Dim Shared mheadname As String * 10
-    Dim Shared mfilename As String * 10
-
+    '' gheadname[10]=GREXT"HEAD.",
+    '' gfilename[10]=GREXT"GRAPH.",
+    '' gdictname[10]=GREXT"DICT.",
+    Const mheadname="MAPHEAD."
+    Const mfilename="MAPTEMP."
+    Const aheadname="AUDIOHED."
+    Const afilename="AUDIOT."
 $End If
