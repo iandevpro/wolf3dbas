@@ -1,3 +1,5 @@
+' WL_MENU.C
+
 $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     $Let INCLUDE_WL_MENU_BM = 1
 
@@ -29,6 +31,49 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 VL_Bar 0, y, 320, 22, 0
                 VWB_Hlin 0, 319, y + 23, 0
         $End If
+    End Sub
+
+    Sub CheckForEpisodes
+        Dim fileExists As Integer
+        Dim i As Integer
+        Dim testFile As String
+
+        ' Check for full version (WL6)
+        fileExists = 0
+        testFile = "VSWAP.WL6"
+        If _FileExists(testFile) Then fileExists = 1
+
+        If fileExists Then
+            extension = "WL6"
+            ' Enable all episodes
+            For i = 1 To 5
+                EpisodeSelect(i) = 1
+            Next i
+        Else
+            ' Check for shareware version (WL1)
+            testFile = "VSWAP.WL1"
+            If _FileExists(testFile) Then
+                extension = "WL1"
+            Else
+                Print "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
+                Print "Please ensure VSWAP.WL1 or VSWAP.WL6 is in the current directory."
+                End
+            End If
+        End If
+
+        ' Append extension to all file names
+        configname = configname + extension
+        SaveName = SaveName + extension
+        PageFileName = PageFileName + extension
+        audioname = audioname + extension
+        demoname = demoname + extension
+        ' TODO
+        '#ifdef SPEAR
+        '#ifndef SPEARDEMO
+        '   if (!findfirst("*.SOD",&f,FA_ARCH))
+        '   {
+        '       strcpy(extension,"SOD");
+        '   }
     End Sub
 '$INCLUDE: 'ID_VH.BM'
 $End If

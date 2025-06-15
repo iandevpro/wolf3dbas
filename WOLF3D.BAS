@@ -120,6 +120,7 @@ System
 '$INCLUDE:'WL_GAME.BM'
 '$INCLUDE:'WL_INTER.BM'
 '$INCLUDE:'ID_CA.BM'
+'$INCLUDE:'WL_MENU.BM'
 
 ' SignonScreen - Displays the game's intro screen
 Sub SignonScreen
@@ -297,49 +298,6 @@ Sub InitGame
     ' Show signon screen
     SignonScreen
     CA_Startup
-End Sub
-
-Sub CheckForEpisodes
-    Dim fileExists As Integer
-    Dim i As Integer
-    Dim testFile As String
-
-    ' Check for full version (WL6)
-    fileExists = 0
-    testFile = "VSWAP.WL6"
-    If _FileExists(testFile) Then fileExists = 1
-
-    If fileExists Then
-        extension = "WL6"
-        ' Enable all episodes
-        For i = 1 To 5
-            EpisodeSelect(i) = 1
-        Next i
-    Else
-        ' Check for shareware version (WL1)
-        testFile = "VSWAP.WL1"
-        If _FileExists(testFile) Then
-            extension = "WL1"
-        Else
-            Print "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
-            Print "Please ensure VSWAP.WL1 or VSWAP.WL6 is in the current directory."
-            End
-        End If
-    End If
-
-    ' Append extension to all file names
-    configname = configname + extension
-    SaveName = SaveName + extension
-    PageFileName = PageFileName + extension
-    audioname = audioname + extension
-    demoname = demoname + extension
-    ' TODO
-    '#ifdef SPEAR
-    '#ifndef SPEARDEMO
-    '   if (!findfirst("*.SOD",&f,FA_ARCH))
-    '   {
-    '       strcpy(extension,"SOD");
-    '   }
 End Sub
 
 Sub BuildTables
