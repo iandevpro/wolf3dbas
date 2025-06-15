@@ -4,6 +4,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     $Let INCLUDE_ID_CA_BM = 1
 
     Sub CAL_SetupMapFile ()
+        Print "Setting up map file..."
         Dim i As Integer
         Dim handle As Integer
         Dim length As Long
