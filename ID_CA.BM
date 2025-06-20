@@ -170,6 +170,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
 
         ' Load the pic and sprite headers into the arrays in the data segment
         CAL_GetGrChunkLength STRUCTPIC  ' Position file pointer
+        Print "chunkcomplen"; chunkcomplen
         compseg = _MemNew(chunkcomplen)
         If compseg.SIZE = 0 Then
             CA_CannotOpen "Memory allocation failed for compressed segment"
