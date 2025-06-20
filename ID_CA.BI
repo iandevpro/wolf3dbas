@@ -6,6 +6,23 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     ' Constants
     Const NUMMAPS = 60
     Const MAPPLANES = 2
+    Const NUMCHUNKS = 1000  ' Approximate value, adjust as needed
+    Const NUMPICS = 500     ' Approximate value, adjust as needed
+    Const STRUCTPIC = 0     ' Approximate value, adjust as needed
+    Const FILEPOSSIZE = 4   ' Size of file position entries
+
+    ' Huffman node type for graphics compression
+    Type huffnode
+        bit0 As Integer  ' 0-255 is a character, > is a pointer to a node
+        bit1 As Integer  ' 0-255 is a character, > is a pointer to a node
+    End Type
+
+    ' Picture table type
+    Type pictabletype
+        width As Integer
+        height As Integer
+        ' Add other fields as needed based on the original structure
+    End Type
 
     ' Map header fields as separate arrays (was maptype)
     Dim Shared planestart(0 To NUMMAPS - 1, 0 To 2) As Long
@@ -19,6 +36,14 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Dim Shared headeroffsets(0 To 99) As Long
     ' tileinfo can be a separate dynamic array if needed
     ' Dim Shared tileinfo() As Byte
+
+    ' Graphics related variables
+    Dim Shared grhuffman(254) As huffnode  ' Huffman table for graphics
+    Dim Shared grstarts As _MEM  ' Array of offsets in graphics file
+    Dim Shared grhandle As Integer  ' Handle to graphics file
+    Dim Shared pictable(NUMPICS - 1) As pictabletype  ' Picture table
+    Dim Shared chunkcomplen As Long  ' Compressed chunk length
+    Dim Shared chunkexplen As Long  ' Expanded chunk length
 
     ' Shared variables
     Dim Shared profilehandle As Integer
@@ -42,4 +67,8 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Const mfilename="MAPTEMP."
     Const aheadname="AUDIOHED."
     Const afilename="AUDIOT."
+    Const gheadname="EGAHEAD."
+    Const gfilename="EGAGRAPH."
+    Const gdictname="EGADICT."
+
 $End If

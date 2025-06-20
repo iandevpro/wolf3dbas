@@ -110,8 +110,131 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     End Sub
 
     Sub CAL_SetupGrFile ()
-        ' Implementation of CAL_SetupGrFile in QB64 Basic
         Print "Setting up graphics file..."
+        Dim fname As String * 13
+        Dim handle As Integer
+        Dim compseg As _MEM
+        Dim fileBytes() As _Unsigned _Byte
+
+        ' Load ???dict.ext (huffman dictionary for graphics files)
+        $If GRHEADERLINKED = UNDEFINED Then
+            fname = gdictname + extension
+
+            handle = FreeFile
+            Open fname For Binary As #handle
+            If Err Then
+                CA_CannotOpen fname
+            End If
+
+            ' Read huffman dictionary
+            Get #handle, , grhuffman()
+            Close #handle
+            CAL_OptimizeNodes grhuffman()
+
+            ' Load the data offsets from ???head.ext
+            grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
+            If grstarts.SIZE = 0 Then
+                CA_CannotOpen "Memory allocation failed for graphics starts"
+            End If
+
+            fname = gheadname + extension
+
+            handle = FreeFile
+            Open fname For Binary As #handle
+            If Err Then
+                CA_CannotOpen fname
+            End If
+
+            ' Read file into byte array, then copy to grstarts
+            ReDim fileBytes(0 To (NUMCHUNKS + 1) * FILEPOSSIZE - 1) As _Unsigned _Byte
+            Get #handle, , fileBytes()
+            _MemPut grstarts, grstarts.OFFSET, fileBytes()
+            Close #handle
+        $Else
+            ' Linked graphics header code would go here
+            ' For now, we'll just set up a basic structure
+            grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
+            If grstarts.SIZE = 0 Then
+                CA_CannotOpen "Memory allocation failed for graphics starts"
+            End If
+        $End If
+
+        ' Open the graphics file, leaving it open until the game is finished
+        fname = gfilename + extension
+
+        grhandle = FreeFile
+        Open fname For Binary As #grhandle
+        If Err Then
+            CA_CannotOpen fname
+        End If
+
+        ' Load the pic and sprite headers into the arrays in the data segment
+        CAL_GetGrChunkLength STRUCTPIC  ' Position file pointer
+        compseg = _MemNew(chunkcomplen)
+        If compseg.SIZE = 0 Then
+            CA_CannotOpen "Memory allocation failed for compressed segment"
+        End If
+
+        ' Read compressed data
+        ReDim fileBytes(0 To chunkcomplen - 1) As _Unsigned _Byte
+        Get #grhandle, , fileBytes()
+        _MemPut compseg, compseg.OFFSET, fileBytes()
+
+        ' Expand the data into pictable
+        CAL_HuffExpand compseg, pictable(), NUMPICS * SizeOf(pictable(0)), grhuffman(), False
+        _MemFree compseg
+    End Sub
+
+    Sub CAL_OptimizeNodes (huffTable() As huffnode)
+        ' Goes through a huffman table and changes the 256-511 node numbers to the
+        ' actual address of the node. Must be called before CAL_HuffExpand
+        Dim i As Integer
+        Dim node As huffnode
+
+        For i = 0 To 254
+            node = huffTable(i)
+            If node.bit0 >= 256 Then
+                huffTable(i).bit0 = i + (node.bit0 - 256)
+            End If
+            If node.bit1 >= 256 Then
+                huffTable(i).bit1 = i + (node.bit1 - 256)
+            End If
+        Next i
+    End Sub
+
+    Sub CAL_GetGrChunkLength (chunk As Integer)
+        ' Gets the length of an explicit length chunk (not tiles)
+        ' The file pointer is positioned so the compressed data can be read in next.
+        Dim pos As Long
+
+        ' Calculate position in grstarts array
+        pos = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
+
+        ' Seek to the chunk position
+        Seek #grhandle, pos + 1  ' QB64 uses 1-based file positions
+
+        ' Read the expanded length (first 4 bytes)
+        Get #grhandle, , chunkexplen
+
+        ' Calculate compressed length
+        If chunk < NUMCHUNKS - 1 Then
+            Dim nextPos As Long
+            nextPos = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 4, Long)
+            chunkcomplen = nextPos - pos - 4
+        Else
+            ' For the last chunk, assume a reasonable size
+            chunkcomplen = 8192  ' Default size, adjust as needed
+        End If
+    End Sub
+
+    Sub CAL_HuffExpand (source As _MEM, dest() As pictabletype, length As Long, huffTable() As huffnode, screenhack As Integer)
+        ' Length is the length of the EXPANDED data
+        ' If screenhack, the data is decompressed in four planes directly to the screen
+        ' This is a simplified implementation - you may need to expand this based on your needs
+
+        Print "Huffman expansion not fully implemented yet"
+        ' TODO: Implement full huffman expansion algorithm
+        ' For now, just copy data directly if possible, or implement a basic expansion
     End Sub
 
     Sub CAL_SetupAudioFile ()
