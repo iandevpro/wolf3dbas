@@ -181,7 +181,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         _MemPut compseg, compseg.OFFSET, fileBytes()
 
         ' Expand the data into pictable
-        CAL_HuffExpand compseg, pictable(), NUMPICS * SizeOf(pictable(0)), grhuffman(), False
+        CAL_HuffExpand compseg, pictable(), NUMPICS * Len(pictable(0)), grhuffman(), False
         _MemFree compseg
     End Sub
 
@@ -205,22 +205,22 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     Sub CAL_GetGrChunkLength (chunk As Integer)
         ' Gets the length of an explicit length chunk (not tiles)
         ' The file pointer is positioned so the compressed data can be read in next.
-        Dim pos As Long
+        Dim chunkPosition As Long
 
         ' Calculate position in grstarts array
-        pos = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
+        chunkPosition = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
 
         ' Seek to the chunk position
-        Seek #grhandle, pos + 1  ' QB64 uses 1-based file positions
+        Seek #grhandle, chunkPosition + 1  ' QB64 uses 1-based file positions
 
         ' Read the expanded length (first 4 bytes)
         Get #grhandle, , chunkexplen
 
         ' Calculate compressed length
         If chunk < NUMCHUNKS - 1 Then
-            Dim nextPos As Long
-            nextPos = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 4, Long)
-            chunkcomplen = nextPos - pos - 4
+            Dim nextChunkPosition As Long
+            nextChunkPosition = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 4, Long)
+            chunkcomplen = nextChunkPosition - chunkPosition - 4
         Else
             ' For the last chunk, assume a reasonable size
             chunkcomplen = 8192  ' Default size, adjust as needed
