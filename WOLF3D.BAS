@@ -111,6 +111,7 @@ End
 
 ErrorHandler:
 Print "Error: "; Err; " - Line: "; _ErrorLine
+Print "ErrorMessage: "; _ERRORMESSAGE$
 Print "_INCLERRORFILE$: "; _InclErrorFile$; "_INCLERRORLINE:"; _InclErrorLine
 Print "Press any key to exit..."
 Do: Loop Until InKey$ <> ""
