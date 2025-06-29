@@ -71,7 +71,9 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ' Load all map headers
         For i = 0 To NUMMAPS - 1
             ' Get header offset from tile info
-            position = _MemGet(tinf, tinf.OFFSET + i * 4, Long)
+            ' +2 bytes: unsigned int RLEWtag on the start of maptypeinfo C struct
+            ' *4: maptypeinfo->long headeroffset[100]
+            position = _MemGet(tinf, tinf.OFFSET + 2 + i * 4, Long)
             If position < 0 Then  ' -1 indicates sparse map
                 _CONTINUE
             End If
