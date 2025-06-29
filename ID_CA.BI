@@ -8,7 +8,7 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Const MAPPLANES = 2
     Const NUMCHUNKS = 1000  ' Approximate value, adjust as needed
     Const NUMPICS = 500     ' Approximate value, adjust as needed
-    Const STRUCTPIC = 0     ' Approximate value, adjust as needed
+    Const STRUCTPIC = 0
     Const FILEPOSSIZE = 4   ' Size of file position entries
 
     ' Huffman node type for graphics compression
@@ -38,7 +38,7 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     ' Dim Shared tileinfo() As Byte
 
     ' Graphics related variables
-    Dim Shared grhuffman(254) As huffnode  ' Huffman table for graphics
+    Dim Shared grhuffman(0 To 254) As huffnode  ' Huffman table for graphics
     Dim Shared grstarts As _MEM  ' Array of offsets in graphics file
     Dim Shared grhandle As Integer  ' Handle to graphics file
     Dim Shared pictable(NUMPICS - 1) As pictabletype  ' Picture table
@@ -67,8 +67,8 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Const mfilename="MAPTEMP."
     Const aheadname="AUDIOHED."
     Const afilename="AUDIOT."
-    Const gheadname="EGAHEAD."
-    Const gfilename="EGAGRAPH."
-    Const gdictname="EGADICT."
+    Const gheadname="VGAHEAD."
+    Const gfilename="VGAGRAPH."
+    Const gdictname="VGADICT."
 
 $End If
