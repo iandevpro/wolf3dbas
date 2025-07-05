@@ -9,7 +9,14 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Const NUMCHUNKS = 1000  ' Approximate value, adjust as needed
     Const NUMPICS = 500     ' Approximate value, adjust as needed
     Const STRUCTPIC = 0
-    Const FILEPOSSIZE = 4   ' Size of file position entries
+    $Let THREEBYTEGRSTARTS = 1
+    $If THREEBYTEGRSTARTS = DEFINED Then
+        Const FILEPOSSIZE = 3   ' Size of file position entries
+    $Else
+        ' THREEBYTEGRSTARTS is defined in the original C sources
+        ' can comment out the following section
+        'Const FILEPOSSIZE = 4   ' Size of file position entries
+    $EndIf
 
     ' Huffman node type for graphics compression
     Type huffnode
