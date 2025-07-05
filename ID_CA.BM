@@ -118,8 +118,18 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim compseg As _MEM
         Dim fileBytes() As _Unsigned _Byte
 
-        ' Load ???dict.ext (huffman dictionary for graphics files)
-        $If GRHEADERLINKED = UNDEFINED Then
+        ' GRHEADERLINKED - is not defined in the original C source code
+        $If GRHEADERLINKED = DEFINED Then
+            ' GRHEADERLINKED - is not defined in the original C source code
+            ' can comment out the following section
+            ' ' Linked graphics header code would go here
+            ' ' For now, we'll just set up a basic structure
+            ' grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
+            ' If grstarts.SIZE = 0 Then
+            '     CA_CannotOpen "Memory allocation failed for graphics starts"
+            ' End If
+        $Else
+            ' Load ???dict.ext (huffman dictionary for graphics files)
             fname = gdictname + extension
 
             handle = FreeFile
@@ -152,13 +162,6 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             Get #handle, , fileBytes()
             _MemPut grstarts, grstarts.OFFSET, fileBytes()
             Close #handle
-        $Else
-            ' Linked graphics header code would go here
-            ' For now, we'll just set up a basic structure
-            grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
-            If grstarts.SIZE = 0 Then
-                CA_CannotOpen "Memory allocation failed for graphics starts"
-            End If
         $End If
 
         ' Open the graphics file, leaving it open until the game is finished
