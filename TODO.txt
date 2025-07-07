@@ -1,6 +1,6 @@
 DONE: Structure code around proper include, so it will include GFXV_WL6.H (GFXV_WL6.BI)
 'This should be included for Wolf 3D
-TODO: create file '$INCLUDE:'GFXV_WL6.BI'
+DONE: create file '$INCLUDE:'GFXV_WL6.BI'
 TODO: create file '$INCLUDE:'AUDIOWL6.BI'
 TODO: create file '$INCLUDE:'MAPSWL6.BI'
 
@@ -14,3 +14,4 @@ TODO: create file '$INCLUDE:'GFXV_SDM.BI'
 TODO: create file '$INCLUDE:'AUDIOSDM.BI'
 TODO: create file '$INCLUDE:'MAPSSDM.BI'
 
+TODO: sort out proper file include location for pictable
