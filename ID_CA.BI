@@ -6,9 +6,6 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     ' Constants
     Const NUMMAPS = 60
     Const MAPPLANES = 2
-    Const NUMCHUNKS = 1000  ' Approximate value, adjust as needed
-    Const NUMPICS = 500     ' Approximate value, adjust as needed
-    Const STRUCTPIC = 0
     $Let THREEBYTEGRSTARTS = 1
     $If THREEBYTEGRSTARTS = DEFINED Then
         Const FILEPOSSIZE = 3   ' Size of file position entries
