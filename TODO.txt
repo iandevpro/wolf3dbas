@@ -1,0 +1,16 @@
+DONE: Structure code around proper include, so it will include GFXV_WL6.H (GFXV_WL6.BI)
+'This should be included for Wolf 3D
+TODO: create file '$INCLUDE:'GFXV_WL6.BI'
+TODO: create file '$INCLUDE:'AUDIOWL6.BI'
+TODO: create file '$INCLUDE:'MAPSWL6.BI'
+
+# Optional, for supporting Japan and Spear of Destiny (+demo) 
+TODO: create file '$INCLUDE:'FOREIGN\JAPAN\GFXV_WJ1.BI'
+TODO: create file '$INCLUDE:'FOREIGN\JAPAN\GFXV_WJ6.BI'
+TODO: create file '$INCLUDE:'GFXV_SOD.BI'
+TODO: create file '$INCLUDE:'AUDIOSOD.BI'
+TODO: create file '$INCLUDE:'MAPSSOD.BI'
+TODO: create file '$INCLUDE:'GFXV_SDM.BI'
+TODO: create file '$INCLUDE:'AUDIOSDM.BI'
+TODO: create file '$INCLUDE:'MAPSSDM.BI'
+
