@@ -162,10 +162,12 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     $Let LATCHPICS_LUMP_END = 134
 
     ' --- Amount of each data item ---
-    $Let NUMCHUNKS = 149
+    '$Let NUMCHUNKS = 149
+    Const NUMCHUNKS = 149
     $Let NUMFONT = 2
     $Let NUMFONTM = 0
-    $Let NUMPICS = 132
+    '$Let NUMPICS = 132
+    Const NUMPICS = 132
     $Let NUMPICM = 0
     $Let NUMSPRITES = 0
     $Let NUMTILE8 = 72
@@ -177,7 +179,8 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     $Let NUMEXTERNS = 13
 
     ' --- File offsets for data items ---
-    $Let STRUCTPIC = 0
+    ' $Let STRUCTPIC = 0
+    Const STRUCTPIC = 0
     $Let STARTFONT = 1
     $Let STARTFONTM = 3
     $Let STARTPICS = 3
