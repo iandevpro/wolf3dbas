@@ -152,47 +152,44 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     Const ENUMEND = 149
 
     ' --- Data LUMPs ---
-    $Let README_LUMP_START = 3
-    $Let README_LUMP_END = 9
-    $Let CONTROLS_LUMP_START = 10
-    $Let CONTROLS_LUMP_END = 42
-    $Let LEVELEND_LUMP_START = 43
-    $Let LEVELEND_LUMP_END = 85
-    $Let LATCHPICS_LUMP_START = 91
-    $Let LATCHPICS_LUMP_END = 134
+    Const README_LUMP_START = 3
+    Const README_LUMP_END = 9
+    Const CONTROLS_LUMP_START = 10
+    Const CONTROLS_LUMP_END = 42
+    Const LEVELEND_LUMP_START = 43
+    Const LEVELEND_LUMP_END = 85
+    Const LATCHPICS_LUMP_START = 91
+    Const LATCHPICS_LUMP_END = 134
 
     ' --- Amount of each data item ---
-    '$Let NUMCHUNKS = 149
     Const NUMCHUNKS = 149
-    $Let NUMFONT = 2
-    $Let NUMFONTM = 0
-    '$Let NUMPICS = 132
+    Const NUMFONT = 2
+    Const NUMFONTM = 0
     Const NUMPICS = 132
-    $Let NUMPICM = 0
-    $Let NUMSPRITES = 0
-    $Let NUMTILE8 = 72
-    $Let NUMTILE8M = 0
-    $Let NUMTILE16 = 0
-    $Let NUMTILE16M = 0
-    $Let NUMTILE32 = 0
-    $Let NUMTILE32M = 0
-    $Let NUMEXTERNS = 13
+    Const NUMPICM = 0
+    Const NUMSPRITES = 0
+    Const NUMTILE8 = 72
+    Const NUMTILE8M = 0
+    Const NUMTILE16 = 0
+    Const NUMTILE16M = 0
+    Const NUMTILE32 = 0
+    Const NUMTILE32M = 0
+    Const NUMEXTERNS = 13
 
     ' --- File offsets for data items ---
-    ' $Let STRUCTPIC = 0
     Const STRUCTPIC = 0
-    $Let STARTFONT = 1
-    $Let STARTFONTM = 3
-    $Let STARTPICS = 3
-    $Let STARTPICM = 135
-    $Let STARTSPRITES = 135
-    $Let STARTTILE8 = 135
-    $Let STARTTILE8M = 136
-    $Let STARTTILE16 = 136
-    $Let STARTTILE16M = 136
-    $Let STARTTILE32 = 136
-    $Let STARTTILE32M = 136
-    $Let STARTEXTERNS = 136
+    Const STARTFONT = 1
+    Const STARTFONTM = 3
+    Const STARTPICS = 3
+    Const STARTPICM = 135
+    Const STARTSPRITES = 135
+    Const STARTTILE8 = 135
+    Const STARTTILE8M = 136
+    Const STARTTILE16 = 136
+    Const STARTTILE16M = 136
+    Const STARTTILE32 = 136
+    Const STARTTILE32M = 136
+    Const STARTEXTERNS = 136
 
 $EndIf
 ' --- End of GFXV_WL6.BI ---
