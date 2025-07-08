@@ -1,4 +1,5 @@
 $Debug
+$RESIZE:SMOOTH
 ' WOLF3D.BAS - QB64 Port of Wolfenstein 3D
 ' Original by id Software, Port by Ian Dichkovskyi
 
