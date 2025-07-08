@@ -21,13 +21,6 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
         bit1 As Integer  ' 0-255 is a character, > is a pointer to a node
     End Type
 
-    ' Picture table type
-    Type pictabletype
-        width As Integer
-        height As Integer
-        ' Add other fields as needed based on the original structure
-    End Type
-
     ' Map header fields as separate arrays (was maptype)
     Dim Shared planestart(0 To NUMMAPS - 1, 0 To 2) As Long
     Dim Shared planelength(0 To NUMMAPS - 1, 0 To 2) As Integer

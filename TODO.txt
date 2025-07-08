@@ -14,4 +14,4 @@ TODO: create file '$INCLUDE:'GFXV_SDM.BI'
 TODO: create file '$INCLUDE:'AUDIOSDM.BI'
 TODO: create file '$INCLUDE:'MAPSSDM.BI'
 
-TODO: sort out proper file include location for pictable
+DONE: sort out proper file include location for pictable
