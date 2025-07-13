@@ -212,9 +212,37 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ' Gets the length of an explicit length chunk (not tiles)
         ' The file pointer is positioned so the compressed data can be read in next.
         Dim chunkPosition As Long
+        Dim tempBytes(0 To 2) As _Unsigned _Byte
 
-        ' Calculate position in grstarts array
-        chunkPosition = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
+        ' Calculate position in grstarts array - handle 3-byte file positions
+        $If THREEBYTEGRSTARTS = DEFINED Then
+            ' Read 3 bytes and convert to 24-bit value
+            tempBytes(0) = _MemGet(grstarts, grstarts.OFFSET + chunk * 3, _Unsigned _Byte)
+            tempBytes(1) = _MemGet(grstarts, grstarts.OFFSET + chunk * 3 + 1, _Unsigned _Byte)
+            tempBytes(2) = _MemGet(grstarts, grstarts.OFFSET + chunk * 3 + 2, _Unsigned _Byte)
+
+            ' Convert 3 bytes to 24-bit value (little-endian)
+            chunkPosition = tempBytes(0) + (tempBytes(1) * 256) + (tempBytes(2) * 65536)
+
+            ' Mask to 24 bits (same as C code: value &= 0x00ffffffl)
+            chunkPosition = chunkPosition And &HFFFFFF
+
+            ' Check for sparse tile marker (0xffffff)
+            If chunkPosition = &HFFFFFF Then
+                chunkPosition = -1
+            End If
+        $Else
+            ' 4-byte file positions
+            chunkPosition = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
+        $End If
+
+        ' Check if position is valid
+        If chunkPosition < 0 Then
+            Print "Error: Invalid chunk position for chunk"; chunk; "position:"; chunkPosition
+            chunkcomplen = 8192  ' Default size
+            chunkexplen = 8192   ' Default size
+            Return
+        End If
 
         ' Seek to the chunk position
         Seek #grhandle, chunkPosition + 1  ' QB64 uses 1-based file positions
@@ -225,12 +253,51 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ' Calculate compressed length
         If chunk < NUMCHUNKS - 1 Then
             Dim nextChunkPosition As Long
-            nextChunkPosition = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 4, Long)
+
+            $If THREEBYTEGRSTARTS = DEFINED Then
+                ' Read 3 bytes for next position
+                tempBytes(0) = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 3, _Unsigned _Byte)
+                tempBytes(1) = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 3 + 1, _Unsigned _Byte)
+                tempBytes(2) = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 3 + 2, _Unsigned _Byte)
+
+                ' Convert 3 bytes to 24-bit value (little-endian)
+                nextChunkPosition = tempBytes(0) + (tempBytes(1) * 256) + (tempBytes(2) * 65536)
+
+                ' Mask to 24 bits
+                nextChunkPosition = nextChunkPosition And &HFFFFFF
+
+                ' Check for sparse tile marker
+                If nextChunkPosition = &HFFFFFF Then
+                    nextChunkPosition = -1
+                End If
+            $Else
+                ' 4-byte file positions
+                nextChunkPosition = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 4, Long)
+            $End If
+
+            ' Check if next position is valid
+            If nextChunkPosition < 0 Then
+                Print "Error: Invalid next chunk position for chunk"; chunk; "next position:"; nextChunkPosition
+                End
+                'chunkcomplen = 8192  ' Default size
+                ' Return
+            End If
+
             chunkcomplen = nextChunkPosition - chunkPosition - 4
+
+            ' Ensure chunkcomplen is positive
+            If chunkcomplen <= 0 Then
+                Print "Warning: Invalid chunk length for chunk"; chunk; "using default size"
+                End
+                ' chunkcomplen = 8192  ' Default size
+            End If
         Else
             ' For the last chunk, assume a reasonable size
-            chunkcomplen = 8192  ' Default size, adjust as needed
+            End
+            ' chunkcomplen = 8192  ' Default size, adjust as needed
         End If
+
+        Print "Chunk"; chunk; "position:"; chunkPosition; "length:"; chunkcomplen; "expanded:"; chunkexplen
     End Sub
 
     Sub CAL_HuffExpand (source As _MEM, dest() As pictabletype, length As Long, huffTable() As huffnode, screenhack As Integer)
