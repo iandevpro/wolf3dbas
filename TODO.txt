@@ -15,3 +15,6 @@ TODO: create file '$INCLUDE:'AUDIOSDM.BI'
 TODO: create file '$INCLUDE:'MAPSSDM.BI'
 
 DONE: sort out proper file include location for pictable
+
+DONE: grstarts, CAL_GetGrChunkLength
+TODO: CAL_HuffExpand - fix compilation 

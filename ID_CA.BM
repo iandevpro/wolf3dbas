@@ -300,14 +300,98 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Print "Chunk"; chunk; "position:"; chunkPosition; "length:"; chunkcomplen; "expanded:"; chunkexplen
     End Sub
 
-    Sub CAL_HuffExpand (source As _MEM, dest() As pictabletype, length As Long, huffTable() As huffnode, screenhack As Integer)
+    'Sub CAL_HuffExpand (source As _MEM, dest() As pictabletype, length As Long, huffTable() As huffnode, screenhack As Integer)
         ' Length is the length of the EXPANDED data
         ' If screenhack, the data is decompressed in four planes directly to the screen
         ' This is a simplified implementation - you may need to expand this based on your needs
 
-        Print "Huffman expansion not fully implemented yet"
+    '    Print "Huffman expansion not fully implemented yet"
         ' TODO: Implement full huffman expansion algorithm
         ' For now, just copy data directly if possible, or implement a basic expansion
+    'End Sub
+
+    Sub CAL_HuffExpand(sourceMem As _MEM, destMem As _MEM, length As Long, huffTable() As huffnode, screenhack As Integer)
+        ' QB64 port of Wolf3D Huffman decompression (both <64k and >64k cases)
+        Dim headNode As Integer: headNode = 254
+        Dim srcPtr As _Offset: srcPtr = sourceMem.OFFSET
+        Dim dstPtr As _Offset: dstPtr = destMem.OFFSET
+        Dim srcEnd As _Offset: srcEnd = srcPtr + length - 1
+        Dim bitMask As Integer, curByte As Integer, nodeIdx As Integer
+        Dim outCount As Long: outCount = 0
+
+        If length < &HFFF0 Then
+            ' --- Less than 64k case ---
+            curByte = _MemGet(sourceMem, srcPtr, _Unsigned _Byte)
+            srcPtr = srcPtr + 1
+            bitMask = 1
+            nodeIdx = headNode
+
+            Do While outCount < length
+                If (curByte And bitMask) = 0 Then
+                    If huffTable(nodeIdx).bit0 < 256 Then
+                        _MemPut destMem, dstPtr, huffTable(nodeIdx).bit0
+                        dstPtr = dstPtr + 1
+                        outCount = outCount + 1
+                        nodeIdx = headNode
+                    Else
+                        nodeIdx = huffTable(nodeIdx).bit0 - 256
+                    End If
+                Else
+                    If huffTable(nodeIdx).bit1 < 256 Then
+                        _MemPut destMem, dstPtr, huffTable(nodeIdx).bit1
+                        dstPtr = dstPtr + 1
+                        outCount = outCount + 1
+                        nodeIdx = headNode
+                    Else
+                        nodeIdx = huffTable(nodeIdx).bit1 - 256
+                    End If
+                End If
+
+                bitMask = bitMask * 2
+                If bitMask > 128 Then
+                    If srcPtr > srcEnd Then Exit Do
+                    curByte = _MemGet(sourceMem, srcPtr, _Unsigned _Byte)
+                    srcPtr = srcPtr + 1
+                    bitMask = 1
+                End If
+            Loop
+        Else
+            ' --- Greater than 64k case ---
+            Dim remaining As Long: remaining = length
+            curByte = _MemGet(sourceMem, srcPtr, _Unsigned _Byte)
+            srcPtr = srcPtr + 1
+            bitMask = 1
+            nodeIdx = headNode
+
+            Do While remaining > 0
+                If (curByte And bitMask) = 0 Then
+                    If huffTable(nodeIdx).bit0 < 256 Then
+                        _MemPut destMem, dstPtr, huffTable(nodeIdx).bit0
+                        dstPtr = dstPtr + 1
+                        remaining = remaining - 1
+                        nodeIdx = headNode
+                    Else
+                        nodeIdx = huffTable(nodeIdx).bit0 - 256
+                    End If
+                Else
+                    If huffTable(nodeIdx).bit1 < 256 Then
+                        _MemPut destMem, dstPtr, huffTable(nodeIdx).bit1
+                        dstPtr = dstPtr + 1
+                        remaining = remaining - 1
+                        nodeIdx = headNode
+                    Else
+                        nodeIdx = huffTable(nodeIdx).bit1 - 256
+                    End If
+                End If
+
+                bitMask = bitMask * 2
+                If bitMask > 128 Then
+                    curByte = _MemGet(sourceMem, srcPtr, _Unsigned _Byte)
+                    srcPtr = srcPtr + 1
+                    bitMask = 1
+                End If
+            Loop
+        End If
     End Sub
 
     Sub CAL_SetupAudioFile ()
