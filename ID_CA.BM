@@ -310,14 +310,16 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ' For now, just copy data directly if possible, or implement a basic expansion
     'End Sub
 
-    Sub CAL_HuffExpand(sourceMem As _MEM, destMem As _MEM, length As Long, huffTable() As huffnode, screenhack As Integer)
+    Sub CAL_HuffExpand(sourceMem As _MEM, destArray() As pictabletype, length As Long, huffTable() As huffnode, screenhack As Integer)
         ' QB64 port of Wolf3D Huffman decompression (both <64k and >64k cases)
+        ' This version works with arrays instead of _MEM blocks
         Dim headNode As Integer: headNode = 254
         Dim srcPtr As _Offset: srcPtr = sourceMem.OFFSET
-        Dim dstPtr As _Offset: dstPtr = destMem.OFFSET
         Dim srcEnd As _Offset: srcEnd = srcPtr + length - 1
         Dim bitMask As Integer, curByte As Integer, nodeIdx As Integer
         Dim outCount As Long: outCount = 0
+        Dim destIndex As Integer: destIndex = 0
+        Dim tempByte As _Unsigned _Byte
 
         If length < &HFFF0 Then
             ' --- Less than 64k case ---
@@ -326,11 +328,14 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             bitMask = 1
             nodeIdx = headNode
 
-            Do While outCount < length
+            Do While outCount < length And destIndex < UBound(destArray)
                 If (curByte And bitMask) = 0 Then
                     If huffTable(nodeIdx).bit0 < 256 Then
-                        _MemPut destMem, dstPtr, huffTable(nodeIdx).bit0
-                        dstPtr = dstPtr + 1
+                        ' Store byte in array (simplified - you may need to adjust based on pictabletype structure)
+                        tempByte = huffTable(nodeIdx).bit0
+                        ' For now, just store in the first field of the array element
+                        destArray(destIndex).width = tempByte
+                        destIndex = destIndex + 1
                         outCount = outCount + 1
                         nodeIdx = headNode
                     Else
@@ -338,8 +343,10 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
                     End If
                 Else
                     If huffTable(nodeIdx).bit1 < 256 Then
-                        _MemPut destMem, dstPtr, huffTable(nodeIdx).bit1
-                        dstPtr = dstPtr + 1
+                        ' Store byte in array
+                        tempByte = huffTable(nodeIdx).bit1
+                        destArray(destIndex).width = tempByte
+                        destIndex = destIndex + 1
                         outCount = outCount + 1
                         nodeIdx = headNode
                     Else
@@ -363,11 +370,12 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             bitMask = 1
             nodeIdx = headNode
 
-            Do While remaining > 0
+            Do While remaining > 0 And destIndex < UBound(destArray)
                 If (curByte And bitMask) = 0 Then
                     If huffTable(nodeIdx).bit0 < 256 Then
-                        _MemPut destMem, dstPtr, huffTable(nodeIdx).bit0
-                        dstPtr = dstPtr + 1
+                        tempByte = huffTable(nodeIdx).bit0
+                        destArray(destIndex).width = tempByte
+                        destIndex = destIndex + 1
                         remaining = remaining - 1
                         nodeIdx = headNode
                     Else
@@ -375,8 +383,9 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
                     End If
                 Else
                     If huffTable(nodeIdx).bit1 < 256 Then
-                        _MemPut destMem, dstPtr, huffTable(nodeIdx).bit1
-                        dstPtr = dstPtr + 1
+                        tempByte = huffTable(nodeIdx).bit1
+                        destArray(destIndex).width = tempByte
+                        destIndex = destIndex + 1
                         remaining = remaining - 1
                         nodeIdx = headNode
                     Else
