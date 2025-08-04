@@ -6,7 +6,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     Sub CAL_SetupMapFile ()
         Print "Setting up map file..."
         Dim i As Integer
-        Dim handle Long
+        Dim handle As Long
         Dim length As Long
         ' pos - reserved keyword in QB64
         Dim position As Long
@@ -406,7 +406,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     Sub CAL_SetupAudioFile ()
         ' Implementation of CAL_SetupAudioFile in QB64 Basic
 
-        Dim handle As Integer, length As Long, fname As String * 13
+        Dim handle As Long, length As Long, fname As String * 13
 
         ' Load maphead.ext (offsets and tileinfo for map file)
         ' AUDIOHEADERLINKED - is not defined in the original C sources
