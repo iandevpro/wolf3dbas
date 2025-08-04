@@ -404,43 +404,53 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     End Sub
 
     Sub CAL_SetupAudioFile ()
-        '     ' Implementation of CAL_SetupAudioFile in QB64 Basic
-        '
-        '     Dim handle AS INTEGER, length AS LONG, fname AS STRING * 13
-        '
-        '     ' Load maphead.ext (offsets and tileinfo for map file)
-        '     $If AUDIOHEADERLINKED = UNDEFINED Then
-        '         fname = aheadname & extension
-        '
-        '         If (handle = open(fname, O_RDONLY OR O_BINARY)) == -1 Then
-        '             CA_CannotOpen fname
-        '         End If
-        '
-        '         length = filelength(handle)
-        '         MM_GetPtr(memptr, length)
-        '         CA_FarRead handle, memptr, length
-        '         close(handle)
-        '
-        '     $Else
-        '         ' Linked audio header code
-        '         audiohuffman = (huffnode)&audiodict
-        '         CAL_OptimizeNodes(audiohuffman)
-        '         audiostarts = (long _seg *)FP_SEG(&audiohead)
-        '     $EndIf
-        '
-        '     ' Open the data file
-        '     $If NOT DEFINED AUDIOHEADERLINKED
-        '         fname = afilename & extension
-        '
-        '         If (audiohandle = open(fname, O_RDONLY OR O_BINARY)) == -1 Then
-        '             CA_CannotOpen fname
-        '         END IF
-        '     $ELSE
-        '         IF (audiohandle = open("AUDIO."EXTENSION", O_RDONLY OR O_BINARY)) == -1 THEN
-        '             Quit "Can't open AUDIO."EXTENSION"!"
-        '         END IF
-        '     $ENDIF
-        '
+        ' Implementation of CAL_SetupAudioFile in QB64 Basic
+
+        Dim handle As Integer, length As Long, fname As String * 13
+
+        ' Load maphead.ext (offsets and tileinfo for map file)
+        ' AUDIOHEADERLINKED - is not defined in the original C sources
+        $If AUDIOHEADERLINKED = UNDEFINED Then
+            fname = aheadname + extension
+
+            handle = FreeFile
+            Open fname For Binary As #handle
+            If Err Then
+                CA_CannotOpen fname
+            End If
+
+            length = LOF(handle)
+            ' TODO: Implement MM_GetPtr and CA_FarRead equivalents
+            Close #handle
+
+        $Else
+            ' Linked audio header code
+            ' TODO: Implement linked audio header handling
+            ' audiohuffman = (huffnode)&audiodict
+            ' CAL_OptimizeNodes(audiohuffman)
+            ' audiostarts = (long _seg *)FP_SEG(&audiohead)
+        $End If
+
+        ' Open the data file
+        $If AUDIOHEADERLINKED = UNDEFINED Then
+            fname = afilename + extension
+
+            ' TODO: Implement audio file opening
+            audiohandle = FreeFile
+            Open fname For Binary As #audiohandle
+            If Err Then
+                CA_CannotOpen fname
+            End If
+        $Else
+            ' TODO: Implement linked audio file handling
+            ' audiohandle = FreeFile
+            ' Open "AUDIO." + extension For Binary As #audiohandle
+            ' If Err Then
+            '     Print "Can't open AUDIO." + extension + "!"
+            '     End
+            ' End If
+        $End If
+
     End Sub
 
     Sub CA_Startup ()

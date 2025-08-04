@@ -4,7 +4,7 @@ DONE: create file '$INCLUDE:'GFXV_WL6.BI'
 TODO: create file '$INCLUDE:'AUDIOWL6.BI'
 TODO: create file '$INCLUDE:'MAPSWL6.BI'
 
-# Optional, for supporting Japan and Spear of Destiny (+demo) 
+# Optional, for supporting Japan and Spear of Destiny (+demo)
 TODO: create file '$INCLUDE:'FOREIGN\JAPAN\GFXV_WJ1.BI'
 TODO: create file '$INCLUDE:'FOREIGN\JAPAN\GFXV_WJ6.BI'
 TODO: create file '$INCLUDE:'GFXV_SOD.BI'
@@ -17,4 +17,5 @@ TODO: create file '$INCLUDE:'MAPSSDM.BI'
 DONE: sort out proper file include location for pictable
 
 DONE: grstarts, CAL_GetGrChunkLength
-TODO: CAL_HuffExpand - fix compilation 
+DONE: CAL_HuffExpand - fix compilation
+TODO: CAL_SetupAudioFile - uncomment, port again(maybe), compile

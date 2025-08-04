@@ -68,4 +68,7 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Const gfilename="VGAGRAPH."
     Const gdictname="VGADICT."
 
+    ' Local variable in ID_CA.C, but global due to Shared here and unability to declare variable on top of ID_CA.BM
+    Dim Shared audiohandle as Long
+
 $End If
