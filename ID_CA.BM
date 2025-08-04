@@ -6,7 +6,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     Sub CAL_SetupMapFile ()
         Print "Setting up map file..."
         Dim i As Integer
-        Dim handle As Integer
+        Dim handle Long
         Dim length As Long
         ' pos - reserved keyword in QB64
         Dim position As Long

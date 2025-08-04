@@ -37,13 +37,13 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     ' Graphics related variables
     Dim Shared grhuffman(0 To 254) As huffnode  ' Huffman table for graphics
     Dim Shared grstarts As _MEM  ' Array of offsets in graphics file
-    Dim Shared grhandle As Integer  ' Handle to graphics file
+    Dim Shared grhandle As Long  ' Handle to graphics file
     Dim Shared pictable(NUMPICS - 1) As pictabletype  ' Picture table
     Dim Shared chunkcomplen As Long  ' Compressed chunk length
     Dim Shared chunkexplen As Long  ' Expanded chunk length
 
     ' Shared variables
-    Dim Shared profilehandle As Integer
+    Dim Shared profilehandle As Long
     Dim Shared mapon As Integer
     Dim Shared ca_levelbit As Integer
     Dim Shared ca_levelnum As Integer
@@ -52,7 +52,7 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Dim Shared tinf As _MEM  ' Pointer to tile info
     Dim Shared mapsegs(MAPPLANES - 1) As _Offset  ' Array of pointers to map segments
     ' mapheaderseg is no longer needed as a pointer array
-    Dim Shared maphandle As Integer  ' Handle to map file
+    Dim Shared maphandle As Long  ' Handle to map file
 
     ' File name variables
     ' Declare AND initialize them here. In the original sources they were initialized in ID_CA.C
