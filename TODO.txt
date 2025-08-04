@@ -18,4 +18,4 @@ DONE: sort out proper file include location for pictable
 
 DONE: grstarts, CAL_GetGrChunkLength
 DONE: CAL_HuffExpand - fix compilation
-TODO: CAL_SetupAudioFile - uncomment, port again(maybe), compile
+DONE: CAL_SetupAudioFile - uncomment, port again(maybe), compile - allocate mem and read file

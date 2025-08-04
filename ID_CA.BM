@@ -407,6 +407,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ' Implementation of CAL_SetupAudioFile in QB64 Basic
 
         Dim handle As Long, length As Long, fname As String * 13
+        Dim fileBytes() As _Unsigned _Byte
 
         ' Load maphead.ext (offsets and tileinfo for map file)
         ' AUDIOHEADERLINKED - is not defined in the original C sources
@@ -420,7 +421,17 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             End If
 
             length = LOF(handle)
-            ' TODO: Implement MM_GetPtr and CA_FarRead equivalents
+            ' MM_GetPtr equivalent - allocate memory for audio starts
+            audiostarts = _MemNew(length)
+            If audiostarts.SIZE = 0 Then
+                Close #handle
+                CA_CannotOpen "Memory allocation failed for audio starts"
+            End If
+
+            ' CA_FarRead equivalent - read file into byte array, then copy to audiostarts
+            ReDim fileBytes(0 To length - 1) As _Unsigned _Byte
+            Get #handle, , fileBytes()
+            _MemPut audiostarts, audiostarts.OFFSET, fileBytes()
             Close #handle
 
         $Else

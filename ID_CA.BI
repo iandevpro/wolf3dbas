@@ -42,6 +42,9 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Dim Shared chunkcomplen As Long  ' Compressed chunk length
     Dim Shared chunkexplen As Long  ' Expanded chunk length
 
+    ' Audio related variables
+    Dim Shared audiostarts As _MEM  ' Array of offsets in audio file
+
     ' Shared variables
     Dim Shared profilehandle As Long
     Dim Shared mapon As Integer
