@@ -11,13 +11,13 @@ $If INCLUDE_ID_HEADS_BI = UNDEFINED Then
         $Else
                 'REM '$INCLUDE:'FOREIGN\JAPAN\GFXV_WJ6.BI'
         $End If
-            'REM: TODO: create file '$INCLUDE:'AUDIOWL6.BI'
+            '$INCLUDE:'AUDIOWL6.BI'
             'REM: TODO: create file '$INCLUDE:'MAPSWL6.BI'
     $Else
         $If SPEAR = UNDEFINED Then
             ' IAN: This should be included for Wolf 3D
             '$INCLUDE:'GFXV_WL6.BI'
-            'REM: TODO: create file '$INCLUDE:'AUDIOWL6.BI'
+            '$INCLUDE:'AUDIOWL6.BI'
             'REM: TODO: create file '$INCLUDE:'MAPSWL6.BI'
         $Else
             $If SPEARDEMO = UNDEFINED Then

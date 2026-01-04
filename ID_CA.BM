@@ -464,6 +464,11 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
 
     End Sub
 
+    Sub CA_CacheAudioChunk (chunk As Integer)
+        ' TODO: Implement audio chunk caching
+        ' For now, stub does nothing
+    End Sub
+
     Sub CA_Startup ()
         $If PROFILE = DEFINED Then
                 CLOSE "PROFILE.TXT"

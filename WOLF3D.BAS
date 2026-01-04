@@ -14,6 +14,7 @@ Const TRUE = -1
 '$INCLUDE: 'ID_VL.BI'
 '$INCLUDE: 'ID_VH.BI'
 '$INCLUDE: 'WL_INTER.BI'
+' WL_MENU.BI is already included through WL_DEF.BI
 '$INCLUDE: 'WL_MENU.BI'
 '$INCLUDE: 'ID_CA.BI'
 
@@ -124,6 +125,8 @@ System
 '$INCLUDE:'WL_INTER.BM'
 '$INCLUDE:'ID_CA.BM'
 '$INCLUDE:'WL_MENU.BM'
+'$INCLUDE:'ID_MM.BM'
+'$INCLUDE:'ID_SD.BM'
 
 ' SignonScreen - Displays the game's intro screen
 Sub SignonScreen
@@ -439,7 +442,7 @@ Sub DemoLoop
                 $End If
             $End If
         $End If
-        'Call StartCPMusic(INTROSONG)
+        Call StartCPMusic(INTROSONG)
 
         $If JAPAN = UNDEFINED Then
             If Not NOWAIT Then

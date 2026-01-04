@@ -75,5 +75,32 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         '       strcpy(extension,"SOD");
         '   }
     End Sub
+
+    Sub StartCPMusic (song As Integer)
+        Dim chunk As Integer
+        Dim tempPtr As _Offset
+
+        ' Free previous music if it exists
+        If audiosegs(STARTMUSIC + lastmusic_gbl) <> -1 Then
+            tempPtr = audiosegs(STARTMUSIC + lastmusic_gbl)
+            MM_FreePtr tempPtr
+            ' Clear the pointer after freeing
+            audiosegs(STARTMUSIC + lastmusic_gbl) = -1
+        End If
+        lastmusic_gbl = song
+
+        SD_MusicOff
+        chunk = song
+
+        MM_BombOnError FALSE
+        CA_CacheAudioChunk STARTMUSIC + chunk
+        MM_BombOnError TRUE
+
+        tempPtr = audiosegs(STARTMUSIC + chunk)
+        MM_SetLock tempPtr, TRUE
+        SD_StartMusic audiosegs(STARTMUSIC + chunk)
+    End Sub
+
+
 '$INCLUDE: 'ID_VH.BM'
 $End If

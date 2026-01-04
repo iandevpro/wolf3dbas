@@ -1,0 +1,22 @@
+' ID_MM.C - ID software memory manager
+' hope to be mostly stubs in QB64
+
+$If INCLUDE_ID_MM_BM = UNDEFINED Then
+    $Let INCLUDE_ID_MM_BM = 1
+    ' Stub functions for memory sound management (to be fully implemented later or never, might not be needed at all)
+    Sub MM_FreePtr (baseptr As _Offset)
+        ' TODO: Implement full memory deallocation
+        ' For now, stub does nothing (pointer will be cleared by caller)
+    End Sub
+
+    Sub MM_SetLock (baseptr As _Offset, locked As Integer)
+        ' TODO: Implement memory locking
+        ' For now, stub does nothing
+    End Sub
+
+    Sub MM_BombOnError (bomb As Integer)
+        ' TODO: Implement error handling
+        ' For now, stub does nothing
+    End Sub
+
+$EndIf

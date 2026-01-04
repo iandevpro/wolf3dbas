@@ -1,0 +1,15 @@
+'	ID_SD.c - Sound Manager for Wolfenstein 3D
+$If INCLUDE_ID_SD_BM = UNDEFINED Then
+    $Let INCLUDE_ID_SD_BM = 1
+
+  Sub SD_MusicOff
+      ' TODO: Implement music stopping
+      ' For now, stub does nothing
+  End Sub
+
+  Sub SD_StartMusic (music As _Offset)
+      ' TODO: Implement music playback
+      ' For now, stub does nothing
+  End Sub
+
+$EndIf
