@@ -300,7 +300,16 @@ Sub InitGame
 
     ' Show signon screen
     SignonScreen
+
+    'VW_Startup (); orig C - Video Startup - not needed in QB64, modern OSes
+    'IN_Startup (); orig C - Input Manager Startup - not needed in QB64, modern OSes
+    'PM_Startup (); orig C - Page Manager Startup - not needed in QB64, modern OSes
+    'PM_UnlockMainMem (); orig C - related to memory management - not needed in QB64, modern OSes
+    'SD_Startup (); orig C - Sound Manager Startup - not needed in QB64, modern OSes
     CA_Startup
+    'US_Startup (); orig C - Starts the User Mgr - it looks like there are some init for Rnd (not needed)
+    ' and checks for running Ted (level editor)
+
 End Sub
 
 Sub BuildTables
