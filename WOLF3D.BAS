@@ -17,6 +17,7 @@ Const TRUE = -1
 ' WL_MENU.BI is already included through WL_DEF.BI
 '$INCLUDE: 'WL_MENU.BI'
 '$INCLUDE: 'ID_CA.BI'
+'$INCLUDE: 'ID_SD.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
