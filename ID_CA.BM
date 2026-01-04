@@ -175,7 +175,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
 
         ' Load the pic and sprite headers into the arrays in the data segment
         CAL_GetGrChunkLength STRUCTPIC  ' Position file pointer
-        Print "chunkcomplen"; chunkcomplen
+        ' Print "chunkcomplen"; chunkcomplen
         compseg = _MemNew(chunkcomplen)
         If compseg.SIZE = 0 Then
             CA_CannotOpen "Memory allocation failed for compressed segment"
@@ -297,7 +297,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             ' chunkcomplen = 8192  ' Default size, adjust as needed
         End If
 
-        Print "Chunk"; chunk; "position:"; chunkPosition; "length:"; chunkcomplen; "expanded:"; chunkexplen
+        ' Print "Chunk"; chunk; "position:"; chunkPosition; "length:"; chunkcomplen; "expanded:"; chunkexplen
     End Sub
 
     'Sub CAL_HuffExpand (source As _MEM, dest() As pictabletype, length As Long, huffTable() As huffnode, screenhack As Integer)
