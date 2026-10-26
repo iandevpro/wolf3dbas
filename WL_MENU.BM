@@ -80,25 +80,23 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Dim chunk As Integer
         Dim tempPtr As _Offset
 
+        ' Stop music first (orig C does it after freeing), so the sequencer no longer reads the freed chunk
+        SD_MusicOff
+
         ' Free previous music if it exists
-        If audiosegs(STARTMUSIC + lastmusic_gbl) <> -1 Then
-            tempPtr = audiosegs(STARTMUSIC + lastmusic_gbl)
-            MM_FreePtr tempPtr
-            ' Clear the pointer after freeing
-            audiosegs(STARTMUSIC + lastmusic_gbl) = -1
-        End If
+        CA_FreeAudioChunk STARTMUSIC + lastmusic_gbl
         lastmusic_gbl = song
 
-        SD_MusicOff
         chunk = song
 
         MM_BombOnError FALSE
         CA_CacheAudioChunk STARTMUSIC + chunk
         MM_BombOnError TRUE
+        If audiosegs(STARTMUSIC + chunk) = 0 Then Exit Sub
 
         tempPtr = audiosegs(STARTMUSIC + chunk)
         MM_SetLock tempPtr, TRUE
-        SD_StartMusic audiosegs(STARTMUSIC + chunk)
+        SD_StartMusic audiosegMem(STARTMUSIC + chunk)
     End Sub
 
 

@@ -1,156 +1,141 @@
 '	ID_SD.c - Sound Manager for Wolfenstein 3D
 '
-' Per Cursor session
-' ===================================================================
-' ## Summary
-'
-' Implemented an IMF (id Music Format) music player for QB64. The original used AdLib/SoundBlaster hardware and assembler; this version provides a framework that can be extended.
-'
-' ### What was implemented:
-'
-' 1. **Music playback state variables** — Tracks sequencer state, position, timing, etc.
-' 2. **`SD_StartMusic`** — Parses the IMF format from memory:
-'    - Reads the MusicGroup structure (length + values array)
-'    - Sets up sequencer state for playback
-'    - Ready to process OPL2 register commands
-' 3. **`SD_MusicOff`** — Stops music playback and resets state
-' 4. **`SD_ServiceMusic`** — Processes IMF commands:
-'    - Reads register/data pairs and delays from the IMF stream
-'    - Advances time counter at 700Hz
-'    - Loops music when it reaches the end
-'    - Includes TODO markers for OPL2 emulation
-'
-' ### How to use:
-'
-' 1. Call `SD_StartMusic` with the music data pointer (already done in `StartCPMusic`)
-' 2. Call `SD_ServiceMusic` regularly from your game loop (e.g., in `GameLoop` or main loop)
-' 3. Call `SD_MusicOff` to stop music
-'
-' ### Next steps for full playback:
-'
-' To hear music, add OPL2 emulation. Options:
-'
-' 1. **OPL2 emulator library** — Integrate a library like Nuked OPL3 or similar that can be called from QB64
-' 2. **Convert IMF to another format** — Pre-convert IMF files to WAV/MP3 and play with QB64's `_SNDPLAY`
-' 3. **Software synthesis** — Implement a basic OPL2 emulator in QB64 (complex but authentic)
-'
-' The framework is in place; add the OPL2 emulation at the TODO markers in `SD_ServiceMusic` where it says `' TODO: Call OPL2 emulator here: OPL2_Write(reg, data)`.
-'
-' The implementation correctly parses the IMF format and processes commands at the right timing. You just need to add the audio output layer.
-' ===================================================================
+' The original drove an AdLib card from a 700Hz timer interrupt (SDL_t0FastAsmService).
+' In QB64:
+' - the AdLib card is emulated by OPL2.BM, its output is queued with _SndRaw
+' - ON TIMER calls SD_PumpAudio, which tops up the queue to SD_BUFFERSECS seconds.
+'   Timer events fire between statements, so music keeps playing inside busy-wait loops
+' - the 700Hz music clock is counted in generated samples, not wall clock time
 
 $If INCLUDE_ID_SD_BM = UNDEFINED Then
     $Let INCLUDE_ID_SD_BM = 1
 
     '$INCLUDE: 'ID_SD.BI'
+    '$INCLUDE: 'OPL2.BM'
 
-    Sub SD_MusicOff
-        ' Stop music playback
-        sqActive = 0
-        ' Note: sqHackMem.SIZE is read-only, we can't clear it directly
-        ' We rely on sqActive flag and checking sqHackMem.SIZE = 0 to determine validity
-        sqHackPtrOffset = 0
-        sqHackLen = 0
-        sqHackTime = 0
-        alTimeCount = 0
+    Sub SD_Startup ()
+        If sdPipe <> 0 Then Exit Sub
 
-        ' TODO: If using OPL2 emulator, reset all channels here
-        ' For now, this stops the sequencer
+        OPL2_Init
+        ' SDL_DetectAdLib
+        OPL2_Reset ' Zero all the registers
+        OPL2_Write 1, &H20 ' Set WSE=1
+        OPL2_Write 8, 0 ' Set CSM=0 & SEL=0
+        ' SDL_StartAL
+        OPL2_Write alEffects, 0
+
+        sdRate = _SndRate
+        sdOplStep = CLng(OPL2_RATE * 65536# / sdRate)
+        sdImfAcc = 0
+        sdOplAcc = 0
+        sdPrevSample = 0
+        sdCurSample = 0
+
+        sdPipe = _SndOpenRaw
+        sdTimer = _FreeTimer
+        On Timer(sdTimer, SD_TIMERSECS) SD_PumpAudio
+        Timer(sdTimer) On
     End Sub
 
-    Sub SD_StartMusic (music As _Offset)
-        Dim musicMem As _MEM
-        Dim length As Integer
+    Sub SD_Shutdown ()
+        If sdPipe = 0 Then Exit Sub
 
-        ' Stop any currently playing music
+        Timer(sdTimer) Free
+        SD_MusicOff
+        _SndClose sdPipe
+        sdPipe = 0
+    End Sub
+
+    Sub SD_MusicOff ()
+        Dim i As Integer
+
+        sqActive = 0
+        OPL2_Write alEffects, 0
+        For i = 0 To sqMaxTracks - 1
+            OPL2_Write alFreqH + i + 1, 0
+        Next i
+    End Sub
+
+    ' QB64 can't assign _OFFSET to other types, read its bytes instead (64-bit build: 8 bytes)
+    Function SDL_OffsetToLong& (value As _Offset)
+        Dim m As _MEM
+        m = _Mem(value)
+        SDL_OffsetToLong& = _MemGet(m, m.OFFSET, _Integer64)
+        _MemFree m
+    End Function
+
+    Sub SD_StartMusic (music As _MEM)
+        Dim size As Long
+
         SD_MusicOff
 
-        If music = 0 Then Exit Sub
+        size = SDL_OffsetToLong&(music.SIZE)
+        If size < 2 Then Exit Sub
 
-        ' Get memory block for music data
-        musicMem = _Mem(music)
-        If musicMem.SIZE = 0 Then Exit Sub
-
-        ' Read length (first word) - number of value words
-        _MemGet musicMem, musicMem.OFFSET, length
-
-        ' Store memory block and calculate relative offset to values array (skip length word)
-        ' We store relative offsets (from the memory block's base) as Long values
-        sqHackMem = musicMem
-        sqHackBaseOffset = 2 ' Relative offset: skip the length word (2 bytes)
-        sqHackPtrOffset = sqHackBaseOffset
-        sqHackSeqLen = length * 2 ' Convert word count to byte count
+        sqHackSeqLen = _MemGet(music, music.OFFSET, _Unsigned Integer)
+        If sqHackSeqLen > size - 2 Then sqHackSeqLen = size - 2
+        sqHackMem = music
+        sqHackPtrOffset = 2 ' skip the length word
         sqHackLen = sqHackSeqLen
         sqHackTime = 0
         alTimeCount = 0
+        ' SD_MusicOn
         sqActive = 1
-
-        lastMusicUpdateTime = Timer
-
-        ' TODO: Initialize OPL2 emulator here if using one
-        ' For now, the sequencer is set up and ready to process commands
     End Sub
 
-    ' Service routine to process IMF music commands
-    ' Should be called regularly from the game loop (e.g., in GameLoop or main loop)
-    ' The original ran at 700Hz via timer interrupt, but calling from game loop works too
-    Sub SD_ServiceMusic
-        Dim cmdWord As Integer
-        Dim delayWord As Integer
-        Dim reg As _Unsigned _Byte
-        Dim regData As _Unsigned _Byte
-        Dim currentTime As Double
-        Dim deltaTime As Double
-        Dim ticksToProcess As Long
+    ' One 700Hz tick of the music sequencer (the music part of SDL_ALService / SDL_t0Service)
+    Sub SDL_ServiceMusicTick ()
+        Dim w As _Unsigned Integer
 
-        If sqActive = 0 Then Exit Sub
-        If sqHackMem.SIZE = 0 Then Exit Sub
-
-        ' Calculate time delta since last update
-        currentTime = Timer
-        deltaTime = currentTime - lastMusicUpdateTime
-        lastMusicUpdateTime = currentTime
-
-        ' Convert time delta to 700Hz ticks (IMF playback rate: 700Hz)
-        ' Process up to a reasonable number of ticks per call to avoid lag
-        ticksToProcess = Int(deltaTime * IMF_RATE)
-        If ticksToProcess > 10 Then ticksToProcess = 10 ' Limit to prevent lag spikes
-
-        ' Advance time counter
-        alTimeCount = alTimeCount + ticksToProcess
-
-        ' Process commands that are due
-        While sqHackLen >= 4 And sqHackTime <= alTimeCount
-            ' Read command word: low byte = register, high byte = data
-            ' sqHackPtrOffset is a relative offset (Long) from the memory block base
-            ' _MemGet accepts numeric offsets which are added to mem.OFFSET automatically
-            _MemGet sqHackMem, sqHackPtrOffset, cmdWord
-
-            ' Extract register and data
-            reg = cmdWord And &HFF
-            regData = (cmdWord \ 256) And &HFF
-
-            ' Read delay word (next word)
-            _MemGet sqHackMem, sqHackPtrOffset + 2, delayWord
-
-            ' Send to OPL2 emulator (or store for later processing)
-            ' TODO: Call OPL2 emulator here: OPL2_Write(reg, regData)
-            ' For now, we just track the commands
-            ' You can add OPL2 emulation here or convert to another format
-
-            ' Advance pointer and update state
+        Do While sqHackLen >= 4 And sqHackTime <= alTimeCount
+            w = _MemGet(sqHackMem, sqHackMem.OFFSET + sqHackPtrOffset, _Unsigned Integer)
+            sqHackTime = alTimeCount + _MemGet(sqHackMem, sqHackMem.OFFSET + sqHackPtrOffset + 2, _Unsigned Integer)
+            ' low byte = register, high byte = data
+            OPL2_Write w And &HFF, w \ 256
             sqHackPtrOffset = sqHackPtrOffset + 4
             sqHackLen = sqHackLen - 4
-            sqHackTime = alTimeCount + delayWord
-        Wend
+        Loop
+        alTimeCount = alTimeCount + 1
 
         ' Loop music if we've reached the end
-        If sqHackLen = 0 Then
-            sqHackPtrOffset = sqHackBaseOffset
+        If sqHackLen < 4 Then
+            sqHackPtrOffset = 2
             sqHackLen = sqHackSeqLen
             alTimeCount = 0
             sqHackTime = 0
         End If
+    End Sub
+
+    ' Generates audio until SD_BUFFERSECS seconds are queued, called by ON TIMER
+    Sub SD_PumpAudio ()
+        Dim i As Long
+        Dim s As Single
+
+        If sdPipe = 0 Or sdInPump <> 0 Then Exit Sub
+        sdInPump = -1
+
+        Do While _SndRawLen(sdPipe) < SD_BUFFERSECS
+            For i = 1 To 256
+                sdImfAcc = sdImfAcc + IMF_RATE
+                If sdImfAcc >= sdRate Then
+                    sdImfAcc = sdImfAcc - sdRate
+                    If sqActive Then SDL_ServiceMusicTick
+                End If
+
+                ' Resample native OPL2 output to the sound card rate (linear interpolation)
+                sdOplAcc = sdOplAcc + sdOplStep
+                Do While sdOplAcc >= 65536
+                    sdOplAcc = sdOplAcc - 65536
+                    sdPrevSample = sdCurSample
+                    sdCurSample = OPL2_Generate&
+                Loop
+                s = (sdPrevSample + (sdCurSample - sdPrevSample) * (sdOplAcc / 65536!)) * SD_MUSICGAIN / 32768!
+                If s > 1 Then s = 1 Else If s < -1 Then s = -1
+                _SndRaw s, s, sdPipe
+            Next i
+        Loop
+
+        sdInPump = 0
     End Sub
 
 $EndIf

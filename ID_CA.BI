@@ -45,6 +45,8 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     ' Audio related variables
     Dim Shared audiostarts As _MEM  ' Array of offsets in audio file
     Dim Shared audiosegs(0 To NUMSNDCHUNKS - 1) As _Offset ' Array of pointers to audio segments
+    ' _MEM blocks backing audiosegs(), needed for size info and _MemFree (MM_GetPtr equivalent)
+    Dim Shared audiosegMem(0 To NUMSNDCHUNKS - 1) As _MEM
 
     ' Shared variables
     Dim Shared profilehandle As Long

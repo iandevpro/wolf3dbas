@@ -465,8 +465,39 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     End Sub
 
     Sub CA_CacheAudioChunk (chunk As Integer)
-        ' TODO: Implement audio chunk caching
-        ' For now, stub does nothing
+        Dim position As Long, compressed As Long
+        Dim fileBytes() As _Unsigned _Byte
+
+        If audiosegs(chunk) <> 0 Then
+            Exit Sub ' allready in memory
+        End If
+
+        ' load the chunk into a newly allocated buffer
+        position = _MemGet(audiostarts, audiostarts.OFFSET + chunk * 4, Long)
+        compressed = _MemGet(audiostarts, audiostarts.OFFSET + (chunk + 1) * 4, Long) - position
+        If compressed <= 0 Then Exit Sub
+
+        ' AUDIOHEADERLINKED - is not defined in the original C sources, chunks are stored uncompressed
+        $If AUDIOHEADERLINKED = UNDEFINED Then
+            ' MM_GetPtr equivalent
+            audiosegMem(chunk) = _MemNew(compressed)
+            If audiosegMem(chunk).SIZE = 0 Then Exit Sub
+
+            ' CA_FarRead equivalent
+            ReDim fileBytes(0 To compressed - 1) As _Unsigned _Byte
+            Get #audiohandle, position + 1, fileBytes() ' QB64 uses 1-based file positions
+            _MemPut audiosegMem(chunk), audiosegMem(chunk).OFFSET, fileBytes()
+            audiosegs(chunk) = audiosegMem(chunk).OFFSET
+        $Else
+            ' TODO: Implement linked (huffman compressed) audio chunks
+        $End If
+    End Sub
+
+    ' MM_FreePtr equivalent for audio chunks
+    Sub CA_FreeAudioChunk (chunk As Integer)
+        If audiosegs(chunk) = 0 Then Exit Sub
+        _MemFree audiosegMem(chunk)
+        audiosegs(chunk) = 0
     End Sub
 
     Sub CA_Startup ()

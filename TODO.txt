@@ -1,7 +1,7 @@
 DONE: Structure code around proper include, so it will include GFXV_WL6.H (GFXV_WL6.BI)
 'This should be included for Wolf 3D
 DONE: create file '$INCLUDE:'GFXV_WL6.BI'
-TODO: create file '$INCLUDE:'AUDIOWL6.BI'
+DONE: create file '$INCLUDE:'AUDIOWL6.BI'
 TODO: create file '$INCLUDE:'MAPSWL6.BI'
 
 # Optional, for supporting Japan and Spear of Destiny (+demo)
@@ -19,3 +19,8 @@ DONE: sort out proper file include location for pictable
 DONE: grstarts, CAL_GetGrChunkLength
 DONE: CAL_HuffExpand - fix compilation
 DONE: CAL_SetupAudioFile - uncomment, port again(maybe), compile - allocate mem and read file
+
+DONE: CA_CacheAudioChunk, IMF music playback via OPL2 emulator (OPL2.BM) + _SndRaw, see plans/qb64_opl2_emulator_fee1c44b.plan.md
+TODO: OPL2 rhythm mode (reg BD bits 0-5)
+TODO: sound effects - AdLib SFX (SDL_ALPlaySound), PC speaker, digitized sounds from VSWAP
+TODO: remove temporary key wait after DemoLoop in WOLF3D.BAS when the main menu is ported

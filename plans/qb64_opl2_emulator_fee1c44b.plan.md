@@ -1,265 +1,65 @@
----
-name: QB64 OPL2 Emulator
-overview: Implement Wolf3D music playback with two compile-time backends — pure QB64 OPL2 (IMF from AUDIO.WL6) as default, and QB64-PE native MIDI playback (pre-converted .mid + OP2 bank) as a fallback.
-todos:
-  - id: opl2-core
-    content: "Create OPL2.BI + OPL2.BM: register file, 4 waveforms, ADSR tables, 18-op FM, rhythm mode (0xBD), OPL2_Write/Generate/Reset"
-    status: pending
-  - id: midi-assets
-    content: "Add tools/extract_music script: dump IMF chunks from AUDIO.WL6, convert to .mid via dro2midi (700 Hz / .wlf), ship MUSIC/*.mid + GENMIDI.OP2 bank"
-    status: pending
-  - id: sd-integration
-    content: "Extend ID_SD.BI/BM with $If USE_MIDI_MUSIC flag: OPL2 path (SD_PumpAudio) or MIDI path (_MIDISOUNDBANK + _SNDOPEN/_SNDPLAY); shared SD_StartMusic/SD_MusicOff API"
-    status: pending
-  - id: game-wiring
-    content: "Wire WOLF3D.BAS: include ID_SD.BM, SD_Startup in InitGame, SD_UpdateAudio in DemoLoop (OPL2 only); prep GameLoop hook"
-    status: pending
-  - id: test-music
-    content: "Test both backends: OPL2 with WL6 data, MIDI with converted assets; verify intro/menu song switching"
-    status: pending
-isProject: false
----
+# Wolf3D QB64 port: project status and revised music (OPL2) plan
 
-# Wolf3D Music Playback Plan (OPL2 + MIDI)
+## Context
+Wolf3D's music is stored as IMF: a list of OPL2 (AdLib) register writes, played at 700 Hz by a timer interrupt. The QB64 port can already parse IMF but makes no sound. Another model wrote `plans/qb64_opl2_emulator_fee1c44b.plan.md`. I reviewed it against the code and the installed compiler, and it has blockers. The user chose to **build only the OPL2 path, on classic QB64 v2.1** (`C:\qb64\qb64.exe` reports "QB64 Compiler V2.1"). The goal is to hear the intro song (`StartCPMusic(INTROSONG)` in `DemoLoop`) through a pure-QB64 OPL2 emulator.
 
-## Can QB64 MIDI be used?
+## Current project state
+**Done:** palette (GAMEPAL); signon and intro screens; `BuildTables`, `NewViewSize`, `CalcProjection`; map, graphics and audio-header setup in `ID_CA.BM` (`CAL_SetupMapFile`, `CAL_SetupGrFile` + `CAL_HuffExpand`, `CAL_SetupAudioFile`); `CheckForEpisodes`; `StartCPMusic`; the IMF sequencer skeleton in `ID_SD.BM`; `ID_MM.BM` stubs.
 
-**Yes, but not directly on IMF data.**
+**Not done:** `CA_CacheAudioChunk` (it's a stub, so `audiosegs()` is never filled), all audio output, `DemoLoop` after the intro song (the menu, the `while 1` loop at C line 1486, PG13), the game loop and renderer (`WL_GAME.BM`, `WL_RENDER.BAS` are partial), `MAPSWL6.BI`, and SFX (AdLib SFX and digitized sounds from VSWAP).
 
-Wolf3D stores music as **IMF** (OPL2 register write streams) inside `AUDIO.WL6`, cached via `CA_CacheAudioChunk` and played by `SD_StartMusic`. QB64-PE (v3.14+) MIDI support plays **MIDI files** via `_SNDOPEN` / `_SNDPLAY`, with optional FM banks via `_MIDISOUNDBANK` (including **OP2** — the DMX OPL2 instrument format Wolf3D used).
+## Review of the existing plan
+**Pros:** it separates the sequencer from the synth; uses the correct channel-to-operator maps (ID_SD.C:155–159); calls for fixed-point math and lookup tables; puts the chip in OPL2.BI/.BM, which fits the project's include conventions; and keeps the shared SD_* API.
 
-| Format | What Wolf3D has | What QB64 MIDI plays |
-|--------|-----------------|----------------------|
-| IMF register stream | Yes (in memory) | No |
-| Standard MIDI (.mid) | No (must convert) | Yes |
-| OPL/OP2 sound bank | Embedded in IMF | Yes via `_MIDISOUNDBANK "GENMIDI.OP2"` |
+**Cons and bugs it misses:**
+1. **Wrong toolchain:** `_SNDRAWBATCH`, `_MIDISOUNDBANK`, `$EMBED` and `_EMBEDDED$` exist only in QB64-PE. QB64 2.1 has only `_SNDOPENRAW`, `_SNDRAW`, `_SNDRAWLEN`, `_SNDRAWDONE` and `_SNDRATE` (checked in `C:\qb64\source\subs_functions\subs_functions.bas`). Path B is dropped.
+2. **`CA_CacheAudioChunk` is a stub:** even with an emulator, no music data reaches `SD_StartMusic`. The plan never mentions it.
+3. **`_Mem(music)` bug in `SD_StartMusic`:** `_Mem` applied to an `_Offset` variable describes the 8-byte variable itself, not the buffer it points to. Every read returns garbage.
+4. **Length bug:** `MusicGroup.length` is in **bytes** (C: `sqHackLen = music->length`, then `-= 4` per event). The port multiplies it by 2 and reads past the end of the buffer. `sqHackLen` and `sqHackSeqLen` are `Integer` but should be `Long`.
+5. **Timing bug:** `SD_ServiceMusic` reads the wall clock (`Timer`) and caps work at 10 ticks per call. At 60 fps a frame is about 11.7 ticks, so music plays slow, the fractional part of each tick is lost, and `Timer` wraps at midnight. The plan keeps two independent clocks.
+6. **Nothing services audio during blocking loops:** many `Do: Loop Until InKey$ <> ""` waits exist (WOLF3D.BAS:120, 163, 168, 262, …). Adding `SD_UpdateAudio` to every loop is fragile.
+7. **The synth spec is too vague and leaves features out:** it omits the 0x01 waveform-select enable, tremolo/vibrato (AM/VIB bits and 0xBD depth), KSL, key-scale rate, and the real logsin/exp attenuation. "Approximations" risk wrong-sounding instruments.
+8. Small issues: `'$INCLUDE:'ID_SD.BM'` is already active (WOLF3D.BAS:130). `StartCPMusic` tests `audiosegs(..) <> -1`, but the "empty" value is 0, as in C.
 
-QB64-PE renders MIDI through internal backends including **Opal** (OPL/OP2), so converted tracks can still sound AdLib-authentic — but the conversion IMF→MIDI is **lossy** (pitchbend approximations, instrument mapping).
+## Revised design
+- **The audio pump owns the clock** (sample-accurate, like the original interrupt). Inside `SD_PumpAudio`, for each output sample: `imfAcc += 700: If imfAcc >= rate Then imfAcc -= rate: SDL_ServiceMusicTick`. One tick is exactly the C loop body at ID_SD.C:1506–1521. The `Timer` delta logic and the 10-tick cap go away.
+- **The pump is driven by `ON TIMER`**, QB64's stand-in for the original timer interrupt. `ON TIMER(sdTimerId, 0.01)` calls the pump. QB64 checks events between statements, so it fires inside busy-wait loops too. The pump tops up the queue until `_SNDRAWLEN(pipe) >= 0.1` seconds. If QB64 2.1 refuses the `ON TIMER(n, t) SubName` form, use `GoSub` to a label in WOLF3D.BAS that calls `SD_PumpAudio`.
+- **The OPL2 core** is integer-only and runs at the native 49716 Hz. A fractional accumulator resamples it to `_SNDRATE` (linear interpolation). Its structure follows the well-documented YM3812 model used by Nuked-OPL / dbopl: a 256-entry logsin table plus an exp table, a 9-bit envelope with rate counters, and 10-bit phase. All of it is ported to QB64 Long arithmetic. Output is mono `Single` in -1..1 through `_SNDRAW s!, s!, pipe&` (QB64 2.1 has no batch call; 44k calls a second is fine in compiled C++).
 
-**Requirement:** QB64-PE v3.14+ (stable MIDI). Classic QB64 lacks this.
-
-## Dual-backend design (user choice: both via compile-time flag)
-
-```basic
-' In WOLF3D.BAS or ID_SD.BI — pick one at build time:
-' $Let USE_MIDI_MUSIC = 0   ' default: pure QB64 OPL2 + IMF sequencer
-' $Let USE_MIDI_MUSIC = 1   ' fallback: pre-converted .mid files + QB64 MIDI
-```
-
-```mermaid
-flowchart TB
-    StartCPMusic --> SD_StartMusic
-    SD_StartMusic --> Flag{USE_MIDI_MUSIC}
-    Flag -->|0| IMFPath[IMF sequencer + OPL2 synth]
-    Flag -->|1| MIDIPath["_SNDOPEN MUSIC/n.mid + _SNDPLAY"]
-    IMFPath --> SNDRAW["_SNDRAWBATCH"]
-    MIDIPath --> QB64Midi[QB64 Opal backend]
-```
-
-Shared API unchanged: `SD_Startup`, `SD_StartMusic`, `SD_MusicOff`, `SD_UpdateAudio` (no-op pump for MIDI path).
-
----
-
-# Path A: Pure QB64 OPL2 (default, USE_MIDI_MUSIC = 0)
-
-## Current state
-
-The IMF music **sequencer** is done in [`ID_SD.BM`](ID_SD.BM): it parses register/data pairs at 700 Hz and has TODO markers for `OPL2_Write(reg, data)`. Nothing produces audio yet, and **`SD_ServiceMusic` is never called** from the game loop.
-
-Original hardware path (for reference):
-
-```405:409:origsrc/ID_SD_A.ASM
-	mov	ax,[es:di]						; Get register/value pair
-	xor	bh,bh
-	mov	bl,ah
-	xor	ah,ah
-	CALL alOut C,ax,bx
-```
-
-Register = low byte, data = high byte — matches the QB64 parser.
-
-## Architecture
-
-Two independent clocks:
-
-| Layer | Rate | Responsibility |
-|-------|------|----------------|
-| IMF sequencer | 700 Hz | `SD_ServiceMusic` — apply register writes from cached music |
-| OPL2 synth | `_SNDRATE` (~44100 Hz) | Generate PCM from chip state, queue to sound card |
-
-```mermaid
-flowchart TB
-    subgraph init [Startup]
-        SD_Startup --> OPL2_Init
-        SD_Startup --> SNDOPEN["_SNDOPENRAW"]
-    end
-    subgraph eachFrame [Each frame / menu tick]
-        SD_ServiceMusic --> OPL2_Write
-        SD_PumpAudio --> OPL2_Generate
-        OPL2_Generate --> SNDRAW["_SNDRAWBATCH"]
-    end
-    OPL2_Write --> RegFile[RegisterFile_256]
-    RegFile --> OPL2_Generate
-```
-
-## New files
-
-### [`OPL2.BI`](OPL2.BI) — chip constants and shared state
-
-- YM3812 constants from [`origsrc/ID_SD.EQU`](origsrc/ID_SD.EQU): operator bases (`0x20`, `0x40`, `0x60`, `0x80`, `0xE0`), channel bases (`0xA0`, `0xB0`, `0xC0`), global `0xBD`
-- Channel→operator map (from original [`origsrc/ID_SD.C`](origsrc/ID_SD.C) lines 155–159):
-  - carriers: `{3,4,5,11,12,13,19,20,21}`
-  - modulators: `{0,1,2,8,9,10,16,17,18}`
-  - rhythm ops: `{16,17,18,19,20,21}` for bass/snare/tom/cymbal/hihat
-- `Type OPL2Operator` — phase (Long), envelope level (Integer), key-on state, derived freq multiplier
-- Shared arrays: `oplRegs(255)`, 18 operators, 9 channels, waveform LUTs, ADSR rate LUTs
-- Declarations: `OPL2_Init`, `OPL2_Reset`, `OPL2_Write`, `OPL2_Generate`
-
-### [`OPL2.BM`](OPL2.BM) — core emulator (~400–600 lines)
-
-**1. Initialization (`OPL2_Init`)**
-- Build 4 waveform tables (1024 samples each): sine, half-sine, abs-sine, truncated-sine (OPL2 wave select bits 0–1)
-- Precompute ADSR increment tables from attack/decay/sustain/release nibbles (logarithmic OPL curve approximation — same approach as DOSBox/dbopl, table-driven per tick at chip rate)
-- Chip master clock: **49716 Hz**; resample to `_SNDRATE` inside `OPL2_Generate` (accumulator-based fractional stepping)
-
-**2. Register write (`OPL2_Write reg, data`)**
-- Mirror write into `oplRegs(reg)`
-- Side effects:
-  - `0xB0–0xB8`: key-on bit (bit 5) triggers envelope restart on both operators
-  - `0xBD`: rhythm mode — enable/disable percussion operators 16–20
-  - Frequency block + f-number → update per-operator phase increment
-
-**3. Per-sample synthesis (`OPL2_Generate buffer(), count`)**
-- For each output sample at `_SNDRATE`:
-  - Advance chip timer by `49716 / _SNDRATE` (fixed-point)
-  - For each of 18 operators with active envelope:
-    - Lookup waveform sample from phase
-    - Apply envelope attenuation (OPL uses ~3 dB steps; use power-of-2 or exp table)
-  - For each melodic channel 0–8:
-    - Read `0xC0` connection bits: modulator→carrier FM or additive parallel
-    - Apply feedback (top 3 bits of `0xC0`) to modulator
-  - Rhythm mode (`0xBD` bit 5): mix bass/snare/tom/cym/hihat from ops 16–20 per OPL2 rhythm map
-  - Sum all channels, clip to ±1.0, write mono `SINGLE` buffer
-- Use **Integer/Long fixed-point** throughout (no Double in inner loop) for QB64 performance
-
-**4. Reset (`OPL2_Reset`)**
-- Zero registers, silence all operators (matches `SDL_CleanAL` loop in original: regs `0x01–0xF4`)
-
-## Changes to existing files
-
-### [`ID_SD.BI`](ID_SD.BI)
-- Add: `sdRawPipe&`, `sdAudioReady` flag, `sdMixBuffer()` array, `OPL2_BATCH = 1024`, `SNDRAW_TARGET = 0.2` (seconds of buffer)
-- Declare: `SD_Startup`, `SD_Shutdown`, `SD_PumpAudio`
-
-### [`ID_SD.BM`](ID_SD.BM)
-- `$INCLUDE: 'OPL2.BI'` and `$INCLUDE: 'OPL2.BM'`
-- **`SD_Startup`**: `OPL2_Init`, open `_SNDOPENRAW`, allocate mix buffer
-- **`SD_Shutdown`**: `_SNDCLOSE sdRawPipe&`
-- Replace TODOs:
-  - `SD_StartMusic` → `OPL2_Reset`
-  - `SD_MusicOff` → `OPL2_Reset`
-  - `SD_ServiceMusic` loop → `OPL2_Write reg, regData`
-- **`SD_PumpAudio`** (new):
-  ```basic
-  DO WHILE _SNDRAWLEN(sdRawPipe&) < SNDRAW_TARGET
-      OPL2_Generate sdMixBuffer(), OPL2_BATCH
-      _SNDRAWBATCH sdMixBuffer(), sdRawPipe&
-  LOOP
-  ```
-- **`SD_UpdateAudio`** convenience wrapper: calls `SD_ServiceMusic` then `SD_PumpAudio` (single call site for game/menu loops)
-
-### [`WOLF3D.BAS`](WOLF3D.BAS)
-- Uncomment/add includes: `'$INCLUDE:'ID_SD.BM'` (and ensure `OPL2.BM` is pulled in)
-- In `InitGame`, replace stub comment with `SD_Startup` (line ~312)
-- In `DemoLoop` (and any wait/input loop), call `SD_UpdateAudio` each iteration so intro music (`StartCPMusic(INTROSONG)` at line 446) is audible
-- Add `SD_Shutdown` before `End` for clean exit
-
-### [`WL_GAME.BM`](WL_GAME.BM) (when game loop is enabled)
-- Call `SD_UpdateAudio` inside `GameLoop` each frame (OPL2 path only)
-
----
-
-# Path B: QB64 MIDI playback (USE_MIDI_MUSIC = 1)
-
-## Asset pipeline (one-time / build step)
-
-1. Extract IMF blobs from `AUDIO.WL6` (chunks 261+, matching `STARTMUSIC` in [`AUDIOWL6.BI`](AUDIOWL6.BI)) — 27 tracks for WL6
-2. Convert each to `.mid` with **[dro2midi](https://github.com/Malvineous/dro2midi)**:
-   - Wolf3D IMF runs at **700 Hz** — use `.wlf` extension or dro2midi's Wolf rate flag so timing is correct
-   - Conversion constant `-c 49716` (default) matches OPL chip clock
-3. Bundle output as `MUSIC/NAZI_NOR.mid`, etc., named to match song constants
-4. Include **GENMIDI.OP2** (or equivalent DMX OP2 bank) for authentic instruments via `_MIDISOUNDBANK "GENMIDI.OP2"`
-
-Optional: embed `.mid` files with `$EMBED` and load via `_SNDOPEN(_EMBEDDED$(...), "memory")` to avoid shipping loose files.
-
-## Runtime changes in [`ID_SD.BM`](ID_SD.BM)
-
-```basic
-$If USE_MIDI_MUSIC Then
-    Sub SD_Startup
-        _MIDISOUNDBANK "GENMIDI.OP2"
-    End Sub
-
-    Sub SD_StartMusic (music As _Offset)
-        ' Ignore IMF pointer; use song index from lastmusic_gbl
-        SD_MusicOff
-        sdMusicHandle& = _SNDOPEN("MUSIC/" + MusicFileName$(lastmusic_gbl))
-        If sdMusicHandle& > 0 Then _SNDPLAY sdMusicHandle&
-    End Sub
-
-    Sub SD_MusicOff
-        If sdMusicHandle& > 0 Then _SNDSTOP sdMusicHandle&: _SNDCLOSE sdMusicHandle&
-        sdMusicHandle& = 0
-    End Sub
-
-    Sub SD_UpdateAudio
-        ' No-op — QB64 renders MIDI asynchronously
-    End Sub
-$Else
-    ' ... OPL2 path from Path A ...
-$End If
-```
-
-`StartCPMusic` in [`WL_MENU.BM`](WL_MENU.BM) already sets `lastmusic_gbl = song` before `SD_StartMusic` — reuse that index for MIDI filename lookup table in `ID_SD.BI`.
-
-## Looping
-
-Original IMF loops in `SD_ServiceMusic` when `sqHackLen = 0`. For MIDI:
-- Use `_SNDPLAY sdMusicHandle&, 1` if QB64 supports loop flag, **or**
-- Poll `_SNDPLAYING(sdMusicHandle&)` in `SD_UpdateAudio` and restart when finished
-
-## MIDI path pros / cons
-
-| Pros | Cons |
-|------|------|
-| ~50 lines vs ~600 lines OPL2 core | Lossy IMF→MIDI conversion |
-| No `_SNDRAW` CPU load | Extra build step + asset files |
-| QB64 Opal backend is battle-tested OPL FM | Requires QB64-PE v3.14+ |
-| Easy to swap soundfonts / OP2 banks | Slight pitch/instrument differences possible |
-
----
-
-## Performance strategy (OPL2 path only)
-
-- Batch generation via `_SNDRAWBATCH` (not per-sample `_SNDRAW`)
-- All hot-path math: Long fixed-point, precomputed LUTs
-- Skip idle operators (envelope at minimum / key-off)
-- If profiling shows underruns on slower machines: reduce `OPL2_BATCH` latency target or add optional half-rate internal clock (22050 resample) behind a constant in `OPL2.BI` — only as fallback, not default
+## Implementation steps
+1. **Audio chunk cache.** Edit `ID_CA.BI` and `ID_CA.BM` to port `CA_CacheAudioChunk` (origsrc/ID_CA.C:1134, non-linked branch):
+   - Add `Dim Shared audiosegMem(0 To NUMSNDCHUNKS - 1) As _MEM`.
+   - Get `pos` and `compressed` by `_MemGet` of the 4-byte Longs at `audiostarts.OFFSET + chunk*4`.
+   - `_MemNew(compressed)`, `Get #audiohandle, pos + 1, bytes()`, `_MemPut`, then set `audiosegs(chunk) = audiosegMem(chunk).OFFSET`.
+   - Return early if the chunk is already loaded (`audiosegs(chunk) <> 0`).
+   - In `ID_MM.BM`, add a small `CA_FreeAudioChunk chunk` (`_MemFree` and zero the entry), or teach `MM_FreePtr` to do it.
+2. **`WL_MENU.BM` `StartCPMusic`:** use the `<> 0` test and pass `audiosegMem(STARTMUSIC + chunk)` to `SD_StartMusic`.
+3. **New `OPL2.BI`:** include guard `INCLUDE_OPL2_BI`. Holds constants from origsrc/ID_SD.EQU (operator bases 0x20/0x40/0x60/0x80/0xE0, channel bases 0xA0/0xB0/0xC0, 0xBD, 0x01), `OPL2_RATE = 49716`, `Type OPL2Op`, operator and channel tables, logsin/exp tables, and the `DECLARE`s.
+4. **New `OPL2.BM`** (~400–500 lines), with these subs:
+   - `OPL2_Init`: builds the tables.
+   - `OPL2_Reset`: zeroes registers 0x01–0xF5 and sets every envelope to silent, like `SDL_CleanAL`.
+   - `OPL2_Write reg, value`: handles operator registers (decode the slot), A0/B0 (frequency number, block, key-on edge restarts the envelope), C0 (feedback and connection), BD (AM/VIB depth and rhythm), and 01 (waveform-select enable).
+   - `OPL2_Sample&`: produces one native-rate sample covering 9 melodic channels, FM and additive connection, feedback, 4 waveforms, KSL, total level, tremolo and vibrato.
+   - Rhythm mode is optional and comes last; Wolf3D music is melodic.
+5. **`ID_SD.BI` and `ID_SD.BM`:**
+   - Change `sqHackLen` and `sqHackSeqLen` to `Long`; add `sdPipe&`, `sdTimerId`, `imfAcc&`, `oplAcc&`.
+   - `SD_StartMusic (music As _MEM)`: length = the first word in **bytes** (no ×2). Call `OPL2_Reset` on start and in `SD_MusicOff`.
+   - `SDL_ServiceMusicTick` = the C tick body, calling `OPL2_Write reg, regData`. `alTimeCount` increments once per tick.
+   - Remove the `Timer`-based `SD_ServiceMusic` logic.
+   - Add `SD_Startup` (`OPL2_Init`, `OPL2_Write &H01, &H20`, `sdPipe& = _SndOpenRaw`, arm `ON TIMER`), `SD_Shutdown` (`Timer(sdTimerId) Off`, `_SndRawDone`, `_SndClose`), and `SD_PumpAudio`.
+   - Include `OPL2.BI` and `OPL2.BM` from here.
+6. **`WOLF3D.BAS`:** call `SD_Startup` in `InitGame` (line 312, replacing the comment). Call `SD_Shutdown` before `End` (line 113) and in `ErrorHandler`. Add the GoSub label only if the fallback from the design section is needed.
+7. **Housekeeping:** rewrite `plans/qb64_opl2_emulator_fee1c44b.plan.md` to match this plan (drop Path B, record the bugs found), and update `TODO.txt` (AUDIOWL6.BI is now done, add sound TODOs). Follow the code style: CamelCase keywords, `$If X = UNDEFINED Then / $Let X = 1 / $End If` guards.
 
 ## Verification
+- Compile with `C:\qb64\qb64.exe -x WOLF3D.BAS` after each step; `parse-format-qb64-error.awk` and `mymake.sh` help read errors.
+- After step 1: temporarily print the chunk size and first word of `STARTMUSIC + INTROSONG`; the length should equal the chunk size minus 2 or 4.
+- After step 4: a temporary test sub writes a single sine-wave note (frequency number 0x244, block 4 ≈ 440 Hz, key-on). It should be audible and in tune.
+- End to end: run `WOLF3D.exe`. The intro song ("NAZI_NOR") should play during the signon/PG13 key waits at the right tempo (compare with DOSBox or a reference recording), with no dropouts (`_SNDRAWLEN` stays near 0.1 s), and should loop correctly at the end.
 
-**OPL2 path (default):**
-1. Build/run with `$Let USE_MIDI_MUSIC = 0`, `AUDIO.WL6` + `VSWAP.WL6` present
-2. Intro music audible after `StartCPMusic(INTROSONG)`
-3. `_SNDRAWLEN` stays near target (no underruns)
-
-**MIDI path:**
-1. Build/run with `$Let USE_MIDI_MUSIC = 1`, converted `MUSIC/*.mid` + `GENMIDI.OP2` present
-2. Same song switching works via `SD_MusicOff` + new `_SNDPLAY`
-3. Compare against OPL2 path for acceptable quality
-
-## Risk notes
-
-- **OPL2 path:** Pure QB64 FM at 44.1 kHz is CPU-heavy; fixed-point + batching required
-- **MIDI path:** Requires QB64-PE v3.14+, not classic QB64; IMF must be pre-converted
-- **Both paths:** IMF timing cap (10 ticks/call) only affects OPL2 path; sound effects remain out of scope
+## Implementation status (2026-10-25)
+- Steps 1–6 implemented: `CA_CacheAudioChunk`/`CA_FreeAudioChunk` (ID_CA), `StartCPMusic` (WL_MENU), `OPL2.BI`/`OPL2.BM`, rewritten `ID_SD.BI`/`ID_SD.BM`, `SD_Startup`/`SD_Shutdown` wiring in WOLF3D.BAS.
+- `ON TIMER(n, t) SubName` works in QB64 2.1 (about 62 events/s on Windows, fires inside busy loops).
+- Offline checks: a 440 Hz test note measured 439 zero crossings/s; after 30 s, the sequencer position matches a Python model of the original C loop exactly (byte 4718 of 8428 in NAZI_NOR).
+- Speed: 13.8x realtime without `$Debug`, 2.7x with `$Debug` (WOLF3D.BAS has `$Debug` on).
+- Still open: rhythm mode, AdLib/PC/digitized SFX, listening test against DOSBox.

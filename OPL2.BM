@@ -1,0 +1,357 @@
+' OPL2.BM - Yamaha YM3812 (OPL2 / AdLib) software emulator, see OPL2.BI
+
+$If INCLUDE_OPL2_BM = UNDEFINED Then
+    $Let INCLUDE_OPL2_BM = 1
+
+    '$INCLUDE: 'OPL2.BI'
+
+    ' Fills a table from a comma separated list of numbers
+    Sub OPL2_ParseTable (values As String, table() As Long)
+        Dim i As Long, p As Long, q As Long
+        p = 1
+        For i = LBound(table) To UBound(table)
+            q = InStr(p, values, ",")
+            If q = 0 Then q = Len(values) + 1
+            table(i) = Val(Mid$(values, p, q - p))
+            p = q + 1
+        Next i
+    End Sub
+
+    Sub OPL2_Init ()
+        Dim i As Long, c As Long
+
+        For i = 0 To 255
+            oplLogSin(i) = Int(-Log(Sin((i + 0.5) * _Pi / 512)) / Log(2) * 256 + 0.5)
+            oplExp(i) = Int(2 ^ ((255 - i) / 256) * 1024 + 0.5) * 2
+        Next i
+        For i = 0 To 30
+            oplPow2(i) = 2 ^ i
+        Next i
+        OPL2_ParseTable "0,32,40,45,48,51,53,55,56,58,59,60,61,62,63,64", oplKslRom()
+        OPL2_ParseTable "8,1,2,0", oplKslShift()
+        OPL2_ParseTable "1,2,4,6,8,10,12,14,16,18,20,20,24,24,30,30", oplMt()
+        ' Envelope increment steps for rates 12..15
+        oplIncStep(1, 0) = 1
+        oplIncStep(2, 0) = 1: oplIncStep(2, 2) = 1
+        oplIncStep(3, 0) = 1: oplIncStep(3, 1) = 1: oplIncStep(3, 2) = 1
+
+        ' Operator offsets: 0,1,2 modulators and 3,4,5 carriers of channels 0,1,2, then +8 and +16
+        ' Same layout as modifiers[] / carriers[] in ID_SD.C
+        For i = 0 To 21
+            If (i And 7) < 6 Then
+                opValid(i) = 1
+                opChan(i) = (i \ 8) * 3 + ((i And 7) Mod 3)
+                If (i And 7) >= 3 Then opIsCarrier(i) = 1
+            End If
+        Next i
+        For c = 0 To 8
+            chMod(c) = (c \ 3) * 8 + (c Mod 3)
+            chCar(c) = chMod(c) + 3
+        Next c
+
+        OPL2_Reset
+    End Sub
+
+    ' Silences the chip and clears all registers
+    Sub OPL2_Reset ()
+        Dim i As Long
+
+        For i = 0 To 255
+            oplRegs(i) = 0
+        Next i
+        For i = 0 To 21
+            opAm(i) = 0: opVib(i) = 0: opEgt(i) = 0: opKsr(i) = 0: opMult(i) = 0
+            opKsl(i) = 0: opTl(i) = 0: opAr(i) = 0: opDr(i) = 0: opSl(i) = 0: opRr(i) = 0
+            opWave(i) = 0: opKey(i) = 0: opPhase(i) = 0
+            opOut(i) = 0: opPrevOut(i) = 0: opFbMod(i) = 0
+            opEgRout(i) = &H1FF
+            opEgGen(i) = OPL2_EG_RELEASE
+        Next i
+        For i = 0 To 8
+            chFnum(i) = 0: chBlock(i) = 0: chFb(i) = 0: chCon(i) = 0: chKsl(i) = 0: chKsv(i) = 0
+        Next i
+        oplWse = 0
+        oplNts = 0
+        oplTremoloShift = 4
+        oplVibShift = 1
+        oplTimer = 0
+        oplEgTimer = 0
+        oplEgState = 0
+        oplEgAdd = 0
+        oplEgTimerLo = 0
+        oplTremoloPos = 0
+        oplTremolo = 0
+        oplVibPos = 0
+    End Sub
+
+    ' Recalculates key scale level and key scale value after a frequency change
+    Sub OPL2_UpdateChannel (c As Long)
+        Dim ksl As Long
+
+        ksl = oplKslRom(chFnum(c) \ 64) * 4 - (8 - chBlock(c)) * 32
+        If ksl < 0 Then ksl = 0
+        chKsl(c) = ksl
+        chKsv(c) = chBlock(c) * 2 + ((chFnum(c) \ oplPow2(9 - oplNts)) And 1)
+    End Sub
+
+    ' alOut equivalent - puts value in AdLib register reg
+    Sub OPL2_Write (reg As Long, value As Long)
+        Dim r As Long, v As Long, o As Long, c As Long
+
+        r = reg And &HFF
+        v = value And &HFF
+        oplRegs(r) = v
+
+        Select Case r
+            Case &H01
+                oplWse = (v \ 32) And 1
+            Case &H08
+                oplNts = (v \ 64) And 1
+                For c = 0 To 8
+                    OPL2_UpdateChannel c
+                Next c
+            Case &H20 To &H35
+                o = r - &H20
+                If opValid(o) Then
+                    opAm(o) = (v \ 128) And 1
+                    opVib(o) = (v \ 64) And 1
+                    opEgt(o) = (v \ 32) And 1
+                    opKsr(o) = (v \ 16) And 1
+                    opMult(o) = v And 15
+                End If
+            Case &H40 To &H55
+                o = r - &H40
+                If opValid(o) Then
+                    opKsl(o) = (v \ 64) And 3
+                    opTl(o) = v And 63
+                End If
+            Case &H60 To &H75
+                o = r - &H60
+                If opValid(o) Then
+                    opAr(o) = (v \ 16) And 15
+                    opDr(o) = v And 15
+                End If
+            Case &H80 To &H95
+                o = r - &H80
+                If opValid(o) Then
+                    opSl(o) = (v \ 16) And 15
+                    If opSl(o) = 15 Then opSl(o) = 31
+                    opRr(o) = v And 15
+                End If
+            Case &HE0 To &HF5
+                o = r - &HE0
+                If opValid(o) Then opWave(o) = v And 3
+            Case &HA0 To &HA8
+                c = r - &HA0
+                chFnum(c) = (chFnum(c) And &H300) Or v
+                OPL2_UpdateChannel c
+            Case &HB0 To &HB8
+                c = r - &HB0
+                chFnum(c) = (chFnum(c) And &HFF) Or ((v And 3) * 256)
+                chBlock(c) = (v \ 4) And 7
+                OPL2_UpdateChannel c
+                ' Key on/off, the envelope restarts in OPL2_Generate
+                opKey(chMod(c)) = (v \ 32) And 1
+                opKey(chCar(c)) = (v \ 32) And 1
+            Case &HBD
+                If v And 128 Then oplTremoloShift = 2 Else oplTremoloShift = 4
+                If v And 64 Then oplVibShift = 0 Else oplVibShift = 1
+                ' TODO: rhythm mode (bit 5) and percussion keys (bits 0-4)
+            Case &HC0 To &HC8
+                c = r - &HC0
+                chFb(c) = (v \ 2) And 7
+                chCon(c) = v And 1
+        End Select
+    End Sub
+
+    $Checking:Off
+    ' Generates one sample at the native OPL2_RATE, returns the mix of the 9 channels
+    Function OPL2_Generate& ()
+        Dim o As Long, c As Long, accm As Long, x As Long, p As Long
+        Dim regRate As Long, ks As Long, rate As Long, rateHi As Long, rateLo As Long
+        Dim egShift As Long, shift As Long, egRout As Long, egInc As Long, egOff As Long
+        Dim egOut As Long, egReset As Long
+        Dim fnum As Long, range As Long, phaseIn As Long, level As Long, neg As Long, w As Long
+
+        For o = 0 To 21
+            If opValid(o) = 0 Then _Continue
+            ' Fully released operator: silent, nothing to update until the next key on
+            If opKey(o) = 0 And opEgRout(o) = &H1FF Then
+                opOut(o) = 0: opPrevOut(o) = 0: opFbMod(o) = 0
+                _Continue
+            End If
+            c = opChan(o)
+
+            ' Feedback, used only by the modulator
+            If chFb(c) Then
+                x = opPrevOut(o) + opOut(o)
+                p = oplPow2(9 - chFb(c))
+                If x >= 0 Then opFbMod(o) = x \ p Else opFbMod(o) = -((p - 1 - x) \ p)
+            Else
+                opFbMod(o) = 0
+            End If
+            opPrevOut(o) = opOut(o)
+
+            ' Envelope generator
+            egOut = opEgRout(o) + opTl(o) * 4 + chKsl(c) \ oplPow2(oplKslShift(opKsl(o)))
+            If opAm(o) Then egOut = egOut + oplTremolo
+            If egOut > &H1FF Then egOut = &H1FF
+
+            egReset = 0
+            If opKey(o) <> 0 And opEgGen(o) = OPL2_EG_RELEASE Then
+                egReset = 1
+                regRate = opAr(o)
+            Else
+                Select Case opEgGen(o)
+                    Case OPL2_EG_ATTACK
+                        regRate = opAr(o)
+                    Case OPL2_EG_DECAY
+                        regRate = opDr(o)
+                    Case OPL2_EG_SUSTAIN
+                        If opEgt(o) Then regRate = 0 Else regRate = opRr(o)
+                    Case Else
+                        regRate = opRr(o)
+                End Select
+            End If
+
+            If opKsr(o) Then ks = chKsv(c) Else ks = chKsv(c) \ 4
+            rate = ks + regRate * 4
+            rateHi = rate \ 4
+            rateLo = rate And 3
+            If rateHi And 16 Then rateHi = 15
+            egShift = rateHi + oplEgAdd
+            shift = 0
+            If regRate <> 0 Then
+                If rateHi < 12 Then
+                    If oplEgState Then
+                        Select Case egShift
+                            Case 12
+                                shift = 1
+                            Case 13
+                                shift = (rateLo \ 2) And 1
+                            Case 14
+                                shift = rateLo And 1
+                        End Select
+                    End If
+                Else
+                    shift = (rateHi And 3) + oplIncStep(rateLo, oplEgTimerLo)
+                    If shift And 4 Then shift = 3
+                    If shift = 0 Then shift = oplEgState
+                End If
+            End If
+
+            egRout = opEgRout(o)
+            egInc = 0
+            egOff = 0
+            If egReset <> 0 And rateHi = 15 Then egRout = 0 ' Instant attack
+            If (opEgRout(o) And &H1F8) = &H1F8 Then egOff = 1
+            If opEgGen(o) <> OPL2_EG_ATTACK And egReset = 0 And egOff <> 0 Then egRout = &H1FF
+            Select Case opEgGen(o)
+                Case OPL2_EG_ATTACK
+                    If opEgRout(o) = 0 Then
+                        opEgGen(o) = OPL2_EG_DECAY
+                    ElseIf opKey(o) <> 0 And shift > 0 And rateHi <> 15 Then
+                        ' (~rout) >> (4 - shift), rounded down like an arithmetic shift
+                        p = oplPow2(4 - shift)
+                        egInc = -((opEgRout(o) + p) \ p)
+                    End If
+                Case OPL2_EG_DECAY
+                    If (opEgRout(o) \ 16) = opSl(o) Then
+                        opEgGen(o) = OPL2_EG_SUSTAIN
+                    ElseIf egOff = 0 And egReset = 0 And shift > 0 Then
+                        egInc = oplPow2(shift - 1)
+                    End If
+                Case Else
+                    If egOff = 0 And egReset = 0 And shift > 0 Then egInc = oplPow2(shift - 1)
+            End Select
+            opEgRout(o) = (egRout + egInc) And &H1FF
+            If egReset Then opEgGen(o) = OPL2_EG_ATTACK
+            If opKey(o) = 0 Then opEgGen(o) = OPL2_EG_RELEASE
+
+            ' Phase generator
+            fnum = chFnum(c)
+            If opVib(o) Then
+                range = (fnum \ 128) And 7
+                If (oplVibPos And 3) = 0 Then
+                    range = 0
+                ElseIf oplVibPos And 1 Then
+                    range = range \ 2
+                End If
+                range = range \ oplPow2(oplVibShift)
+                If oplVibPos And 4 Then range = -range
+                fnum = fnum + range
+            End If
+            phaseIn = opPhase(o) \ 512
+            If egReset Then opPhase(o) = 0
+            opPhase(o) = (opPhase(o) + (((fnum * oplPow2(chBlock(c))) \ 2) * oplMt(opMult(o))) \ 2) And &H7FFFF
+
+            ' Operator output: carrier is modulated by the modulator (FM), modulator by its feedback
+            If opIsCarrier(o) Then
+                If chCon(c) = 0 Then phaseIn = phaseIn + opOut(chMod(c))
+            Else
+                phaseIn = phaseIn + opFbMod(o)
+            End If
+            phaseIn = phaseIn And &H3FF
+
+            If oplWse Then w = opWave(o) Else w = 0
+            neg = 0
+            Select Case w
+                Case 0 ' Sine
+                    If phaseIn And &H100 Then level = oplLogSin((phaseIn And &HFF) Xor &HFF) Else level = oplLogSin(phaseIn And &HFF)
+                    If phaseIn And &H200 Then neg = 1
+                Case 1 ' Half sine
+                    If phaseIn And &H200 Then
+                        level = &H1000
+                    ElseIf phaseIn And &H100 Then
+                        level = oplLogSin((phaseIn And &HFF) Xor &HFF)
+                    Else
+                        level = oplLogSin(phaseIn And &HFF)
+                    End If
+                Case 2 ' Absolute sine
+                    If phaseIn And &H100 Then level = oplLogSin((phaseIn And &HFF) Xor &HFF) Else level = oplLogSin(phaseIn And &HFF)
+                Case Else ' Quarter sine
+                    If phaseIn And &H100 Then level = &H1000 Else level = oplLogSin(phaseIn And &HFF)
+            End Select
+            level = level + egOut * 8
+            If level >= &H1000 Then
+                x = 0
+            Else
+                x = oplExp(level And &HFF) \ oplPow2(level \ 256)
+            End If
+            If neg Then x = -x - 1
+            opOut(o) = x
+        Next o
+
+        ' Channel mix
+        accm = 0
+        For c = 0 To 8
+            If chCon(c) Then accm = accm + opOut(chMod(c))
+            accm = accm + opOut(chCar(c))
+        Next c
+
+        ' Tremolo, vibrato and envelope timers
+        If (oplTimer And &H3F) = &H3F Then oplTremoloPos = (oplTremoloPos + 1) Mod 210
+        If oplTremoloPos < 105 Then
+            oplTremolo = oplTremoloPos \ oplPow2(oplTremoloShift)
+        Else
+            oplTremolo = (210 - oplTremoloPos) \ oplPow2(oplTremoloShift)
+        End If
+        If (oplTimer And &H3FF) = &H3FF Then oplVibPos = (oplVibPos + 1) And 7
+        oplTimer = (oplTimer + 1) And &HFFFF
+
+        If oplEgState Then
+            shift = 0
+            Do While shift < 13 And ((oplEgTimer \ oplPow2(shift)) And 1) = 0
+                shift = shift + 1
+            Loop
+            If shift > 12 Then oplEgAdd = 0 Else oplEgAdd = shift + 1
+            oplEgTimerLo = oplEgTimer And 3
+            oplEgTimer = (oplEgTimer + 1) And &HFFFFFFF
+        End If
+        oplEgState = oplEgState Xor 1
+
+        OPL2_Generate& = accm
+    End Function
+    $Checking:On
+
+$EndIf

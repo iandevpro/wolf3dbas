@@ -100,6 +100,9 @@ Call InitGame
 'Options
 Call DemoLoop
 
+' TODO: remove when the rest of DemoLoop (main menu) is ported - keeps the intro music playing
+Do: _Limit 30: Loop Until InKey$ <> ""
+
 ' Main game loop
 'Print "Debug: Entering main loop"
 'Do: Loop Until InKey$ <> ""
@@ -110,9 +113,11 @@ Call DemoLoop
 '_Limit 60 ' Limit to ~60 FPS
 'Loop Until InKey$ = Chr$(27) ' ESC to quit
 
+SD_Shutdown
 End
 
 ErrorHandler:
+SD_Shutdown
 Print "Error: "; Err; " - Line: "; _ErrorLine
 Print "ErrorMessage: "; _ErrorMessage$
 Print "_InclErrorFile: "; _InclErrorFile$; "_InclErrorLine:"; _InclErrorLine
@@ -309,7 +314,7 @@ Sub InitGame
     'IN_Startup (); orig C - Input Manager Startup - not needed in QB64, modern OSes
     'PM_Startup (); orig C - Page Manager Startup - not needed in QB64, modern OSes
     'PM_UnlockMainMem (); orig C - related to memory management - not needed in QB64, modern OSes
-    'SD_Startup (); orig C - Sound Manager Startup - not needed in QB64, modern OSes
+    SD_Startup ' Sound Manager Startup - OPL2 emulator + _SndRaw output
     CA_Startup
     'US_Startup (); orig C - Starts the User Mgr - it looks like there are some init for Rnd (not needed)
     ' and checks for running Ted (level editor)
