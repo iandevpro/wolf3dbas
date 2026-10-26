@@ -1,0 +1,49 @@
+' ID_IN.C - Input Manager
+' The original read the keyboard, mouse and joystick from its own interrupt handlers.
+' QB64 provides InKey$ and _MouseInput instead.
+
+$If INCLUDE_ID_IN_BM = UNDEFINED Then
+    $Let INCLUDE_ID_IN_BM = 1
+
+    '$INCLUDE: 'ID_IN.BI'
+
+    ' Drops pending key presses and mouse events
+    Sub IN_ClearKeysDown ()
+        Do While InKey$ <> ""
+        Loop
+        Do While _MouseInput
+        Loop
+    End Sub
+
+    ' IN_StartAck / IN_CheckAck - true when a key or mouse button was pressed
+    Function IN_CheckAck% ()
+        IN_CheckAck% = FALSE
+        If InKey$ <> "" Then IN_CheckAck% = TRUE: Exit Function
+        Do While _MouseInput
+            If _MouseButton(1) Or _MouseButton(2) Then IN_CheckAck% = TRUE: Exit Function
+        Loop
+    End Function
+
+    '===================
+    '=
+    '= IN_UserInput
+    '=
+    '= Waits for the specified delay time (in ticks, TickBase per second)
+    '= or the user pressing a key or a mouse button
+    '=
+    '===================
+    Function IN_UserInput% (delay As Long)
+        Dim lasttime As Double, elapsed As Double
+
+        IN_UserInput% = FALSE
+        lasttime = Timer(.001)
+        IN_ClearKeysDown
+        Do
+            _Limit TickBase
+            If IN_CheckAck% Then IN_UserInput% = TRUE: Exit Function
+            elapsed = Timer(.001) - lasttime
+            If elapsed < 0 Then elapsed = elapsed + 86400 ' Timer wraps at midnight
+        Loop While elapsed * TickBase < delay
+    End Function
+
+$EndIf

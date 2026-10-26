@@ -44,6 +44,31 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         '   IN_Ack()
     End Sub
 
+    $If JAPAN = UNDEFINED Then
+        '==================
+        '=
+        '= PG13
+        '=
+        '==================
+        Sub PG13
+            Dim ack As Integer
+
+            VW_FadeOut
+            VWB_Bar 0, 0, 320, 200, &H82 ' background
+
+            CA_CacheGrChunk PG13PIC
+            VWB_DrawPic 216, 110, PG13PIC
+            VW_UpdateScreen
+
+            UNCACHEGRCHUNK PG13PIC
+
+            VW_FadeIn
+            ack = IN_UserInput(TickBase * 7)
+
+            VW_FadeOut
+        End Sub
+    $End If
+
 '$INCLUDE: 'ID_VH.BM'
 '$INCLUDE: 'WL_MENU.BM'
 $End If

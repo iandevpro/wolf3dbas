@@ -115,7 +115,8 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Print "Setting up graphics file..."
         Dim fname As String * 13
         Dim handle As Integer
-        Dim compseg As _MEM
+        Dim compseg As _MEM, picseg As _MEM
+        Dim i As Integer
         Dim fileBytes() As _Unsigned _Byte
 
         ' GRHEADERLINKED - is not defined in the original C source code
@@ -186,26 +187,22 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Get #grhandle, , fileBytes()
         _MemPut compseg, compseg.OFFSET, fileBytes()
 
-        ' Expand the data into pictable
-        CAL_HuffExpand compseg, pictable(), NUMPICS * Len(pictable(0)), grhuffman(), False
+        ' Expand the data into pictable (NUMPICS pairs of width, height words)
+        picseg = _MemNew(NUMPICS * Len(pictable(0)))
+        CAL_HuffExpand compseg, picseg, NUMPICS * Len(pictable(0)), grhuffman(), False
+        For i = 0 To NUMPICS - 1
+            pictable(i).width = _MemGet(picseg, picseg.OFFSET + i * 4, Integer)
+            pictable(i).height = _MemGet(picseg, picseg.OFFSET + i * 4 + 2, Integer)
+        Next i
+        _MemFree picseg
         _MemFree compseg
     End Sub
 
     Sub CAL_OptimizeNodes (huffTable() As huffnode)
         ' Goes through a huffman table and changes the 256-511 node numbers to the
         ' actual address of the node. Must be called before CAL_HuffExpand
-        Dim i As Integer
-        Dim node As huffnode
-
-        For i = 0 To 254
-            node = huffTable(i)
-            If node.bit0 >= 256 Then
-                huffTable(i).bit0 = i + (node.bit0 - 256)
-            End If
-            If node.bit1 >= 256 Then
-                huffTable(i).bit1 = i + (node.bit1 - 256)
-            End If
-        Next i
+        ' QB64 has no pointers: the node numbers are kept as is and CAL_HuffExpand
+        ' uses (code - 256) as the node index, so there is nothing to do here
     End Sub
 
     Sub CAL_GetGrChunkLength (chunk As Integer)
@@ -300,107 +297,111 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ' Print "Chunk"; chunk; "position:"; chunkPosition; "length:"; chunkcomplen; "expanded:"; chunkexplen
     End Sub
 
-    'Sub CAL_HuffExpand (source As _MEM, dest() As pictabletype, length As Long, huffTable() As huffnode, screenhack As Integer)
+    Sub CAL_HuffExpand (source As _MEM, dest As _MEM, length As Long, huffTable() As huffnode, screenhack As Integer)
         ' Length is the length of the EXPANDED data
-        ' If screenhack, the data is decompressed in four planes directly to the screen
-        ' This is a simplified implementation - you may need to expand this based on your needs
+        ' Node codes 0-255 are output bytes, 256+ are node numbers + 256 (see CAL_OptimizeNodes)
+        ' screenhack (decompress in four planes directly to the screen) is not needed in QB64
+        Dim srcOff As _Offset, srcEnd As _Offset, dstOff As _Offset, dstEnd As _Offset
+        Dim curByte As Long, bitMask As Long, nodeIdx As Long, code As Long
 
-    '    Print "Huffman expansion not fully implemented yet"
-        ' TODO: Implement full huffman expansion algorithm
-        ' For now, just copy data directly if possible, or implement a basic expansion
-    'End Sub
+        If length <= 0 Then Exit Sub
+        srcOff = source.OFFSET
+        srcEnd = source.OFFSET + source.SIZE
+        dstOff = dest.OFFSET
+        dstEnd = dest.OFFSET + length
 
-    Sub CAL_HuffExpand(sourceMem As _MEM, destArray() As pictabletype, length As Long, huffTable() As huffnode, screenhack As Integer)
-        ' QB64 port of Wolf3D Huffman decompression (both <64k and >64k cases)
-        ' This version works with arrays instead of _MEM blocks
-        Dim headNode As Integer: headNode = 254
-        Dim srcPtr As _Offset: srcPtr = sourceMem.OFFSET
-        Dim srcEnd As _Offset: srcEnd = srcPtr + length - 1
-        Dim bitMask As Integer, curByte As Integer, nodeIdx As Integer
-        Dim outCount As Long: outCount = 0
-        Dim destIndex As Integer: destIndex = 0
-        Dim tempByte As _Unsigned _Byte
+        nodeIdx = 254 ' head node is always node 254
+        curByte = _MemGet(source, srcOff, _Unsigned _Byte)
+        srcOff = srcOff + 1
+        bitMask = 1
+        Do
+            If curByte And bitMask Then code = huffTable(nodeIdx).bit1 Else code = huffTable(nodeIdx).bit0
+            bitMask = bitMask * 2
+            If bitMask = 256 Then
+                If srcOff < srcEnd Then curByte = _MemGet(source, srcOff, _Unsigned _Byte) Else curByte = 0
+                srcOff = srcOff + 1
+                bitMask = 1
+            End If
+            If code < 256 Then
+                _MemPut dest, dstOff, code As _UNSIGNED _BYTE
+                dstOff = dstOff + 1
+                nodeIdx = 254
+                If dstOff >= dstEnd Then Exit Do
+            Else
+                nodeIdx = code - 256
+            End If
+        Loop
+    End Sub
 
-        If length < &HFFF0 Then
-            ' --- Less than 64k case ---
-            curByte = _MemGet(sourceMem, srcPtr, _Unsigned _Byte)
-            srcPtr = srcPtr + 1
-            bitMask = 1
-            nodeIdx = headNode
+    ' GRFILEPOS macro - file position of a graphics chunk, -1 for sparse tiles
+    Function GRFILEPOS& (chunk As Integer)
+        Dim value As Long
+        $If THREEBYTEGRSTARTS = DEFINED Then
+            value = _MemGet(grstarts, grstarts.OFFSET + chunk * 3, _Unsigned _Byte)
+            value = value + _MemGet(grstarts, grstarts.OFFSET + chunk * 3 + 1, _Unsigned _Byte) * 256&
+            value = value + _MemGet(grstarts, grstarts.OFFSET + chunk * 3 + 2, _Unsigned _Byte) * 65536
+            If value = &HFFFFFF Then value = -1
+        $Else
+            value = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
+        $End If
+        GRFILEPOS& = value
+    End Function
 
-            Do While outCount < length And destIndex < UBound(destArray)
-                If (curByte And bitMask) = 0 Then
-                    If huffTable(nodeIdx).bit0 < 256 Then
-                        ' Store byte in array (simplified - you may need to adjust based on pictabletype structure)
-                        tempByte = huffTable(nodeIdx).bit0
-                        ' For now, just store in the first field of the array element
-                        destArray(destIndex).width = tempByte
-                        destIndex = destIndex + 1
-                        outCount = outCount + 1
-                        nodeIdx = headNode
-                    Else
-                        nodeIdx = huffTable(nodeIdx).bit0 - 256
-                    End If
-                Else
-                    If huffTable(nodeIdx).bit1 < 256 Then
-                        ' Store byte in array
-                        tempByte = huffTable(nodeIdx).bit1
-                        destArray(destIndex).width = tempByte
-                        destIndex = destIndex + 1
-                        outCount = outCount + 1
-                        nodeIdx = headNode
-                    Else
-                        nodeIdx = huffTable(nodeIdx).bit1 - 256
-                    End If
-                End If
+    '======================
+    '=
+    '= CA_CacheGrChunk
+    '=
+    '= Makes sure a given chunk is in memory, loadiing it if needed
+    '=
+    '======================
+    Sub CA_CacheGrChunk (chunk As Integer)
+        Dim position As Long, compressed As Long, expanded As Long
+        Dim nextChunk As Integer
+        Dim source As _MEM
+        Dim fileBytes() As _Unsigned _Byte
 
-                bitMask = bitMask * 2
-                If bitMask > 128 Then
-                    If srcPtr > srcEnd Then Exit Do
-                    curByte = _MemGet(sourceMem, srcPtr, _Unsigned _Byte)
-                    srcPtr = srcPtr + 1
-                    bitMask = 1
-                End If
-            Loop
-        Else
-            ' --- Greater than 64k case ---
-            Dim remaining As Long: remaining = length
-            curByte = _MemGet(sourceMem, srcPtr, _Unsigned _Byte)
-            srcPtr = srcPtr + 1
-            bitMask = 1
-            nodeIdx = headNode
-
-            Do While remaining > 0 And destIndex < UBound(destArray)
-                If (curByte And bitMask) = 0 Then
-                    If huffTable(nodeIdx).bit0 < 256 Then
-                        tempByte = huffTable(nodeIdx).bit0
-                        destArray(destIndex).width = tempByte
-                        destIndex = destIndex + 1
-                        remaining = remaining - 1
-                        nodeIdx = headNode
-                    Else
-                        nodeIdx = huffTable(nodeIdx).bit0 - 256
-                    End If
-                Else
-                    If huffTable(nodeIdx).bit1 < 256 Then
-                        tempByte = huffTable(nodeIdx).bit1
-                        destArray(destIndex).width = tempByte
-                        destIndex = destIndex + 1
-                        remaining = remaining - 1
-                        nodeIdx = headNode
-                    Else
-                        nodeIdx = huffTable(nodeIdx).bit1 - 256
-                    End If
-                End If
-
-                bitMask = bitMask * 2
-                If bitMask > 128 Then
-                    curByte = _MemGet(sourceMem, srcPtr, _Unsigned _Byte)
-                    srcPtr = srcPtr + 1
-                    bitMask = 1
-                End If
-            Loop
+        If grsegs(chunk) <> 0 Then
+            Exit Sub ' allready in memory
         End If
+
+        position = GRFILEPOS(chunk)
+        If position < 0 Then Exit Sub ' $FFFFFFFF start is a sparse tile
+
+        nextChunk = chunk + 1
+        Do While GRFILEPOS(nextChunk) = -1 ' skip past any sparse tiles
+            nextChunk = nextChunk + 1
+        Loop
+        compressed = GRFILEPOS(nextChunk) - position
+
+        Seek #grhandle, position + 1 ' QB64 uses 1-based file positions
+
+        ' CAL_ExpandGrChunk
+        If chunk >= STARTTILE8 And chunk < STARTEXTERNS Then
+            ' expanded sizes of tile8/16/32 are implicit (WL6 has only unmasked 8x8 tiles)
+            expanded = 64 * NUMTILE8 ' BLOCK * NUMTILE8
+        Else
+            ' everything else has an explicit size longword
+            Get #grhandle, , expanded
+            compressed = compressed - 4
+        End If
+
+        source = _MemNew(compressed)
+        ReDim fileBytes(0 To compressed - 1) As _Unsigned _Byte
+        Get #grhandle, , fileBytes()
+        _MemPut source, source.OFFSET, fileBytes()
+
+        ' MM_GetPtr equivalent
+        grsegsMem(chunk) = _MemNew(expanded)
+        CAL_HuffExpand source, grsegsMem(chunk), expanded, grhuffman(), False
+        grsegs(chunk) = grsegsMem(chunk).OFFSET
+        _MemFree source
+    End Sub
+
+    ' UNCACHEGRCHUNK macro - frees a graphics chunk
+    Sub UNCACHEGRCHUNK (chunk As Integer)
+        If grsegs(chunk) = 0 Then Exit Sub
+        _MemFree grsegsMem(chunk)
+        grsegs(chunk) = 0
     End Sub
 
     Sub CAL_SetupAudioFile ()

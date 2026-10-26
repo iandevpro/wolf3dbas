@@ -39,6 +39,9 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Dim Shared grstarts As _MEM  ' Array of offsets in graphics file
     Dim Shared grhandle As Long  ' Handle to graphics file
     Dim Shared pictable(NUMPICS - 1) As pictabletype  ' Picture table
+    Dim Shared grsegs(0 To NUMCHUNKS - 1) As _Offset ' Pointers to cached graphics chunks
+    ' _MEM blocks backing grsegs(), needed for size info and _MemFree (MM_GetPtr equivalent)
+    Dim Shared grsegsMem(0 To NUMCHUNKS - 1) As _MEM
     Dim Shared chunkcomplen As Long  ' Compressed chunk length
     Dim Shared chunkexplen As Long  ' Expanded chunk length
 

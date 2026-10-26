@@ -17,6 +17,8 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
 
     Const sqMaxTracks = 10
 
+    Const TickBase = 70 ' 70Hz per tick - used as a base for timer 0
+
     ' IMF playback rate: 700Hz (TickBase * 10 in SDL_SetTimerSpeed)
     Const IMF_RATE = 700
 

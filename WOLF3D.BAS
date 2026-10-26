@@ -18,6 +18,7 @@ Const TRUE = -1
 '$INCLUDE: 'WL_MENU.BI'
 '$INCLUDE: 'ID_CA.BI'
 '$INCLUDE: 'ID_SD.BI'
+'$INCLUDE: 'ID_IN.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -133,6 +134,7 @@ System
 '$INCLUDE:'WL_MENU.BM'
 '$INCLUDE:'ID_MM.BM'
 '$INCLUDE:'ID_SD.BM'
+'$INCLUDE:'ID_IN.BM'
 
 ' SignonScreen - Displays the game's intro screen
 Sub SignonScreen
@@ -452,7 +454,7 @@ Sub DemoLoop
 
         $If JAPAN = UNDEFINED Then
             If Not NOWAIT Then
-                'Call PG13()
+                Call PG13
             End If
         $End If
     $End If

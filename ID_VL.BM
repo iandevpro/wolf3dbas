@@ -81,6 +81,67 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
 
     '=================
     '=
+    '= VL_FadeIn
+    '=
+    '=================
+    Sub VL_FadeIn (start As Integer, finish As Integer, palette_array() As Long, steps As Integer)
+        Dim i As Integer
+        Dim j As Integer
+        VL_WaitVBL 1
+        VL_GetPalette palette1()
+
+        c_fmemcpy palette2(), palette1(), 256
+
+        ' fade through intermediate frames
+        For i = 0 To steps - 1
+            For j = start To finish
+                palette2(j) = _RGB32(_Red32(palette1(j)) + (_Red32(palette_array(j)) - _Red32(palette1(j))) * i / steps, _Green32(palette1(j)) + (_Green32(palette_array(j)) - _Green32(palette1(j))) * i / steps, _Blue32(palette1(j)) + (_Blue32(palette_array(j)) - _Blue32(palette1(j))) * i / steps)
+            Next j
+
+            VL_WaitVBL 1
+            VL_SetPalette palette2()
+        Next i
+
+        ' final color
+        VL_SetPalette palette_array()
+        screenfaded = FALSE
+    End Sub
+
+    '=================
+    '=
+    '= VL_PlanarMemToScreen
+    '=
+    '= VL_MemToScreen of ID_VL.C: draws a block stored as 4 VGA planes
+    '= (plane p holds the pixels with x mod 4 = p) to the Screen 13 page.
+    '= VL_MemToScreen in WOLF3D.BAS draws linear (already munged) data.
+    '=
+    '=================
+    Sub VL_PlanarMemToScreen (source As _MEM, width As Integer, height As Integer, x As Integer, y As Integer)
+        Dim scr As _MEM
+        Dim plane As Long, py As Long, px As Long, sx As Long, sy As Long
+        Dim src As _Offset
+        Dim pixel As _Unsigned _Byte
+
+        scr = _MemImage(0)
+        src = source.OFFSET
+        For plane = 0 To 3
+            For py = 0 To height - 1
+                sy = y + py
+                For px = 0 To width \ 4 - 1
+                    sx = x + px * 4 + plane
+                    pixel = _MemGet(source, src, _Unsigned _Byte)
+                    If sx >= 0 And sx < 320 And sy >= 0 And sy < 200 Then
+                        _MemPut scr, scr.OFFSET + sy * 320 + sx, pixel
+                    End If
+                    src = src + 1
+                Next px
+            Next py
+        Next plane
+        _MemFree scr
+    End Sub
+
+    '=================
+    '=
     '= VL_Hlin
     '=
     '=================
@@ -95,14 +156,6 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     '=
     '=================
     Sub VL_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
-        Dim i As Integer
-        Dim j As Integer
-
-        For i = y To height - 1
-            For j = x To width - 1
-                ' TODO - in case of dropped performance, need to implement via memory writes to screen memory'
-                PSet (j + x, i + y), color_bar
-            Next j
-        Next i
+        Line (x, y)-(x + width - 1, y + height - 1), color_bar, BF
     End Sub
 $End If

@@ -9,5 +9,8 @@ $If INCLUDE_ID_VH_BI = UNDEFINED Then
     End Type
 
     Declare Sub VW_FadeOut
+    Declare Sub VW_FadeIn
+    Declare Sub VW_UpdateScreen
+    Declare Sub VWB_DrawPic (x As Integer, y As Integer, chunknum As Integer)
 
 $End If

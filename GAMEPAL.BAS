@@ -2,7 +2,7 @@
 ' Generated from gamepal.bin
 
 Sub LoadGamePalette
-    Dim gamepal(255) As Long
+    ' gamepal() is Dim Shared in ID_VL.BI, needed by VW_FadeIn
     Dim i As Integer
 
     gamepal(0) = _RGB32(0, 0, 0)
@@ -262,8 +262,9 @@ Sub LoadGamePalette
     gamepal(254) = _RGB32(0, 27, 27)
     gamepal(255) = _RGB32(38, 0, 34)
 
-    ' Set the palette
+    ' Set the palette, VGA DAC values are 6-bit (0-63), scale them to 8-bit
     For i = 0 To 255
+        gamepal(i) = _RGB32(_Red32(gamepal(i)) * 255 \ 63, _Green32(gamepal(i)) * 255 \ 63, _Blue32(gamepal(i)) * 255 \ 63)
         _PaletteColor i, gamepal(i)
     Next i
 End Sub

@@ -6,10 +6,36 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
         VL_FadeOut 0, 255, 0, 0, 0, 30
     End Sub
 
+    ' #define VW_FadeIn()     VL_FadeIn(0,255,&gamepal,30);
+    Sub VW_FadeIn
+        VL_FadeIn 0, 255, gamepal(), 30
+    End Sub
+
+    ' VW_UpdateScreen copied the buffer page to the displayed page.
+    ' Everything is drawn straight to the Screen 13 page here, so there is nothing to copy
+    Sub VW_UpdateScreen
+    End Sub
+
+    '=================
+    '=
+    '= VWB_DrawPic
+    '=
+    '=================
+    Sub VWB_DrawPic (x As Integer, y As Integer, chunknum As Integer)
+        Dim picnum As Integer
+        Dim width As Integer, height As Integer, px As Integer
+
+        picnum = chunknum - STARTPICS
+        px = x And Not 7
+        width = pictable(picnum).width
+        height = pictable(picnum).height
+        If grsegs(chunknum) = 0 Then Exit Sub
+        ' TODO - port VW_MarkUpdateBlock
+        VL_PlanarMemToScreen grsegsMem(chunknum), width, height, px, y
+    End Sub
+
     ' Function to fill a rectangle with specified dimensions and color
     Sub VWB_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
-        Print "VWB_Bar"
-        Do: Loop Until InKey$ <> ""
         ' Mark the update block (simplified; assume it returns TRUE for this example)
         ' TODO - port VW_MarkUpdateBlock'
         If TRUE Then ' Replace with actual condition or function call as needed
