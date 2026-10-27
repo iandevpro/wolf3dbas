@@ -534,6 +534,48 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         $End If
     End Sub
 
+    '======================
+    '=
+    '= CA_LoadAllSounds
+    '=
+    '= Purges all sounds, then loads all new ones (mode switch)
+    '=
+    '======================
+    Sub CA_LoadAllSounds ()
+        Static oldsoundmode As Integer ' sdm_Off
+        Dim start As Integer, i As Integer
+
+        ' Free the sounds of the previous mode (orig C marks them purgable)
+        Select Case oldsoundmode
+            Case sdm_PC
+                start = STARTPCSOUNDS
+            Case sdm_AdLib
+                start = STARTADLIBSOUNDS
+        End Select
+        If oldsoundmode <> sdm_Off Then
+            For i = 0 To NUMSOUNDS - 1
+                CA_FreeAudioChunk start + i
+            Next i
+        End If
+
+        ' cachein:
+        Select Case SoundMode
+            Case sdm_Off
+                oldsoundmode = SoundMode
+                Exit Sub
+            Case sdm_PC
+                start = STARTPCSOUNDS
+            Case sdm_AdLib
+                start = STARTADLIBSOUNDS
+        End Select
+
+        For i = 0 To NUMSOUNDS - 1
+            CA_CacheAudioChunk start + i
+        Next i
+
+        oldsoundmode = SoundMode
+    End Sub
+
     ' MM_FreePtr equivalent for audio chunks
     Sub CA_FreeAudioChunk (chunk As Integer)
         If audiosegs(chunk) = 0 Then Exit Sub

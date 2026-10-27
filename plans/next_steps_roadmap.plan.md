@@ -3,7 +3,7 @@
 The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step makes the next visible thing in the real startup sequence work. Check each step against the original running in DOSBox-X (`C:\Games\DOSBox-X\dosbox-x.exe`, then `cd C:\WOLF3D`, `wolf3d.exe`).
 
 ## Where we are
-- **Done:** signon, NonShareware, intro music (OPL2 emulator, see `qb64_opl2_emulator_fee1c44b.plan.md`), PG13, title and credits, fonts and US_Print, high scores.
+- **Done:** signon, NonShareware, intro music (OPL2 emulator, see `qb64_opl2_emulator_fee1c44b.plan.md`), PG13, title and credits, fonts and US_Print, high scores, AdLib sound effects (`SD_PlaySound`).
 - **Next in the original:** the `while (1)` loop: title, credits, high scores, a demo, and on a key press the main menu (`US_ControlPanel`), then `GameLoop`.
 - **Temporary:** the `DemoLoop` attract loop shows title, credits and high scores (no demo yet). A key press quits, because the control panel isn't ported yet.
 
@@ -26,12 +26,12 @@ The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step
 - Port `DrawHighScores` with the default score table, the `L_*` number and letter pictures, and the text from step 2.
 - After this, the attract loop is complete except for demos.
 
-### 4. AdLib sound effects (next)
+### 4. AdLib sound effects — DONE 2026-10-26 (PC speaker and digitized sounds still TODO)
 - Port `SD_PlaySound` for AdLib (`SDL_ALPlaySound`, `SDL_AlSetFXInst`): the instrument goes on OPL2 channel 0.
 - Service the effect from `SD_PumpAudio`, which already counts samples. The original rate is TickBase * 2, i.e. 140 Hz.
 - Digitized sounds (from VSWAP) come later, with the page manager in step 6.
 
-### 5. Main menu (`US_ControlPanel`, origsrc/WL_MENU.C, about 4000 lines)
+### 5. Main menu — next (`US_ControlPanel`, origsrc/WL_MENU.C, about 4000 lines)
 - Input first: a `Keyboard()` scancode state array built from `_KeyDown`/`_KeyHit`, plus `IN_ReadControl`, `IN_Ack` and `IN_ClearKeysDown` (ID_IN.BM).
 - Then the main menu and cursor, followed by the sub-menus: sound, control, view size, episode and difficulty select, quit. Load/save can wait.
 

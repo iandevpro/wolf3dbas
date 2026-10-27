@@ -41,6 +41,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         If sdPipe = 0 Then Exit Sub
 
         Timer(sdTimer) Free
+        SD_StopSound
         SD_MusicOff
         _SndClose sdPipe
         sdPipe = 0
@@ -111,7 +112,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         Dim i As Long
         Dim s As Single
 
-        If sdPipe = 0 Or sdInPump <> 0 Then Exit Sub
+        If sdPipe = 0 Or sdInPump <> 0 Or sdLock <> 0 Then Exit Sub
         sdInPump = -1
 
         Do While _SndRawLen(sdPipe) < SD_BUFFERSECS
@@ -119,6 +120,12 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
                 sdImfAcc = sdImfAcc + IMF_RATE
                 If sdImfAcc >= sdRate Then
                     sdImfAcc = sdImfAcc - sdRate
+                    ' PC/AdLib effects every 5th tick (DOFX in SDL_t0FastAsmService)
+                    sdCountFx = sdCountFx + 1
+                    If sdCountFx >= 5 Then
+                        sdCountFx = 0
+                        SDL_ALSoundService
+                    End If
                     If sqActive Then SDL_ServiceMusicTick
                 End If
 
@@ -136,6 +143,251 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         Loop
 
         sdInPump = 0
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  Sound effects
+    '//  Only the AdLib device is ported. PC speaker (sdm_PC) and digitized
+    '//  sounds (DigiMap, SD_PlayDigitized) are TODO.
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+
+    ' #define SDL_SoundFinished() {SoundNumber = SoundPriority = 0;}
+    Sub SDL_SoundFinished ()
+        SoundNumber = 0
+        SoundPriority = 0
+    End Sub
+
+    Sub SDL_ALStopSound ()
+        alSoundOffset = 0
+        OPL2_Write alFreqH + 0, 0
+    End Sub
+
+    ' Sets the instrument of channel 0 (modifiers[0] = 0, carriers[0] = 3)
+    ' from the Instrument at offset inst of instMem
+    Sub SDL_AlSetFXInst (instMem As _MEM, inst As Long)
+        Dim m As Integer, c As Integer
+        Dim i As _Offset
+
+        m = 0
+        c = 3
+        i = instMem.OFFSET + inst
+        OPL2_Write m + alChar, _MemGet(instMem, i + 0, _Unsigned _Byte) ' mChar
+        OPL2_Write m + alScale, _MemGet(instMem, i + 2, _Unsigned _Byte) ' mScale
+        OPL2_Write m + alAttack, _MemGet(instMem, i + 4, _Unsigned _Byte) ' mAttack
+        OPL2_Write m + alSus, _MemGet(instMem, i + 6, _Unsigned _Byte) ' mSus
+        OPL2_Write m + alWave, _MemGet(instMem, i + 8, _Unsigned _Byte) ' mWave
+        OPL2_Write c + alChar, _MemGet(instMem, i + 1, _Unsigned _Byte) ' cChar
+        OPL2_Write c + alScale, _MemGet(instMem, i + 3, _Unsigned _Byte) ' cScale
+        OPL2_Write c + alAttack, _MemGet(instMem, i + 5, _Unsigned _Byte) ' cAttack
+        OPL2_Write c + alSus, _MemGet(instMem, i + 7, _Unsigned _Byte) ' cSus
+        OPL2_Write c + alWave, _MemGet(instMem, i + 9, _Unsigned _Byte) ' cWave
+
+        ' Note: Switch commenting on these lines for old MUSE compatibility
+        ' alOut(alFeedCon,inst->nConn);
+        OPL2_Write alFeedCon, 0
+    End Sub
+
+    ' SDL_AlSetFXInst(&alZeroInst)
+    Sub SDL_AlSetZeroInst ()
+        Dim m As Integer, c As Integer
+
+        m = 0
+        c = 3
+        OPL2_Write m + alChar, 0
+        OPL2_Write m + alScale, 0
+        OPL2_Write m + alAttack, 0
+        OPL2_Write m + alSus, 0
+        OPL2_Write m + alWave, 0
+        OPL2_Write c + alChar, 0
+        OPL2_Write c + alScale, 0
+        OPL2_Write c + alAttack, 0
+        OPL2_Write c + alSus, 0
+        OPL2_Write c + alWave, 0
+        OPL2_Write alFeedCon, 0
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SDL_ALPlaySound() - Plays the specified sound on the AdLib card
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub SDL_ALPlaySound (snd As _MEM)
+        SDL_ALStopSound
+
+        sdLock = -1 ' asm cli
+
+        alLengthLeft = _MemGet(snd, snd.OFFSET, Long)
+        alBlock = ((_MemGet(snd, snd.OFFSET + SOUND_BLOCK, _Unsigned _Byte) And 7) * 4) Or &H20
+
+        ' inst->mSus | inst->cSus
+        If (_MemGet(snd, snd.OFFSET + SOUND_INST + 6, _Unsigned _Byte) Or _MemGet(snd, snd.OFFSET + SOUND_INST + 7, _Unsigned _Byte)) = 0 Then
+            sdLock = 0
+            Print "SDL_ALPlaySound() - Bad instrument"
+            End
+        End If
+
+        SDL_AlSetZeroInst ' DEBUG
+        SDL_AlSetFXInst snd, SOUND_INST
+
+        alSoundMem = snd
+        alSoundOffset = SOUND_DATA
+
+        sdLock = 0 ' asm popf
+    End Sub
+
+    ' AdLib part of DOFX (ID_SD_A.ASM) - plays the next sample out through the AdLib card
+    Sub SDL_ALSoundService ()
+        Dim s As Long
+
+        If alSoundOffset = 0 Then Exit Sub ' nil pointer - no AdLib effect going
+
+        s = _MemGet(alSoundMem, alSoundMem.OFFSET + alSoundOffset, _Unsigned _Byte)
+        If s = 0 Then
+            OPL2_Write alFreqH + 0, 0
+        Else
+            OPL2_Write alFreqL + 0, s
+            OPL2_Write alFreqH + 0, alBlock
+        End If
+        alSoundOffset = alSoundOffset + 1
+
+        alLengthLeft = alLengthLeft - 1
+        If alLengthLeft <= 0 Then
+            alSoundOffset = 0 ' Zero the pointer
+            SDL_SoundFinished ' Indicate no sound with no priority
+            OPL2_Write alFreqH + 0, 0 ' Turn off the sound
+        End If
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SD_SetSoundMode() - Sets which sound hardware to use for sound effects
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function SD_SetSoundMode% (mode As Integer)
+        Dim result As Integer
+
+        SD_StopSound
+
+        ' The emulated AdLib is always present
+        Select Case mode
+            Case sdm_Off
+                result = TRUE
+            Case sdm_PC
+                ' TODO: PC speaker sounds (SDL_PCPlaySound), they stay silent for now
+                SoundTableStart = STARTPCSOUNDS
+                result = TRUE
+            Case sdm_AdLib
+                SoundTableStart = STARTADLIBSOUNDS
+                result = TRUE
+        End Select
+
+        If result <> 0 And mode <> SoundMode Then
+            ' SDL_ShutDevice
+            If SoundMode = sdm_AdLib Then
+                ' SDL_ShutAL
+                OPL2_Write alEffects, 0
+                OPL2_Write alFreqH + 0, 0
+                SDL_AlSetZeroInst
+            End If
+            SoundMode = mode
+            ' SDL_StartDevice
+            If SoundMode = sdm_AdLib Then
+                ' SDL_StartAL
+                OPL2_Write alEffects, 0
+                SDL_AlSetZeroInst
+            End If
+            SoundNumber = 0
+            SoundPriority = 0
+        End If
+
+        SD_SetSoundMode% = result
+    End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SD_PlaySound() - plays the specified sound on the appropriate hardware
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function SD_PlaySound% (snd As Integer)
+        Dim chunk As Integer
+        Dim priority As Long
+
+        SD_PlaySound% = FALSE
+        ' TODO: positioned digitized sounds (nextsoundpos, LeftPosition, RightPosition)
+
+        If snd = -1 Then Exit Function
+        If SoundMode = sdm_Off Then Exit Function
+
+        chunk = SoundTableStart + snd
+        If audiosegs(chunk) = 0 Then
+            Print "SD_PlaySound() - Uncached sound"
+            End
+        End If
+
+        ' TODO: digitized sounds (DigiMode, DigiMap) are played here first when available
+
+        If _MemGet(audiosegMem(chunk), audiosegMem(chunk).OFFSET, Long) = 0 Then
+            Print "SD_PlaySound() - Zero length sound"
+            End
+        End If
+        priority = _MemGet(audiosegMem(chunk), audiosegMem(chunk).OFFSET + SOUND_PRIORITY, _Unsigned Integer)
+        If priority < SoundPriority Then Exit Function
+
+        Select Case SoundMode
+            Case sdm_PC
+                ' TODO: SDL_PCPlaySound
+            Case sdm_AdLib
+                SDL_ALPlaySound audiosegMem(chunk)
+        End Select
+
+        SoundNumber = snd
+        SoundPriority = priority
+    End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SD_SoundPlaying() - returns the sound number that's playing, or 0 if
+    '//      no sound is playing
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function SD_SoundPlaying% ()
+        Dim result As Integer
+
+        Select Case SoundMode
+            Case sdm_AdLib
+                result = (alSoundOffset <> 0)
+        End Select
+
+        If result Then SD_SoundPlaying% = SoundNumber Else SD_SoundPlaying% = FALSE
+    End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SD_StopSound() - if a sound is playing, stops it
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub SD_StopSound ()
+        Select Case SoundMode
+            Case sdm_AdLib
+                SDL_ALStopSound
+        End Select
+
+        SoundPositioned = FALSE
+
+        SDL_SoundFinished
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SD_WaitSoundDone() - waits until the current sound is done playing
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub SD_WaitSoundDone ()
+        Do While SD_SoundPlaying%
+            _Limit TickBase
+        Loop
     End Sub
 
 $EndIf

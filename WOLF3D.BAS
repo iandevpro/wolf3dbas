@@ -322,6 +322,9 @@ Sub InitGame
     'US_Startup (); orig C - Starts the User Mgr - it looks like there are some init for Rnd (not needed)
     ' and checks for running Ted (level editor)
 
+    ' TODO: ReadConfig - with no config the sound effects default to the AdLib
+    If SD_SetSoundMode(sdm_AdLib) Then CA_LoadAllSounds
+
 End Sub
 
 Sub BuildTables
