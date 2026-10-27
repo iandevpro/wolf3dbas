@@ -10,6 +10,13 @@ $If INCLUDE_ID_US_1_BM = UNDEFINED Then
 
     '$INCLUDE: 'ID_US.BI'
 
+    ' Returns a C string kept in a fixed length String (e.g. HighScore.name) up to its zero terminator
+    Function US_CString$ (s As String)
+        Dim z As Long
+        z = InStr(s, Chr$(0))
+        If z Then US_CString$ = Left$(s, z - 1) Else US_CString$ = RTrim$(s)
+    End Function
+
     '///////////////////////////////////////////////////////////////////////////
     '//
     '//  US_Print() - Prints a string in the current window. Newlines are

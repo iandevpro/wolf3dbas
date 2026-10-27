@@ -486,14 +486,18 @@ Sub DemoLoop
                 '
                 ' high scores
                 '
-                ' TODO: DrawHighScores, VW_UpdateScreen, VW_FadeIn
-                ' If IN_UserInput(TickBase * 10) Then Exit Do
+                DrawHighScores
+                VW_UpdateScreen
+                VW_FadeIn
+
+                If IN_UserInput(TickBase * 10) Then Exit Do
             $End If
             '
             ' demo
             '
             ' TODO: PlayDemo (LastDemo++ Mod 4), If playstate = ex_abort Then Exit Do
             ' StartCPMusic INTROSONG
+            VW_FadeOut ' Temporary: stands in for the fade out done by PlayDemo
         Loop
 
         VW_FadeOut

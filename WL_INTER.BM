@@ -65,6 +65,120 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         End Sub
     $End If
 
+    ' ultoa + fixed-width digits: font 0 has same-width digit glyphs at 129..138
+    Function HighScoreNumber$ (n As Long)
+        Dim buffer As String
+        Dim i As Long
+
+        buffer = LTrim$(Str$(n))
+        $If SPEAR = UNDEFINED Then
+            For i = 1 To Len(buffer)
+                Mid$(buffer, i, 1) = Chr$(Asc(buffer, i) + (129 - 48)) ' Used fixed-width numbers (129...)
+            Next i
+        $End If
+        HighScoreNumber$ = buffer
+    End Function
+
+    '==================
+    '=
+    '= DrawHighScores
+    '=
+    '==================
+    Sub DrawHighScores
+        Dim i As Integer, w As Integer, h As Integer
+        Dim buffer As String
+
+        $If SPEAR = UNDEFINED Then
+            CA_CacheGrChunk HIGHSCORESPIC
+            CA_CacheGrChunk STARTFONT
+            CA_CacheGrChunk C_LEVELPIC
+            CA_CacheGrChunk C_SCOREPIC
+            CA_CacheGrChunk C_NAMEPIC
+
+            ClearMScreen
+            DrawStripes 10
+
+            VWB_DrawPic 48, 0, HIGHSCORESPIC
+            UNCACHEGRCHUNK HIGHSCORESPIC
+
+            VWB_DrawPic 4 * 8, 68, C_NAMEPIC
+            VWB_DrawPic 20 * 8, 68, C_LEVELPIC
+            VWB_DrawPic 28 * 8, 68, C_SCOREPIC
+            fontnumber = 0
+
+            SETFONTCOLOR 15, &H29
+        $Else
+            ' TODO: SPEAR backdrop and HIGHSCORESPIC lumps (CacheLump / UnCacheLump)
+            ClearMScreen
+            DrawStripes 10
+            CA_CacheGrChunk STARTFONT + 1
+            fontnumber = 1
+            SETFONTCOLOR HIGHLIGHT, &H29
+        $End If
+
+        For i = 0 To MaxScores - 1
+            PrintY = 76 + (16 * i)
+
+            '
+            ' name
+            '
+            $If SPEAR = UNDEFINED Then
+                PrintX = 4 * 8
+            $Else
+                PrintX = 16
+            $End If
+            US_Print US_CString$(Scores(i).name)
+
+            '
+            ' level
+            '
+            buffer = HighScoreNumber$(Scores(i).completed)
+            VW_MeasurePropString buffer, w, h
+            $If SPEAR = UNDEFINED Then
+                PrintX = (22 * 8) - w
+            $Else
+                PrintX = 194 - w
+            $End If
+
+            $If UPLOAD = UNDEFINED Then
+                $If SPEAR = UNDEFINED Then
+                    PrintX = PrintX - 6
+                    US_Print "E"
+                    US_Print LTrim$(Str$(Scores(i).episode + 1))
+                    US_Print "/L"
+                $End If
+            $End If
+
+            $If SPEAR = DEFINED Then
+                If Scores(i).completed = 21 Then
+                    VWB_DrawPic PrintX + 8, PrintY - 1, C_WONSPEARPIC
+                Else
+                    US_Print buffer
+                End If
+            $Else
+                US_Print buffer
+            $End If
+
+            '
+            ' score
+            '
+            buffer = HighScoreNumber$(Scores(i).score)
+            VW_MeasurePropString buffer, w, h
+            $If SPEAR = UNDEFINED Then
+                PrintX = (34 * 8) - 8 - w
+            $Else
+                PrintX = 292 - w
+            $End If
+            US_Print buffer
+        Next i
+
+        VW_UpdateScreen
+
+        $If SPEAR = DEFINED Then
+            fontnumber = 0
+        $End If
+    End Sub
+
 '$INCLUDE: 'ID_VH.BM'
 '$INCLUDE: 'WL_MENU.BM'
 $End If
