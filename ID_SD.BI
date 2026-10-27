@@ -53,6 +53,8 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
     Dim Shared alSoundOffset As Long ' Offset of the next data byte in alSoundMem, 0 = no sound
     Dim Shared alLengthLeft As Long
     Dim Shared alBlock As Integer
+    Dim Shared TimeCount As Long ' 70Hz tick counter (TIME macro in ID_SD_A.ASM)
+    Dim Shared sdCountTime As Integer ' count_time: TimeCount advances every 2nd effects tick
     Dim Shared sdCountFx As Integer ' count_fx in ID_SD_A.ASM: effects run every 5th 700Hz tick (140Hz)
 
     ' Music playback state variables (IMF format)

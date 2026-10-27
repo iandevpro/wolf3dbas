@@ -125,6 +125,11 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
                     If sdCountFx >= 5 Then
                         sdCountFx = 0
                         SDL_ALSoundService
+                        sdCountTime = sdCountTime + 1
+                        If sdCountTime >= 2 Then
+                            sdCountTime = 0
+                            TimeCount = TimeCount + 1
+                        End If
                     End If
                     If sqActive Then SDL_ServiceMusicTick
                 End If

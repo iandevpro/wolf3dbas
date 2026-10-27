@@ -10,6 +10,16 @@ $If INCLUDE_ID_US_1_BM = UNDEFINED Then
 
     '$INCLUDE: 'ID_US.BI'
 
+    ' US_InitRndT / US_RndT - the original used a 256 entry random table (ID_US_A.ASM).
+    ' TODO: port rndtable for demo playback, which needs the exact sequence
+    Sub US_InitRndT (doRandomize As Integer)
+        If doRandomize Then Randomize Timer
+    End Sub
+
+    Function US_RndT% ()
+        US_RndT% = Int(Rnd * 256)
+    End Function
+
     ' Returns a C string kept in a fixed length String (e.g. HighScore.name) up to its zero terminator
     Function US_CString$ (s As String)
         Dim z As Long

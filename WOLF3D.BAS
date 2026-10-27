@@ -112,11 +112,13 @@ Call DemoLoop
 '_Limit 60 ' Limit to ~60 FPS
 'Loop Until InKey$ = Chr$(27) ' ESC to quit
 
+IN_Shutdown
 SD_Shutdown
 VL_SetPalette gamepal() ' undo VW_FadeOut, so QB64's end prompt is readable
 End
 
 ErrorHandler:
+IN_Shutdown
 SD_Shutdown
 Palette ' the screen may be faded to black
 Print "Error: "; Err; " - Line: "; _ErrorLine
@@ -136,6 +138,26 @@ System
 '$INCLUDE:'ID_SD.BM'
 '$INCLUDE:'ID_IN.BM'
 '$INCLUDE:'ID_US_1.BM'
+
+'==========================
+'=
+'= Quit
+'=
+'==========================
+Sub Quit (errmsg As String)
+    ' TODO: WriteConfig, and the ORDERSCREEN / ERRORSCREEN text mode screens
+    IN_Shutdown
+    SD_Shutdown
+
+    If Len(errmsg) Then
+        Palette ' default colors, the screen may be faded out
+        Cls
+        Print errmsg
+        Sleep
+    End If
+
+    System
+End Sub
 
 ' SignonScreen - Displays the game's intro screen
 Sub SignonScreen
@@ -314,13 +336,13 @@ Sub InitGame
     SignonScreen
 
     'VW_Startup (); orig C - Video Startup - not needed in QB64, modern OSes
-    'IN_Startup (); orig C - Input Manager Startup - not needed in QB64, modern OSes
+    IN_Startup ' Input Manager Startup - keyboard scan codes from _KeyHit
     'PM_Startup (); orig C - Page Manager Startup - not needed in QB64, modern OSes
     'PM_UnlockMainMem (); orig C - related to memory management - not needed in QB64, modern OSes
     SD_Startup ' Sound Manager Startup - OPL2 emulator + _SndRaw output
     CA_Startup
-    'US_Startup (); orig C - Starts the User Mgr - it looks like there are some init for Rnd (not needed)
-    ' and checks for running Ted (level editor)
+    ' US_Startup - starts the User Mgr: random numbers (the original also checked for Ted, the level editor)
+    US_InitRndT TRUE
 
     ' TODO: ReadConfig - with no config the sound effects default to the AdLib
     If SD_SetSoundMode(sdm_AdLib) Then CA_LoadAllSounds
@@ -505,8 +527,13 @@ Sub DemoLoop
 
         VW_FadeOut
 
-        ' TODO: RecordDemo / US_ControlPanel 0
-        ' If startgame Or loadedgame Then GameLoop: VW_FadeOut: StartCPMusic INTROSONG
-        Exit Do ' Temporary: no control panel yet, a key press on title/credits quits
+        ' TODO: RecordDemo (Tab + "goobers" parameter)
+        US_ControlPanel 0
+
+        If startgame Or loadedgame Then
+            ' TODO: GameLoop
+            VW_FadeOut
+            StartCPMusic INTROSONG
+        End If
     Loop
 End Sub

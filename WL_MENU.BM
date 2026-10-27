@@ -100,5 +100,887 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     End Sub
 
 
+    ' #define MenuFadeOut()	VL_FadeOut(0,255,43,0,0,10)
+    Sub MenuFadeOut ()
+        $If SPEAR = UNDEFINED Then
+            VL_FadeOut 0, 255, 43, 0, 0, 10
+        $Else
+            VL_FadeOut 0, 255, 0, 0, 51, 10
+        $End If
+    End Sub
+
+    ' #define MenuFadeIn()	VL_FadeIn(0,255,&gamepal,10)
+    Sub MenuFadeIn ()
+        VL_FadeIn 0, 255, gamepal(), 10
+    End Sub
+
+    ' Calls the routine of a menu item (the C function pointers)
+    Sub CP_CallRoutine (rtn As Integer)
+        Dim result As Integer
+
+        Select Case rtn
+            Case RTN_NEWGAME
+                CP_NewGame
+            Case RTN_SOUND
+                CP_Sound
+            Case RTN_CONTROL
+                CP_Control
+            Case RTN_LOADGAME
+                result = CP_LoadGame(0)
+            Case RTN_SAVEGAME
+                result = CP_SaveGame(0)
+            Case RTN_CHANGEVIEW
+                CP_ChangeView
+            Case RTN_READTHIS
+                CP_ReadThis
+            Case RTN_VIEWSCORES
+                CP_ViewScores
+        End Select
+    End Sub
+
+    ' Calls the custom draw routine passed to HandleMenu
+    Sub CP_CallDrawRoutine (rtn As Integer, w As Integer)
+        Select Case rtn
+            Case Else
+                ' TODO: DrawNewGameDiff, TrackWhichGame, FixupCustom... with the sub menus
+        End Select
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// Wolfenstein Control Panel!  Ta Da!
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub US_ControlPanel (scancode As Integer)
+        Dim which As Integer, result As Integer
+
+        If ingame Then
+            If CP_CheckQuick(scancode) Then Exit Sub
+        End If
+
+        StartCPMusic MENUSONG
+        SetupControlPanel
+
+        '
+        ' F-KEYS FROM WITHIN GAME
+        '
+        Select Case scancode
+            Case sc_F1, sc_F2, sc_F3, sc_F4, sc_F5, sc_F6
+                Select Case scancode
+                    Case sc_F1
+                        ' TODO: HelpScreens (BossKey for SPEAR / GOODTIMES)
+                    Case sc_F2
+                        result = CP_SaveGame(0)
+                    Case sc_F3
+                        result = CP_LoadGame(0)
+                    Case sc_F4
+                        CP_Sound
+                    Case sc_F5
+                        CP_ChangeView
+                    Case sc_F6
+                        CP_Control
+                End Select
+                ' finishup:
+                CleanupControlPanel
+                Exit Sub
+        End Select
+
+        DrawMainMenu
+        MenuFadeIn
+        StartGameMenu = 0
+
+        '
+        ' MAIN MENU LOOP
+        '
+        Do
+            which = HandleMenu(MainItems, MainMenu(), DRAWRTN_NONE)
+
+            ' TODO: SPEAR easter egg (I + D keys)
+
+            Select Case which
+                Case mi_viewscores
+                    If MainMenu(mi_viewscores).routine = RTN_NONE Then
+                        If CP_EndGame Then StartGameMenu = 1
+                    End If
+                    DrawMainMenu
+                    MenuFadeIn
+
+                Case mi_backtodemo
+                    StartGameMenu = 1
+                    If Not ingame Then StartCPMusic INTROSONG
+                    VL_FadeOut 0, 255, 0, 0, 0, 10
+
+                Case -1, mi_quit
+                    CP_Quit
+
+                Case Else
+                    If StartGameMenu = 0 Then
+                        DrawMainMenu
+                        MenuFadeIn
+                    End If
+            End Select
+
+            '
+            ' "EXIT OPTIONS" OR "NEW GAME" EXITS
+            '
+        Loop While StartGameMenu = 0
+
+        '
+        ' DEALLOCATE EVERYTHING
+        '
+        CleanupControlPanel
+
+        '
+        ' CHANGE MAINMENU ITEM
+        '
+        If startgame Or loadedgame Then
+            MainMenu(mi_viewscores).routine = RTN_NONE
+            MainMenu(mi_viewscores).txt = STR_EG
+        End If
+    End Sub
+
+    '////////////////////////
+    '//
+    '// DRAW MAIN MENU SCREEN
+    '//
+    Sub DrawMainMenu ()
+        ClearMScreen
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+        DrawStripes 10
+        VWB_DrawPic 84, 0, C_OPTIONSPIC
+
+        $If SPANISH = DEFINED Then
+            DrawWindow MENU_X - 8, MENU_Y - 3, MENU_W + 8, MENU_H, BKGDCOLOR
+        $Else
+            DrawWindow MENU_X - 8, MENU_Y - 3, MENU_W, MENU_H, BKGDCOLOR
+        $End If
+
+        '
+        ' CHANGE "GAME" AND "DEMO"
+        '
+        If ingame Then
+            $If SPANISH = DEFINED Then
+                MainMenu(mi_backtodemo).txt = STR_GAME
+            $Else
+                MainMenu(mi_backtodemo).txt = Left$(STR_BD, 8) + STR_GAME
+            $End If
+            MainMenu(mi_backtodemo).active = 2
+        Else
+            $If SPANISH = DEFINED Then
+                MainMenu(mi_backtodemo).txt = STR_BD
+            $Else
+                MainMenu(mi_backtodemo).txt = Left$(STR_BD, 8) + STR_DEMO
+            $End If
+            MainMenu(mi_backtodemo).active = 1
+        End If
+
+        DrawMenu MainItems, MainMenu()
+        VW_UpdateScreen
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// READ THIS!
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub CP_ReadThis ()
+        ' TODO: HelpScreens (WL_TEXT.C)
+        ' StartCPMusic CORNER_MUS: HelpScreens: StartCPMusic MENUSONG
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// CHECK QUICK-KEYS & QUIT (WHILE IN A GAME)
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Function CP_CheckQuick% (scancode As Integer)
+        ' TODO: F7 end game, F8 quick save, F9 quick load, F10 quit - needs the game
+        CP_CheckQuick% = 0
+    End Function
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// END THE CURRENT GAME
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Function CP_EndGame% ()
+        ' TODO: needs the game (Confirm ENDGAMESTR, playstate = ex_died, ...)
+        CP_EndGame% = 0
+    End Function
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// VIEW THE HIGH SCORES
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub CP_ViewScores ()
+        fontnumber = 0
+
+        $If SPEAR = DEFINED Then
+            ' TODO: UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+            StartCPMusic XAWARD_MUS
+        $Else
+            StartCPMusic ROSTER_MUS
+        $End If
+
+        DrawHighScores
+        VW_UpdateScreen
+        MenuFadeIn
+        fontnumber = 1
+
+        IN_Ack
+
+        StartCPMusic MENUSONG
+        MenuFadeOut
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// Sub menus, ported in later steps
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub CP_NewGame ()
+        ' TODO: episode and difficulty selection (step 5b)
+    End Sub
+
+    Sub CP_Sound ()
+        ' TODO: sound menu (step 5b)
+    End Sub
+
+    Sub CP_Control ()
+        ' TODO: control menu (step 5b)
+    End Sub
+
+    Sub CP_ChangeView ()
+        ' TODO: change view (step 5b)
+    End Sub
+
+    Function CP_LoadGame% (quick As Integer)
+        ' TODO: load game (step 5c)
+        CP_LoadGame% = 0
+    End Function
+
+    Function CP_SaveGame% (quick As Integer)
+        ' TODO: save game (step 5c)
+        CP_SaveGame% = 0
+    End Function
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// QUIT THIS INFERNAL GAME!
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub CP_Quit ()
+        Dim i As Integer, r1 As Integer, r2 As Integer, sure As Integer
+
+        $If SPANISH = DEFINED Then
+            sure = Confirm(ENDGAMESTR)
+        $Else
+            ' endStrings[US_RndT()&0x7+(US_RndT()&1)] - & binds weaker than +
+            r1 = US_RndT
+            r2 = US_RndT
+            sure = Confirm(endStrings(r1 And (7 + (r2 And 1))))
+        $End If
+
+        If sure Then
+            VW_UpdateScreen
+            SD_MusicOff
+            SD_StopSound
+            MenuFadeOut
+            '
+            ' SHUT-UP THE ADLIB
+            '
+            For i = 1 To &HF5
+                OPL2_Write i, 0
+            Next i
+            Quit ""
+        End If
+
+        DrawMainMenu
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// Un/Cache a LUMP of graphics
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub CacheLump (lumpstart As Integer, lumpend As Integer)
+        Dim i As Integer
+
+        For i = lumpstart To lumpend
+            CA_CacheGrChunk i
+        Next i
+    End Sub
+
+    Sub UnCacheLump (lumpstart As Integer, lumpend As Integer)
+        Dim i As Integer
+
+        For i = lumpstart To lumpend
+            If grsegs(i) Then UNCACHEGRCHUNK i
+        Next i
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// Draw a window for a menu
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub DrawWindow (x As Integer, y As Integer, w As Integer, h As Integer, wcolor As Integer)
+        VWB_Bar x, y, w, h, wcolor
+        DrawOutline x, y, w, h, BORD2COLOR, DEACTIVE
+    End Sub
+
+    Sub DrawOutline (x As Integer, y As Integer, w As Integer, h As Integer, color1 As Integer, color2 As Integer)
+        VWB_Hlin x, x + w, y, color2
+        VWB_Vlin y, y + h, x, color2
+        VWB_Hlin x, x + w, y + h, color1
+        VWB_Vlin y, y + h, x + w, color1
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// Setup Control Panel stuff - graphics, etc.
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub SetupControlPanel ()
+        '
+        ' CACHE GRAPHICS & SOUNDS
+        '
+        CA_CacheGrChunk STARTFONT + 1
+        $If SPEAR = UNDEFINED Then
+            CacheLump CONTROLS_LUMP_START, CONTROLS_LUMP_END
+        $Else
+            ' TODO: CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+        $End If
+
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+        fontnumber = 1
+        WindowH = 200
+
+        If Not ingame Then
+            CA_LoadAllSounds
+        Else
+            MainMenu(mi_savegame).active = 1
+        End If
+
+        ' TODO: SEE WHICH SAVE GAME FILES ARE AVAILABLE & READ STRING IN (step 5c)
+        ' TODO: CENTER MOUSE
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// Clean up all the Control Panel stuff
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub CleanupControlPanel ()
+        $If SPEAR = UNDEFINED Then
+            UnCacheLump CONTROLS_LUMP_START, CONTROLS_LUMP_END
+        $Else
+            ' TODO: UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+        $End If
+
+        fontnumber = 0
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// Handle moving gun around a menu
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Function HandleMenu% (item_i As CP_iteminfo, items() As CP_itemtype, routine As Integer)
+        Static redrawitem As Integer, lastitem As Integer, initialized As Integer
+        Dim ky As Integer, i As Integer, x As Integer, y As Integer, basey As Integer
+        Dim xit As Integer, which As Integer, shape As Integer, tmr As Integer, ok As Integer, played As Integer
+        Dim ci As ControlInfo
+
+        If initialized = 0 Then
+            redrawitem = 1
+            lastitem = -1
+            initialized = 1
+        End If
+
+        which = item_i.curpos
+        x = item_i.x And -8
+        basey = item_i.y - 2
+        y = basey + which * 13
+
+        VWB_DrawPic x, y, C_CURSOR1PIC
+        SetTextColor items(which), 1
+        If redrawitem Then
+            PrintX = item_i.x + item_i.indent
+            PrintY = item_i.y + which * 13
+            US_Print US_CString$(items(which).txt)
+        End If
+
+        '
+        ' CALL CUSTOM ROUTINE IF IT IS NEEDED
+        '
+        If routine Then CP_CallDrawRoutine routine, which
+        VW_UpdateScreen
+
+        shape = C_CURSOR1PIC
+        tmr = 8
+        xit = 0
+        TimeCount = 0
+        IN_ClearKeysDown
+
+        Do
+            _Limit TickBase * 2 ' the original was a busy loop
+
+            '
+            ' CHANGE GUN SHAPE
+            '
+            If TimeCount > tmr Then
+                TimeCount = 0
+                If shape = C_CURSOR1PIC Then
+                    shape = C_CURSOR2PIC
+                    tmr = 8
+                Else
+                    shape = C_CURSOR1PIC
+                    tmr = 70
+                End If
+                VWB_DrawPic x, y, shape
+                If routine Then CP_CallDrawRoutine routine, which
+                VW_UpdateScreen
+            End If
+
+            CheckPause
+
+            '
+            ' SEE IF ANY KEYS ARE PRESSED FOR INITIAL CHAR FINDING
+            '
+            ky = LastASCII
+            If ky Then
+                ok = 0
+
+                ' TODO: screen capture (Tab + P with "goobers" parameter)
+
+                If ky >= Asc("a") Then ky = ky - (Asc("a") - Asc("A"))
+
+                For i = which + 1 To item_i.amount - 1
+                    If items(i).active <> 0 And Asc(items(i).txt) = ky Then
+                        EraseGun item_i, items(), x, y, which
+                        which = i
+                        DrawGun item_i, items(), x, y, which, basey, routine
+                        ok = 1
+                        IN_ClearKeysDown
+                        Exit For
+                    End If
+                Next i
+
+                '
+                ' DIDN'T FIND A MATCH FIRST TIME THRU. CHECK AGAIN.
+                '
+                If ok = 0 Then
+                    For i = 0 To which - 1
+                        If items(i).active <> 0 And Asc(items(i).txt) = ky Then
+                            EraseGun item_i, items(), x, y, which
+                            which = i
+                            DrawGun item_i, items(), x, y, which, basey, routine
+                            IN_ClearKeysDown
+                            Exit For
+                        End If
+                    Next i
+                End If
+            End If
+
+            '
+            ' GET INPUT
+            '
+            ReadAnyControl ci
+            Select Case ci.dir
+                '
+                ' MOVE UP
+                '
+                Case dir_North
+                    EraseGun item_i, items(), x, y, which
+
+                    '
+                    ' ANIMATE HALF-STEP
+                    '
+                    If which <> 0 Then
+                        If items(which - 1).active Then
+                            y = y - 6
+                            DrawHalfStep x, y
+                        End If
+                    End If
+
+                    '
+                    ' MOVE TO NEXT AVAILABLE SPOT
+                    '
+                    Do
+                        If which = 0 Then
+                            which = item_i.amount - 1
+                        Else
+                            which = which - 1
+                        End If
+                    Loop While items(which).active = 0
+
+                    DrawGun item_i, items(), x, y, which, basey, routine
+                    '
+                    ' WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
+                    '
+                    TicDelay 20
+
+                '
+                ' MOVE DOWN
+                '
+                Case dir_South
+                    EraseGun item_i, items(), x, y, which
+                    '
+                    ' ANIMATE HALF-STEP
+                    '
+                    If which <> item_i.amount - 1 Then
+                        If items(which + 1).active Then
+                            y = y + 6
+                            DrawHalfStep x, y
+                        End If
+                    End If
+
+                    Do
+                        If which = item_i.amount - 1 Then
+                            which = 0
+                        Else
+                            which = which + 1
+                        End If
+                    Loop While items(which).active = 0
+
+                    DrawGun item_i, items(), x, y, which, basey, routine
+
+                    '
+                    ' WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
+                    '
+                    TicDelay 20
+            End Select
+
+            If ci.button0 Or Keyboard(sc_Space) Or Keyboard(sc_Enter) Then xit = 1
+            If ci.button1 Or Keyboard(sc_Escape) Then xit = 2
+        Loop While xit = 0
+
+        IN_ClearKeysDown
+
+        '
+        ' ERASE EVERYTHING
+        '
+        If lastitem <> which Then
+            VWB_Bar x - 1, y, 25, 16, BKGDCOLOR
+            PrintX = item_i.x + item_i.indent
+            PrintY = item_i.y + which * 13
+            US_Print US_CString$(items(which).txt)
+            redrawitem = 1
+        Else
+            redrawitem = 0
+        End If
+
+        If routine Then CP_CallDrawRoutine routine, which
+        VW_UpdateScreen
+
+        item_i.curpos = which
+
+        lastitem = which
+        HandleMenu% = 0
+        Select Case xit
+            Case 1
+                '
+                ' CALL THE ROUTINE
+                '
+                If items(which).routine <> RTN_NONE Then
+                    CP_ShootSnd
+                    MenuFadeOut
+                    CP_CallRoutine items(which).routine
+                End If
+                HandleMenu% = which
+
+            Case 2
+                played = SD_PlaySound(ESCPRESSEDSND)
+                HandleMenu% = -1
+        End Select
+    End Function
+
+    '
+    ' ERASE GUN & DE-HIGHLIGHT STRING
+    '
+    Sub EraseGun (item_i As CP_iteminfo, items() As CP_itemtype, x As Integer, y As Integer, which As Integer)
+        VWB_Bar x - 1, y, 25, 16, BKGDCOLOR
+        SetTextColor items(which), 0
+
+        PrintX = item_i.x + item_i.indent
+        PrintY = item_i.y + which * 13
+        US_Print US_CString$(items(which).txt)
+        VW_UpdateScreen
+    End Sub
+
+    '
+    ' DRAW HALF STEP OF GUN TO NEXT POSITION
+    '
+    Sub DrawHalfStep (x As Integer, y As Integer)
+        Dim played As Integer
+
+        VWB_DrawPic x, y, C_CURSOR1PIC
+        VW_UpdateScreen
+        played = SD_PlaySound(MOVEGUN1SND)
+        TimeCount = 0
+        Do
+            _Limit TickBase * 2
+        Loop While TimeCount < 8
+    End Sub
+
+    '
+    ' DRAW GUN AT NEW POSITION
+    '
+    Sub DrawGun (item_i As CP_iteminfo, items() As CP_itemtype, x As Integer, y As Integer, which As Integer, basey As Integer, routine As Integer)
+        Dim played As Integer
+
+        VWB_Bar x - 1, y, 25, 16, BKGDCOLOR
+        y = basey + which * 13
+        VWB_DrawPic x, y, C_CURSOR1PIC
+        SetTextColor items(which), 1
+
+        PrintX = item_i.x + item_i.indent
+        PrintY = item_i.y + which * 13
+        US_Print US_CString$(items(which).txt)
+
+        '
+        ' CALL CUSTOM ROUTINE IF IT IS NEEDED
+        '
+        If routine Then CP_CallDrawRoutine routine, which
+        VW_UpdateScreen
+        played = SD_PlaySound(MOVEGUN2SND)
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// DELAY FOR AN AMOUNT OF TICS OR UNTIL CONTROLS ARE INACTIVE
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub TicDelay (count As Integer)
+        Dim ci As ControlInfo
+
+        TimeCount = 0
+        Do
+            _Limit TickBase * 2
+            ReadAnyControl ci
+        Loop While TimeCount < count And ci.dir <> dir_None
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// Draw a menu
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub DrawMenu (item_i As CP_iteminfo, items() As CP_itemtype)
+        Dim i As Integer, which As Integer
+
+        which = item_i.curpos
+        WindowX = item_i.x + item_i.indent
+        PrintX = WindowX
+        WindowY = item_i.y
+        PrintY = WindowY
+        WindowW = 320
+        WindowH = 200
+
+        For i = 0 To item_i.amount - 1
+            SetTextColor items(i), (which = i)
+
+            PrintY = item_i.y + i * 13
+            If items(i).active Then
+                US_Print US_CString$(items(i).txt)
+            Else
+                SETFONTCOLOR DEACTIVE, BKGDCOLOR
+                US_Print US_CString$(items(i).txt)
+                SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+            End If
+
+            US_Print Chr$(10)
+        Next i
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// SET TEXT COLOR (HIGHLIGHT OR NO)
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub SetTextColor (item As CP_itemtype, hlight As Integer)
+        If hlight Then
+            SETFONTCOLOR color_hlite(item.active), BKGDCOLOR
+        Else
+            SETFONTCOLOR color_norml(item.active), BKGDCOLOR
+        End If
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// WAIT FOR CTRLKEY-UP OR BUTTON-UP
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub WaitKeyUp ()
+        Dim ci As ControlInfo
+
+        Do
+            _Limit TickBase * 2
+            ReadAnyControl ci
+        Loop While ci.button0 Or ci.button1 Or ci.button2 Or ci.button3 Or Keyboard(sc_Space) Or Keyboard(sc_Enter) Or Keyboard(sc_Escape)
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// READ KEYBOARD, JOYSTICK AND MOUSE FOR INPUT
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub ReadAnyControl (ci As ControlInfo)
+        Dim buttons As Integer
+
+        IN_ReadControl 0, ci
+
+        If mouseenabled Then
+            ' TODO: mouse motion moves the cursor (Mouse(3) counters around CENTER, SENSITIVE)
+            buttons = IN_MouseButtons%
+            If buttons Then
+                ci.button0 = (buttons And 1) <> 0
+                ci.button1 = (buttons And 2) <> 0
+                ci.button2 = (buttons And 4) <> 0
+                ci.button3 = FALSE
+            End If
+        End If
+
+        ' TODO: joystick
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// DRAW DIALOG AND CONFIRM YES OR NO TO QUESTION
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Function Confirm% (s As String)
+        Dim xit As Integer, x As Integer, y As Integer, tick As Integer, played As Integer
+        Dim yesKey As Integer
+
+        $If SPANISH = DEFINED Then
+            yesKey = sc_S
+        $Else
+            yesKey = sc_Y
+        $End If
+
+        Message s
+        IN_ClearKeysDown
+
+        '
+        ' BLINK CURSOR
+        '
+        x = PrintX
+        y = PrintY
+        TimeCount = 0
+
+        Do
+            _Limit TickBase * 2
+            If TimeCount >= 10 Then
+                Select Case tick
+                    Case 0
+                        VWB_Bar x, y, 8, 13, TEXTCOLOR
+                    Case 1
+                        PrintX = x
+                        PrintY = y
+                        US_Print "_"
+                End Select
+                VW_UpdateScreen
+                tick = tick Xor 1
+                TimeCount = 0
+            End If
+
+            ' TODO: screen capture (Tab + P with "goobers" parameter)
+        Loop Until Keyboard(yesKey) Or Keyboard(sc_N) Or Keyboard(sc_Escape)
+
+        If Keyboard(yesKey) Then
+            xit = 1
+            CP_ShootSnd
+        End If
+
+        Do
+            _Limit TickBase * 2
+        Loop While Keyboard(yesKey) Or Keyboard(sc_N) Or Keyboard(sc_Escape)
+
+        IN_ClearKeysDown
+        ' whichsnd[2]={ESCPRESSEDSND,SHOOTSND}
+        If xit Then played = SD_PlaySound(SHOOTSND) Else played = SD_PlaySound(ESCPRESSEDSND)
+        Confirm% = xit
+    End Function
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// PRINT A MESSAGE IN A WINDOW
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub Message (s As String)
+        Dim h As Integer, w As Integer, mw As Integer, i As Long, fh As Integer
+        Dim font As _MEM
+
+        CA_CacheGrChunk STARTFONT + 1
+        fontnumber = 1
+        font = grsegsMem(STARTFONT + fontnumber)
+        fh = _MemGet(font, font.OFFSET, Integer)
+        h = fh
+        For i = 1 To Len(s)
+            If Asc(s, i) = 10 Then
+                If w > mw Then mw = w
+                w = 0
+                h = h + fh
+            Else
+                w = w + _MemGet(font, font.OFFSET + FONT_WIDTH + Asc(s, i), _Unsigned _Byte)
+            End If
+        Next i
+
+        If w + 10 > mw Then mw = w + 10
+
+        PrintY = (WindowH \ 2) - h \ 2
+        WindowX = 160 - mw \ 2
+        PrintX = WindowX
+
+        DrawWindow WindowX - 5, PrintY - 5, mw + 10, h + 10, TEXTCOLOR
+        DrawOutline WindowX - 5, PrintY - 5, mw + 10, h + 10, 0, HIGHLIGHT
+        SETFONTCOLOR 0, TEXTCOLOR
+        US_Print s
+        VW_UpdateScreen
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  CHECK FOR PAUSE KEY (FOR MUSIC ONLY)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub CheckPause ()
+        If Paused Then
+            Select Case SoundStatus
+                Case 0
+                    sqActive = 1 ' SD_MusicOn
+                Case 1
+                    SD_MusicOff
+            End Select
+
+            SoundStatus = SoundStatus Xor 1
+            VL_WaitVBL 3
+            IN_ClearKeysDown
+            Paused = FALSE
+        End If
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '// DRAW GUN CURSOR AT CORRECT POSITION IN MENU
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub DrawMenuGun (iteminfo As CP_iteminfo)
+        Dim x As Integer, y As Integer
+
+        x = iteminfo.x
+        y = iteminfo.y + iteminfo.curpos * 13 - 2
+        VWB_DrawPic x, y, C_CURSOR1PIC
+    End Sub
+
+    ' ShootSnd in WL_MENU.C, renamed: QB64 names are case insensitive and SHOOTSND exists
+    Sub CP_ShootSnd ()
+        Dim played As Integer
+        played = SD_PlaySound(SHOOTSND)
+    End Sub
+
 '$INCLUDE: 'ID_VH.BM'
 $End If

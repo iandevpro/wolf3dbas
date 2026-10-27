@@ -105,6 +105,7 @@ $If INCLUDE_WL_DEF_BI = UNDEFINED Then
     End Type
 
     ' Global Variables
+    Dim Shared ingame As Integer ' WL_MAIN.C: true while a game is running (menus show Back to Game)
     Dim Shared gamestate As GameStateType
     Dim Shared player As ActorType
     Dim Shared actors(MAXACTORS) As ActorType
@@ -121,7 +122,7 @@ $If INCLUDE_WL_DEF_BI = UNDEFINED Then
     DECLARE Sub SetupWalls ()
     DECLARE Sub NewViewSize (width AS INTEGER)
     DECLARE Sub CalcProjection (focal AS LONG)
-    DECLARE Sub Quit (error AS STRING)
+    DECLARE Sub Quit (errmsg AS STRING)
 
     '$INCLUDE: 'ID_HEADS.BI'
     '$INCLUDE: 'WL_MENU.BI'

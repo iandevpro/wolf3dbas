@@ -58,9 +58,14 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     ' Example usage:
     ' Call the fade out function
     ' VL_FadeOut 0, 255, 255, 0, 0, 64
-    Sub VL_FadeOut (start As Integer, finish As Integer, red As Long, green As Long, blue As Long, steps As Integer)
+    ' red, green, blue are 6-bit VGA DAC values (0-63) as in the original
+    Sub VL_FadeOut (start As Integer, finish As Integer, red6 As Long, green6 As Long, blue6 As Long, steps As Integer)
         Dim i As Integer
         Dim j As Integer
+        Dim red As Long, green As Long, blue As Long
+        red = red6 * 255 \ 63
+        green = green6 * 255 \ 63
+        blue = blue6 * 255 \ 63
         VL_WaitVBL 1
         VL_GetPalette palette1()
 
@@ -148,6 +153,15 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
 
     Sub VL_Hlin (x As Integer, y As Integer, width As Integer, color_bar As Integer)
         Line (x, y)-(x + width - 1, y), color_bar
+    End Sub
+
+    '=================
+    '=
+    '= VL_Vlin
+    '=
+    '=================
+    Sub VL_Vlin (x As Integer, y As Integer, height As Integer, color_bar As Integer)
+        Line (x, y)-(x, y + height - 1), color_bar
     End Sub
 
     '=================
