@@ -397,6 +397,46 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         _MemFree source
     End Sub
 
+    '======================
+    '=
+    '= CA_CacheScreen
+    '=
+    '= Decompresses a chunk from disk straight onto the screen
+    '=
+    '======================
+    Sub CA_CacheScreen (chunk As Integer)
+        Dim position As Long, compressed As Long, expanded As Long
+        Dim nextChunk As Integer
+        Dim source As _MEM, screenseg As _MEM
+        Dim fileBytes() As _Unsigned _Byte
+
+        ' load the chunk into a buffer
+        position = GRFILEPOS(chunk)
+        nextChunk = chunk + 1
+        Do While GRFILEPOS(nextChunk) = -1 ' skip past any sparse tiles
+            nextChunk = nextChunk + 1
+        Loop
+        compressed = GRFILEPOS(nextChunk) - position
+
+        Seek #grhandle, position + 1 ' QB64 uses 1-based file positions
+        Get #grhandle, , expanded
+        compressed = compressed - 4 ' skip over length
+
+        source = _MemNew(compressed)
+        ReDim fileBytes(0 To compressed - 1) As _Unsigned _Byte
+        Get #grhandle, , fileBytes()
+        _MemPut source, source.OFFSET, fileBytes()
+
+        ' The original decompressed straight into the four VGA planes (screenhack),
+        ' here it is expanded to a buffer and drawn as a 320x200 planar picture
+        screenseg = _MemNew(expanded)
+        CAL_HuffExpand source, screenseg, expanded, grhuffman(), True
+        VL_PlanarMemToScreen screenseg, 320, 200, 0, 0
+        ' TODO - port VW_MarkUpdateBlock (0, 0, 319, 199)
+        _MemFree screenseg
+        _MemFree source
+    End Sub
+
     ' UNCACHEGRCHUNK macro - frees a graphics chunk
     Sub UNCACHEGRCHUNK (chunk As Integer)
         If grsegs(chunk) = 0 Then Exit Sub

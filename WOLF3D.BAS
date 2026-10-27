@@ -101,9 +101,6 @@ Call InitGame
 'Options
 Call DemoLoop
 
-' TODO: remove when the rest of DemoLoop (main menu) is ported - keeps the intro music playing
-Do: _Limit 30: Loop Until InKey$ <> ""
-
 ' Main game loop
 'Print "Debug: Entering main loop"
 'Do: Loop Until InKey$ <> ""
@@ -115,10 +112,12 @@ Do: _Limit 30: Loop Until InKey$ <> ""
 'Loop Until InKey$ = Chr$(27) ' ESC to quit
 
 SD_Shutdown
+VL_SetPalette gamepal() ' undo VW_FadeOut, so QB64's end prompt is readable
 End
 
 ErrorHandler:
 SD_Shutdown
+Palette ' the screen may be faded to black
 Print "Error: "; Err; " - Line: "; _ErrorLine
 Print "ErrorMessage: "; _ErrorMessage$
 Print "_InclErrorFile: "; _InclErrorFile$; "_InclErrorLine:"; _InclErrorLine
@@ -458,5 +457,47 @@ Sub DemoLoop
             End If
         $End If
     $End If
-    ' Line 1486, while 1 ...
+
+    Do
+        Do While Not NOWAIT
+            '
+            ' title page
+            '
+            $If DEMOTEST = UNDEFINED Then
+                $If SPEAR = UNDEFINED Then
+                    CA_CacheScreen TITLEPIC
+                    VW_UpdateScreen
+                    VW_FadeIn
+                $Else
+                    ' TODO: SPEAR title (TITLEPALETTE, TITLE1PIC, TITLE2PIC)
+                $End If
+                If IN_UserInput(TickBase * 15) Then Exit Do
+                VW_FadeOut
+                '
+                ' credits page
+                '
+                CA_CacheScreen CREDITSPIC
+                VW_UpdateScreen
+                VW_FadeIn
+                If IN_UserInput(TickBase * 10) Then Exit Do
+                VW_FadeOut
+                '
+                ' high scores
+                '
+                ' TODO: DrawHighScores, VW_UpdateScreen, VW_FadeIn
+                ' If IN_UserInput(TickBase * 10) Then Exit Do
+            $End If
+            '
+            ' demo
+            '
+            ' TODO: PlayDemo (LastDemo++ Mod 4), If playstate = ex_abort Then Exit Do
+            ' StartCPMusic INTROSONG
+        Loop
+
+        VW_FadeOut
+
+        ' TODO: RecordDemo / US_ControlPanel 0
+        ' If startgame Or loadedgame Then GameLoop: VW_FadeOut: StartCPMusic INTROSONG
+        Exit Do ' Temporary: no control panel yet, a key press on title/credits quits
+    Loop
 End Sub

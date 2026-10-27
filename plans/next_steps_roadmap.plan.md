@@ -5,16 +5,16 @@ The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step
 ## Where we are
 - **Done:** signon, NonShareware (partial), intro music (OPL2 emulator, see `qb64_opl2_emulator_fee1c44b.plan.md`), PG13.
 - **Next in the original:** the `while (1)` loop: title, credits, high scores, a demo, and on a key press the main menu (`US_ControlPanel`), then `GameLoop`.
-- **Temporary:** a key wait after `Call DemoLoop` in WOLF3D.BAS stands in for that loop.
+- **Temporary:** the `DemoLoop` attract loop shows title and credits only. A key press quits, because the control panel isn't ported yet.
 
 ## Steps
 
-### 1. Title and credits screens (small, next)
+### 1. Title and credits screens — DONE 2026-10-26
 - Port `CA_CacheScreen` (origsrc/ID_CA.C:1381). It decompresses a full 320x200 planar picture; reuse `CAL_HuffExpand` (ID_CA.BM) and `VL_PlanarMemToScreen` (ID_VL.BM).
 - Port the attract-loop skeleton of `DemoLoop`: TITLEPIC for 15 s, then CREDITSPIC for 10 s, each with `VW_FadeIn`/`VW_FadeOut`. `IN_UserInput(TickBase * n)` breaks out on a key press.
 - Remove the temporary key wait in WOLF3D.BAS.
 
-### 2. Fonts and text output
+### 2. Fonts and text output (next)
 - Load the font chunks (`STARTFONT`): height, `location[256]`, `width[256]`.
 - Port `VW_DrawPropString`, `US_Print`, `US_CPrint`, `SETFONTCOLOR` and the `PrintX`/`PrintY`/`WindowX`/`WindowW` state.
 - Then fix `NonShareware` (WL_INTER.BM):
