@@ -1,0 +1,132 @@
+' ID_US_1.C - User Manager - General routines
+' Window/Printing routines.
+' The original measured and drew through the function pointers USL_MeasureString and
+' USL_DrawString (US_SetPrintRoutines). QB64 has no function pointers, and Wolf3D only uses
+' VW_MeasurePropString / VWB_DrawPropString, so those are called directly.
+' "\n" in the C strings is Chr$(10) here.
+
+$If INCLUDE_ID_US_1_BM = UNDEFINED Then
+    $Let INCLUDE_ID_US_1_BM = 1
+
+    '$INCLUDE: 'ID_US.BI'
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_Print() - Prints a string in the current window. Newlines are
+    '//      supported.
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_Print (s As String)
+        Dim lineStart As Long, lineEnd As Long
+        Dim w As Integer, h As Integer
+        Dim part As String
+
+        lineStart = 1
+        Do While lineStart <= Len(s)
+            lineEnd = InStr(lineStart, s, Chr$(10))
+            If lineEnd = 0 Then
+                part = Mid$(s, lineStart)
+            Else
+                part = Mid$(s, lineStart, lineEnd - lineStart)
+            End If
+
+            VW_MeasurePropString part, w, h
+            px = PrintX
+            py = PrintY
+            VWB_DrawPropString part
+
+            If lineEnd Then
+                lineStart = lineEnd + 1
+                PrintX = WindowX
+                PrintY = PrintY + h
+            Else
+                lineStart = Len(s) + 1
+                PrintX = PrintX + w
+            End If
+        Loop
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_PrintUnsigned() - Prints an unsigned long
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_PrintUnsigned (n As Long)
+        US_Print LTrim$(Str$(n))
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_PrintSigned() - Prints a signed long
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_PrintSigned (n As Long)
+        US_Print LTrim$(Str$(n))
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  USL_PrintInCenter() - Prints a string in the center of the given rect
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub USL_PrintInCenter (s As String, ulx As Integer, uly As Integer, lrx As Integer, lry As Integer)
+        Dim w As Integer, h As Integer
+
+        VW_MeasurePropString s, w, h
+        px = ulx + ((lrx - ulx - w) \ 2)
+        py = uly + ((lry - uly - h) \ 2)
+        VWB_DrawPropString s
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_PrintCentered() - Prints a string centered in the current window.
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_PrintCentered (s As String)
+        USL_PrintInCenter s, WindowX, WindowY, WindowX + WindowW, WindowY + WindowH
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_CPrintLine() - Prints a string centered on the current line and
+    '//      advances to the next line. Newlines are not supported.
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_CPrintLine (s As String)
+        Dim w As Integer, h As Integer
+
+        VW_MeasurePropString s, w, h
+        If w > WindowW Then
+            Print "US_CPrintLine() - String exceeds width"
+            End
+        End If
+        px = WindowX + ((WindowW - w) \ 2)
+        py = PrintY
+        VWB_DrawPropString s
+        PrintY = PrintY + h
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_CPrint() - Prints a string in the current window. Newlines are
+    '//      supported.
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_CPrint (s As String)
+        Dim lineStart As Long, lineEnd As Long
+
+        lineStart = 1
+        Do While lineStart <= Len(s)
+            lineEnd = InStr(lineStart, s, Chr$(10))
+            If lineEnd = 0 Then
+                US_CPrintLine Mid$(s, lineStart)
+                lineStart = Len(s) + 1
+            Else
+                US_CPrintLine Mid$(s, lineStart, lineEnd - lineStart)
+                lineStart = lineEnd + 1
+            End If
+        Loop
+    End Sub
+
+$EndIf

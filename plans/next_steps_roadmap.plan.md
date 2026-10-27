@@ -3,7 +3,7 @@
 The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step makes the next visible thing in the real startup sequence work. Check each step against the original running in DOSBox-X (`C:\Games\DOSBox-X\dosbox-x.exe`, then `cd C:\WOLF3D`, `wolf3d.exe`).
 
 ## Where we are
-- **Done:** signon, NonShareware (partial), intro music (OPL2 emulator, see `qb64_opl2_emulator_fee1c44b.plan.md`), PG13.
+- **Done:** signon, NonShareware, intro music (OPL2 emulator, see `qb64_opl2_emulator_fee1c44b.plan.md`), PG13, title and credits, fonts and US_Print.
 - **Next in the original:** the `while (1)` loop: title, credits, high scores, a demo, and on a key press the main menu (`US_ControlPanel`), then `GameLoop`.
 - **Temporary:** the `DemoLoop` attract loop shows title and credits only. A key press quits, because the control panel isn't ported yet.
 
@@ -14,7 +14,7 @@ The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step
 - Port the attract-loop skeleton of `DemoLoop`: TITLEPIC for 15 s, then CREDITSPIC for 10 s, each with `VW_FadeIn`/`VW_FadeOut`. `IN_UserInput(TickBase * n)` breaks out on a key press.
 - Remove the temporary key wait in WOLF3D.BAS.
 
-### 2. Fonts and text output (next)
+### 2. Fonts and text output — DONE 2026-10-26
 - Load the font chunks (`STARTFONT`): height, `location[256]`, `width[256]`.
 - Port `VW_DrawPropString`, `US_Print`, `US_CPrint`, `SETFONTCOLOR` and the `PrintX`/`PrintY`/`WindowX`/`WindowW` state.
 - Then fix `NonShareware` (WL_INTER.BM):
@@ -22,7 +22,7 @@ The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step
   - turn the opening `VW_FadeOut` back on;
   - print the "Attention" text, then `VW_UpdateScreen`, `VW_FadeIn` and `IN_Ack`.
 
-### 3. High scores screen
+### 3. High scores screen (next)
 - Port `DrawHighScores` with the default score table, the `L_*` number and letter pictures, and the text from step 2.
 - After this, the attract loop is complete except for demos.
 

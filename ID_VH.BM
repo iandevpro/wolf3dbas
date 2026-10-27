@@ -23,15 +23,86 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
     '=================
     Sub VWB_DrawPic (x As Integer, y As Integer, chunknum As Integer)
         Dim picnum As Integer
-        Dim width As Integer, height As Integer, px As Integer
+        Dim width As Integer, height As Integer, drawx As Integer
 
         picnum = chunknum - STARTPICS
-        px = x And Not 7
+        drawx = x And Not 7
         width = pictable(picnum).width
         height = pictable(picnum).height
         If grsegs(chunknum) = 0 Then Exit Sub
         ' TODO - port VW_MarkUpdateBlock
-        VL_PlanarMemToScreen grsegsMem(chunknum), width, height, px, y
+        VL_PlanarMemToScreen grsegsMem(chunknum), width, height, drawx, y
+    End Sub
+
+    ' #define SETFONTCOLOR(f,b) fontcolor=f;backcolor=b;
+    Sub SETFONTCOLOR (f As Integer, b As Integer)
+        fontcolor = f
+        backcolor = b
+    End Sub
+
+    '=================
+    '=
+    '= VW_DrawPropString
+    '=
+    '= Draws a string with the current proportional font at px,py, advancing px
+    '=
+    '=================
+    Sub VW_DrawPropString (s As String)
+        Dim font As _MEM, scr As _MEM
+        Dim i As Long, ch As Long, w As Long, height As Long, glyph As Long
+        Dim c As Long, r As Long, sx As Long, sy As Long, startx As Long
+
+        If grsegs(STARTFONT + fontnumber) = 0 Then Exit Sub
+        font = grsegsMem(STARTFONT + fontnumber)
+        height = _MemGet(font, font.OFFSET, Integer)
+        bufferheight = height
+        startx = px
+
+        scr = _MemImage(0)
+        For i = 1 To Len(s)
+            ch = Asc(s, i)
+            w = _MemGet(font, font.OFFSET + FONT_WIDTH + ch, _Unsigned _Byte)
+            glyph = _MemGet(font, font.OFFSET + FONT_LOCATION + ch * 2, _Unsigned Integer)
+            For c = 0 To w - 1
+                sx = px
+                For r = 0 To height - 1
+                    If _MemGet(font, font.OFFSET + glyph + r * w + c, _Unsigned _Byte) <> 0 Then
+                        sy = py + r
+                        If sx >= 0 And sx < 320 And sy >= 0 And sy < 200 Then
+                            _MemPut scr, scr.OFFSET + sy * 320 + sx, fontcolor As _UNSIGNED _BYTE
+                        End If
+                    End If
+                Next r
+                px = px + 1
+            Next c
+        Next i
+        _MemFree scr
+
+        bufferwidth = (px \ 4 - startx \ 4 + 1) * 4
+    End Sub
+
+    Sub VWB_DrawPropString (s As String)
+        ' TODO - port VW_MarkUpdateBlock (x, py, px - 1, py + bufferheight - 1)
+        VW_DrawPropString s
+    End Sub
+
+    '=================
+    '=
+    '= VW_MeasurePropString
+    '=
+    '=================
+    Sub VW_MeasurePropString (s As String, w As Integer, h As Integer)
+        Dim font As _MEM
+        Dim i As Long
+
+        w = 0
+        h = 0
+        If grsegs(STARTFONT + fontnumber) = 0 Then Exit Sub
+        font = grsegsMem(STARTFONT + fontnumber)
+        h = _MemGet(font, font.OFFSET, Integer)
+        For i = 1 To Len(s)
+            w = w + _MemGet(font, font.OFFSET + FONT_WIDTH + Asc(s, i), _Unsigned _Byte) ' proportional width
+        Next i
     End Sub
 
     ' Function to fill a rectangle with specified dimensions and color

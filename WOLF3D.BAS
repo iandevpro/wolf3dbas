@@ -19,6 +19,7 @@ Const TRUE = -1
 '$INCLUDE: 'ID_CA.BI'
 '$INCLUDE: 'ID_SD.BI'
 '$INCLUDE: 'ID_IN.BI'
+'$INCLUDE: 'ID_US.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -134,6 +135,7 @@ System
 '$INCLUDE:'ID_MM.BM'
 '$INCLUDE:'ID_SD.BM'
 '$INCLUDE:'ID_IN.BM'
+'$INCLUDE:'ID_US_1.BM'
 
 ' SignonScreen - Displays the game's intro screen
 Sub SignonScreen

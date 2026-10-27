@@ -24,6 +24,18 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
         Loop
     End Function
 
+    Sub IN_StartAck ()
+        IN_ClearKeysDown
+    End Sub
+
+    ' IN_Ack - waits for a key or mouse button press
+    Sub IN_Ack ()
+        IN_StartAck
+        Do
+            _Limit TickBase
+        Loop Until IN_CheckAck%
+    End Sub
+
     '===================
     '=
     '= IN_UserInput
@@ -37,7 +49,7 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
 
         IN_UserInput% = FALSE
         lasttime = Timer(.001)
-        IN_ClearKeysDown
+        IN_StartAck
         Do
             _Limit TickBase
             If IN_CheckAck% Then IN_UserInput% = TRUE: Exit Function

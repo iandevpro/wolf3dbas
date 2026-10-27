@@ -4,6 +4,8 @@ $If INCLUDE_ID_IN_BI = UNDEFINED Then
 
     Declare Sub IN_ClearKeysDown ()
     Declare Function IN_CheckAck% ()
+    Declare Sub IN_StartAck ()
+    Declare Sub IN_Ack ()
     Declare Function IN_UserInput% (delay As Long)
 
 $End If

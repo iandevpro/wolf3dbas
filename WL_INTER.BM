@@ -2,46 +2,42 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
     $Let INCLUDE_WL_INTER_BM = 1
 
     Sub NonShareware
-        ' TODO: Uncomment VW_FadeOut
-        'Call VW_FadeOut
-        Call ClearMScreen
-        Do: Loop Until InKey$ <> ""
+        VW_FadeOut
+
+        ClearMScreen
         DrawStripes 10
 
-        ' TODO
-        ' Read, decompress directly to screen
-        ' CA_CacheScreen TITLEPIC
-        '
-        '   CA_CacheGrChunk STARTFONT + 1
-        '   fontnumber = 1
-        '
-        '   SETFONTCOLOR READHCOLOR, BKGDCOLOR
-        '   PrintX = 110
-        '   PrintY = 15
-        '
-        '   IF SPANISH THEN
-        '       US_Print "Atencion"
-        '   ELSE
-        '       US_Print "Attention"
-        '   End If
-        '
-        '   SETFONTCOLOR HIGHLIGHT, BKGDCOLOR
-        '   WindowX = PrintX = 40
-        '   PrintY = 60
-        '   IF SPANISH THEN
-        '       US_Print "Este juego NO es gratis y\n"
-        '       US_Print "NO es Shareware; favor de\n"
-        '       US_Print "no distribuirlo.\n\n"
-        '   ELSE
-        '       US_Print "This game is NOT shareware.\n"
-        '       US_Print "Please do not distribute it.\n"
-        '       US_Print "Thanks.\n\n"
-        '   End If
-        '   US_Print "        Id Software"
-        '
-        '   VW_UpdateScreen()
-        '   VW_FadeIn()
-        '   IN_Ack()
+        CA_CacheGrChunk STARTFONT + 1
+        fontnumber = 1
+
+        SETFONTCOLOR READHCOLOR, BKGDCOLOR
+        PrintX = 110
+        PrintY = 15
+
+        $If SPANISH = DEFINED Then
+            US_Print "Atencion"
+        $Else
+            US_Print "Attention"
+        $End If
+
+        SETFONTCOLOR HIGHLIGHT, BKGDCOLOR
+        WindowX = 40
+        PrintX = 40
+        PrintY = 60
+        $If SPANISH = DEFINED Then
+            US_Print "Este juego NO es gratis y" + Chr$(10)
+            US_Print "NO es Shareware; favor de" + Chr$(10)
+            US_Print "no distribuirlo." + Chr$(10) + Chr$(10)
+        $Else
+            US_Print "This game is NOT shareware." + Chr$(10)
+            US_Print "Please do not distribute it." + Chr$(10)
+            US_Print "Thanks." + Chr$(10) + Chr$(10)
+        $End If
+        US_Print "        Id Software" + Chr$(10)
+
+        VW_UpdateScreen
+        VW_FadeIn
+        IN_Ack
     End Sub
 
     $If JAPAN = UNDEFINED Then
