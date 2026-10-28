@@ -81,7 +81,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         sqHackTime = 0
         alTimeCount = 0
         ' SD_MusicOn
-        sqActive = 1
+        If MusicMode = smm_AdLib Then sqActive = 1
     End Sub
 
     ' One 700Hz tick of the music sequencer (the music part of SDL_ALService / SDL_t0Service)
@@ -382,6 +382,38 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         SoundPositioned = FALSE
 
         SDL_SoundFinished
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SD_SetMusicMode() - sets the device to use for background music
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function SD_SetMusicMode% (mode As Integer)
+        Dim result As Integer
+
+        ' SD_FadeOutMusic - DEBUG - quick hack to turn the music off (orig C)
+        SD_MusicOff
+
+        Select Case mode
+            Case smm_Off
+                result = TRUE
+            Case smm_AdLib
+                If AdLibPresent Then result = TRUE
+        End Select
+
+        If result Then MusicMode = mode
+        SD_SetMusicMode% = result
+    End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SD_SetDigiDevice() - sets the digitized sound device
+    '//  TODO: digitized sounds (VSWAP), only sds_Off is available
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub SD_SetDigiDevice (mode As Integer)
+        If mode = sds_Off Then DigiMode = sds_Off
     End Sub
 
     '///////////////////////////////////////////////////////////////////////////

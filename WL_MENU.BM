@@ -43,6 +43,8 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         testFile = "VSWAP.WL6"
         If _FileExists(testFile) Then fileExists = 1
 
+        EpisodeSelect(0) = 1 ' int EpisodeSelect[6]={1}; episode 1 is always there
+
         If fileExists Then
             extension = "WL6"
             ' Enable all episodes
@@ -135,14 +137,21 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 CP_ReadThis
             Case RTN_VIEWSCORES
                 CP_ViewScores
+            Case RTN_MOUSESENS
+                MouseSensitivity
+            Case RTN_CUSTOMIZE
+                CustomControls
         End Select
     End Sub
 
     ' Calls the custom draw routine passed to HandleMenu
     Sub CP_CallDrawRoutine (rtn As Integer, w As Integer)
         Select Case rtn
-            Case Else
-                ' TODO: DrawNewGameDiff, TrackWhichGame, FixupCustom... with the sub menus
+            Case DRAWRTN_NEWGAMEDIFF
+                DrawNewGameDiff w
+            Case DRAWRTN_FIXUPCUSTOM
+                FixupCustom w
+                ' TODO: TrackWhichGame with load / save (step 5c)
         End Select
     End Sub
 
@@ -336,25 +345,1271 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
     '////////////////////////////////////////////////////////////////////
     '//
-    '// Sub menus, ported in later steps
+    '// Load / save, ported in step 5c
+    '//
+    '////////////////////////////////////////////////////////////////////
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// START A NEW GAME
     '//
     '////////////////////////////////////////////////////////////////////
     Sub CP_NewGame ()
-        ' TODO: episode and difficulty selection (step 5b)
+        Dim which As Integer, episode As Integer
+
+        $If SPEAR = UNDEFINED Then
+            Do ' firstpart:
+                DrawNewEpisode
+
+                Do
+                    which = HandleMenu(NewEitems, NewEmenu(), DRAWRTN_NONE)
+                    Select Case which
+                        Case -1
+                            MenuFadeOut
+                            Exit Sub
+
+                        Case Else
+                            If EpisodeSelect(which \ 2) = 0 Then
+                                CP_PlaySound NOWAYSND
+                                Message "Please select " + Chr$(34) + "Read This!" + Chr$(34) + Chr$(10) + "from the Options menu to" + Chr$(10) + "find out how to order this" + Chr$(10) + "episode from Apogee."
+                                IN_ClearKeysDown
+                                IN_Ack
+                                DrawNewEpisode
+                                which = 0
+                            Else
+                                episode = which \ 2
+                                which = 1
+                            End If
+                    End Select
+                Loop While which = 0
+
+                CP_ShootSnd
+
+                '
+                ' ALREADY IN A GAME?
+                '
+                If ingame Then
+                    If Confirm(CURGAME) = 0 Then
+                        MenuFadeOut
+                        Exit Sub
+                    End If
+                End If
+
+                MenuFadeOut
+
+                DrawNewGame
+                which = HandleMenu(NewItems, NewMenu(), DRAWRTN_NEWGAMEDIFF)
+                If which >= 0 Then Exit Do
+                MenuFadeOut ' goto firstpart
+            Loop
+        $Else
+            ' TODO: SPEAR new game (NEWGAME lumps, no episode selection)
+            Exit Sub
+        $End If
+
+        CP_ShootSnd
+        NewGame which, episode
+        StartGameMenu = 1
+        MenuFadeOut
+
+        '
+        ' CHANGE "READ THIS!" TO NORMAL COLOR
+        '
+        $If READTHIS_ITEM = 1 Then
+            MainMenu(mi_readthis).active = 1
+        $End If
+
+        pickquick = 0
     End Sub
 
+    '/////////////////////
+    '//
+    '// DRAW NEW EPISODE MENU
+    '//
+    Sub DrawNewEpisode ()
+        Dim i As Integer
+
+        ClearMScreen
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+
+        DrawWindow NE_X - 4, NE_Y - 4, NE_W + 8, NE_H + 8, BKGDCOLOR
+        SETFONTCOLOR READHCOLOR, BKGDCOLOR
+        PrintY = 2
+        WindowX = 0
+        $If SPANISH = DEFINED Then
+            US_CPrint "Cual episodio jugar?"
+        $Else
+            US_CPrint "Which episode to play?"
+        $End If
+
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+        DrawMenu NewEitems, NewEmenu()
+
+        For i = 0 To 5
+            VWB_DrawPic NE_X + 32, NE_Y + i * 26, C_EPISODE1PIC + i
+        Next i
+
+        VW_UpdateScreen
+        MenuFadeIn
+        WaitKeyUp
+    End Sub
+
+    '/////////////////////
+    '//
+    '// DRAW NEW GAME MENU
+    '//
+    Sub DrawNewGame ()
+        ClearMScreen
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+
+        SETFONTCOLOR READHCOLOR, BKGDCOLOR
+        PrintX = NM_X + 20
+        PrintY = NM_Y - 32
+
+        $If SPANISH = DEFINED Then
+            US_Print "Eres macho?"
+        $Else
+            US_Print "How tough are you?"
+        $End If
+
+        DrawWindow NM_X - 5, NM_Y - 10, NM_W, NM_H, BKGDCOLOR
+
+        DrawMenu NewItems, NewMenu()
+        DrawNewGameDiff NewItems.curpos
+        VW_UpdateScreen
+        MenuFadeIn
+        WaitKeyUp
+    End Sub
+
+    '////////////////////////
+    '//
+    '// DRAW NEW GAME GRAPHIC
+    '//
+    Sub DrawNewGameDiff (w As Integer)
+        VWB_DrawPic NM_X + 185, NM_Y + 7, w + C_BABYMODEPIC
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// HANDLE SOUND MENU
+    '//
+    '////////////////////////////////////////////////////////////////////
     Sub CP_Sound ()
-        ' TODO: sound menu (step 5b)
+        Dim which As Integer, result As Integer
+
+        DrawSoundMenu
+        MenuFadeIn
+        WaitKeyUp
+
+        Do
+            which = HandleMenu(SndItems, SndMenu(), DRAWRTN_NONE)
+            '
+            ' HANDLE MENU CHOICES
+            '
+            Select Case which
+                '
+                ' SOUND EFFECTS
+                '
+                Case 0
+                    If SoundMode <> sdm_Off Then
+                        SD_WaitSoundDone
+                        result = SD_SetSoundMode(sdm_Off)
+                        DrawSoundMenu
+                    End If
+                Case 1
+                    If SoundMode <> sdm_PC Then
+                        SD_WaitSoundDone
+                        result = SD_SetSoundMode(sdm_PC)
+                        CA_LoadAllSounds
+                        DrawSoundMenu
+                        CP_ShootSnd
+                    End If
+                Case 2
+                    If SoundMode <> sdm_AdLib Then
+                        SD_WaitSoundDone
+                        result = SD_SetSoundMode(sdm_AdLib)
+                        CA_LoadAllSounds
+                        DrawSoundMenu
+                        CP_ShootSnd
+                    End If
+
+                    '
+                    ' DIGITIZED SOUND
+                    '
+                Case 5
+                    If DigiMode <> sds_Off Then
+                        SD_SetDigiDevice sds_Off
+                        DrawSoundMenu
+                    End If
+                Case 6
+                    If DigiMode <> sds_SoundSource Then
+                        SD_SetDigiDevice sds_SoundSource
+                        DrawSoundMenu
+                        CP_ShootSnd
+                    End If
+                Case 7
+                    If DigiMode <> sds_SoundBlaster Then
+                        SD_SetDigiDevice sds_SoundBlaster
+                        DrawSoundMenu
+                        CP_ShootSnd
+                    End If
+
+                    '
+                    ' MUSIC
+                    '
+                Case 10
+                    If MusicMode <> smm_Off Then
+                        result = SD_SetMusicMode(smm_Off)
+                        DrawSoundMenu
+                        CP_ShootSnd
+                    End If
+                Case 11
+                    If MusicMode <> smm_AdLib Then
+                        result = SD_SetMusicMode(smm_AdLib)
+                        DrawSoundMenu
+                        CP_ShootSnd
+                        StartCPMusic MENUSONG
+                    End If
+            End Select
+        Loop While which >= 0
+
+        MenuFadeOut
     End Sub
 
+    '//////////////////////
+    '//
+    '// DRAW THE SOUND MENU
+    '//
+    Sub DrawSoundMenu ()
+        Dim i As Integer, isOn As Integer
+
+        '
+        ' DRAW SOUND MENU
+        '
+        ClearMScreen
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+
+        DrawWindow SM_X - 8, SM_Y1 - 3, SM_W, SM_H1, BKGDCOLOR
+        DrawWindow SM_X - 8, SM_Y2 - 3, SM_W, SM_H2, BKGDCOLOR
+        DrawWindow SM_X - 8, SM_Y3 - 3, SM_W, SM_H3, BKGDCOLOR
+
+        '
+        ' IF NO ADLIB, NON-CHOOSENESS!
+        '
+        If Not AdLibPresent And Not SoundBlasterPresent Then
+            SndMenu(2).active = 0: SndMenu(10).active = 0: SndMenu(11).active = 0
+        End If
+
+        If Not SoundSourcePresent Then SndMenu(6).active = 0
+
+        If Not SoundBlasterPresent Then SndMenu(7).active = 0
+
+        If Not SoundSourcePresent And Not SoundBlasterPresent Then SndMenu(5).active = 0
+
+        DrawMenu SndItems, SndMenu()
+        VWB_DrawPic 100, SM_Y1 - 20, C_FXTITLEPIC
+        VWB_DrawPic 100, SM_Y2 - 20, C_DIGITITLEPIC
+        VWB_DrawPic 100, SM_Y3 - 20, C_MUSICTITLEPIC
+
+        For i = 0 To SndItems.amount - 1
+            If US_CString$(SndMenu(i).txt) <> "" Then
+                '
+                ' DRAW SELECTED/NOT SELECTED GRAPHIC BUTTONS
+                '
+                isOn = 0
+                Select Case i
+                    '
+                    ' SOUND EFFECTS
+                    '
+                    Case 0: If SoundMode = sdm_Off Then isOn = 1
+                    Case 1: If SoundMode = sdm_PC Then isOn = 1
+                    Case 2: If SoundMode = sdm_AdLib Then isOn = 1
+                        '
+                        ' DIGITIZED SOUND
+                        '
+                    Case 5: If DigiMode = sds_Off Then isOn = 1
+                    Case 6: If DigiMode = sds_SoundSource Then isOn = 1
+                    Case 7: If DigiMode = sds_SoundBlaster Then isOn = 1
+                        '
+                        ' MUSIC
+                        '
+                    Case 10: If MusicMode = smm_Off Then isOn = 1
+                    Case 11: If MusicMode = smm_AdLib Then isOn = 1
+                End Select
+
+                If isOn Then
+                    VWB_DrawPic SM_X + 24, SM_Y1 + i * 13 + 2, C_SELECTEDPIC
+                Else
+                    VWB_DrawPic SM_X + 24, SM_Y1 + i * 13 + 2, C_NOTSELECTEDPIC
+                End If
+            End If
+        Next i
+
+        DrawMenuGun SndItems
+        VW_UpdateScreen
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// DEFINE CONTROLS
+    '//
+    '////////////////////////////////////////////////////////////////////
     Sub CP_Control ()
-        ' TODO: control menu (step 5b)
+        Dim which As Integer
+
+        DrawCtlScreen
+        MenuFadeIn
+        WaitKeyUp
+
+        Do
+            which = HandleMenu(CtlItems, CtlMenu(), DRAWRTN_NONE)
+            Select Case which
+                Case CTL_MOUSEENABLE
+                    mouseenabled = mouseenabled Xor 1
+                    ' TODO: center the mouse (Mouse(4))
+                    DrawCtlScreen
+                    CusItems.curpos = -1
+                    CP_ShootSnd
+
+                Case CTL_JOYENABLE
+                    joystickenabled = joystickenabled Xor 1
+                    ' TODO: CalibrateJoystick - joystick is not ported
+                    If joystickenabled Then joystickenabled = 0
+                    DrawCtlScreen
+                    CusItems.curpos = -1
+                    CP_ShootSnd
+
+                Case CTL_USEPORT2
+                    joystickport = joystickport Xor 1
+                    DrawCtlScreen
+                    CP_ShootSnd
+
+                Case CTL_PADENABLE
+                    joypadenabled = joypadenabled Xor 1
+                    DrawCtlScreen
+                    CP_ShootSnd
+
+                Case CTL_MOUSESENS, CTL_CUSTOMIZE
+                    DrawCtlScreen
+                    MenuFadeIn
+                    WaitKeyUp
+            End Select
+        Loop While which >= 0
+
+        MenuFadeOut
     End Sub
 
+    '////////////////////////////////
+    '//
+    '// DRAW MOUSE SENSITIVITY SCREEN
+    '//
+    Sub DrawMouseSens ()
+        ClearMScreen
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+        $If SPANISH = DEFINED Then
+            DrawWindow 10, 80, 300, 43, BKGDCOLOR
+        $Else
+            DrawWindow 10, 80, 300, 30, BKGDCOLOR
+        $End If
+
+        WindowX = 0
+        WindowW = 320
+        PrintY = 82
+        SETFONTCOLOR READCOLOR, BKGDCOLOR
+        US_CPrint STR_MOUSEADJ
+
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+        $If SPANISH = DEFINED Then
+            PrintX = 14
+            PrintY = 95 + 13
+            US_Print STR_SLOW
+            PrintX = 252
+            US_Print STR_FAST
+        $Else
+            PrintX = 14
+            PrintY = 95
+            US_Print STR_SLOW
+            PrintX = 269
+            US_Print STR_FAST
+        $End If
+
+        DrawMouseSensBar
+        VW_UpdateScreen
+        MenuFadeIn
+    End Sub
+
+    ' Slider of the mouse sensitivity screen (repeated 3 times in the original)
+    Sub DrawMouseSensBar ()
+        VWB_Bar 60, 97, 200, 10, TEXTCOLOR
+        DrawOutline 60, 97, 200, 10, 0, HIGHLIGHT
+        DrawOutline 60 + 20 * mouseadjustment, 97, 20, 10, 0, READCOLOR
+        VWB_Bar 61 + 20 * mouseadjustment, 98, 19, 9, READHCOLOR
+    End Sub
+
+    '///////////////////////////
+    '//
+    '// ADJUST MOUSE SENSITIVITY
+    '//
+    Sub MouseSensitivity ()
+        Dim ci As ControlInfo
+        Dim xit As Integer, oldMA As Integer
+
+        oldMA = mouseadjustment
+        DrawMouseSens
+        Do
+            _Limit TickBase * 2
+            ReadAnyControl ci
+            Select Case ci.dir
+                Case dir_North, dir_West
+                    If mouseadjustment Then
+                        mouseadjustment = mouseadjustment - 1
+                        DrawMouseSensBar
+                        VW_UpdateScreen
+                        CP_PlaySound MOVEGUN1SND
+                        Do While Keyboard(sc_LeftArrow)
+                            _Limit TickBase * 2
+                        Loop
+                        WaitKeyUp
+                    End If
+
+                Case dir_South, dir_East
+                    If mouseadjustment < 9 Then
+                        mouseadjustment = mouseadjustment + 1
+                        DrawMouseSensBar
+                        VW_UpdateScreen
+                        CP_PlaySound MOVEGUN1SND
+                        Do While Keyboard(sc_RightArrow)
+                            _Limit TickBase * 2
+                        Loop
+                        WaitKeyUp
+                    End If
+            End Select
+
+            ' TODO: screen capture (Tab + P with "goobers" parameter)
+
+            If ci.button0 Or Keyboard(sc_Space) Or Keyboard(sc_Enter) Then
+                xit = 1
+            ElseIf ci.button1 Or Keyboard(sc_Escape) Then
+                xit = 2
+            End If
+        Loop While xit = 0
+
+        If xit = 2 Then
+            mouseadjustment = oldMA
+            CP_PlaySound ESCPRESSEDSND
+        Else
+            CP_PlaySound SHOOTSND
+        End If
+
+        WaitKeyUp
+        MenuFadeOut
+    End Sub
+
+    '///////////////////////////
+    '//
+    '// DRAW CONTROL MENU SCREEN
+    '//
+    Sub DrawCtlScreen ()
+        Dim i As Integer, x As Integer, y As Integer
+
+        ClearMScreen
+        DrawStripes 10
+        VWB_DrawPic 80, 0, C_CONTROLPIC
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+        DrawWindow CTL_X - 8, CTL_Y - 5, CTL_W, CTL_H, BKGDCOLOR
+        WindowX = 0
+        WindowW = 320
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+
+        If JoysPresent(0) Then
+            CtlMenu(1).active = 1: CtlMenu(2).active = 1: CtlMenu(3).active = 1
+        End If
+
+        CtlMenu(2).active = joystickenabled: CtlMenu(3).active = joystickenabled
+
+        If MousePresent Then
+            CtlMenu(4).active = 1: CtlMenu(0).active = 1
+        End If
+
+        CtlMenu(4).active = mouseenabled
+
+        DrawMenu CtlItems, CtlMenu()
+
+        x = CTL_X + CtlItems.indent - 24
+        y = CTL_Y + 3
+        If mouseenabled Then
+            VWB_DrawPic x, y, C_SELECTEDPIC
+        Else
+            VWB_DrawPic x, y, C_NOTSELECTEDPIC
+        End If
+
+        y = CTL_Y + 16
+        If joystickenabled Then
+            VWB_DrawPic x, y, C_SELECTEDPIC
+        Else
+            VWB_DrawPic x, y, C_NOTSELECTEDPIC
+        End If
+
+        y = CTL_Y + 29
+        If joystickport Then
+            VWB_DrawPic x, y, C_SELECTEDPIC
+        Else
+            VWB_DrawPic x, y, C_NOTSELECTEDPIC
+        End If
+
+        y = CTL_Y + 42
+        If joypadenabled Then
+            VWB_DrawPic x, y, C_SELECTEDPIC
+        Else
+            VWB_DrawPic x, y, C_NOTSELECTEDPIC
+        End If
+
+        '
+        ' PICK FIRST AVAILABLE SPOT
+        '
+        If CtlItems.curpos < 0 Then
+            CtlDrawPickFirst
+        ElseIf CtlMenu(CtlItems.curpos).active = 0 Then
+            CtlDrawPickFirst
+        End If
+
+        DrawMenuGun CtlItems
+        VW_UpdateScreen
+    End Sub
+
+    ' "if (CtlItems.curpos<0 || !CtlMenu[CtlItems.curpos].active)" - QB64 does not short circuit
+    Sub CtlDrawPickFirst ()
+        Dim i As Integer
+
+        For i = 0 To 5
+            If CtlMenu(i).active Then
+                CtlItems.curpos = i
+                Exit For
+            End If
+        Next i
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// CUSTOMIZE CONTROLS
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub CustomControls ()
+        Dim which As Integer
+
+        DrawCustomScreen
+        Do
+            which = HandleMenu(CusItems, CusMenu(), DRAWRTN_FIXUPCUSTOM)
+            Select Case which
+                Case 0
+                    DefineMouseBtns
+                    DrawCustMouse 1
+                Case 3
+                    DefineJoyBtns
+                    DrawCustJoy 0
+                Case 6
+                    DefineKeyBtns
+                    DrawCustKeybd 0
+                Case 8
+                    DefineKeyMove
+                    DrawCustKeys 0
+            End Select
+        Loop While which >= 0
+
+        MenuFadeOut
+    End Sub
+
+    '////////////////////////
+    '//
+    '// DEFINE THE MOUSE BUTTONS
+    '//
+    Sub DefineMouseBtns ()
+        Dim allowed(0 To 3) As Integer ' CustomCtrls mouseallowed={0,1,1,1};
+        allowed(1) = 1: allowed(2) = 1: allowed(3) = 1
+        EnterCtrlData 2, allowed(), CTRL_MOUSE
+    End Sub
+
+    '////////////////////////
+    '//
+    '// DEFINE THE JOYSTICK BUTTONS
+    '//
+    Sub DefineJoyBtns ()
+        Dim allowed(0 To 3) As Integer ' CustomCtrls joyallowed={1,1,1,1};
+        allowed(0) = 1: allowed(1) = 1: allowed(2) = 1: allowed(3) = 1
+        EnterCtrlData 5, allowed(), CTRL_JOYSTICK
+    End Sub
+
+    '////////////////////////
+    '//
+    '// DEFINE THE KEYBOARD BUTTONS
+    '//
+    Sub DefineKeyBtns ()
+        Dim allowed(0 To 3) As Integer ' CustomCtrls keyallowed={1,1,1,1};
+        allowed(0) = 1: allowed(1) = 1: allowed(2) = 1: allowed(3) = 1
+        EnterCtrlData 8, allowed(), CTRL_KEYBOARDBTNS
+    End Sub
+
+    '////////////////////////
+    '//
+    '// DEFINE THE KEYBOARD BUTTONS
+    '//
+    Sub DefineKeyMove ()
+        Dim allowed(0 To 3) As Integer ' CustomCtrls keyallowed={1,1,1,1};
+        allowed(0) = 1: allowed(1) = 1: allowed(2) = 1: allowed(3) = 1
+        EnterCtrlData 10, allowed(), CTRL_KEYBOARDMOVE
+    End Sub
+
+    ' DrawRtn of EnterCtrlData (C function pointer), chosen by the control type
+    Sub CustDrawRtn (ctype As Integer, hilight As Integer)
+        Select Case ctype
+            Case CTRL_MOUSE: DrawCustMouse hilight
+            Case CTRL_JOYSTICK: DrawCustJoy hilight
+            Case CTRL_KEYBOARDBTNS: DrawCustKeybd hilight
+            Case CTRL_KEYBOARDMOVE: DrawCustKeys hilight
+        End Select
+    End Sub
+
+    ' PrintRtn of EnterCtrlData (C function pointer), chosen by the control type
+    Sub CustPrintRtn (ctype As Integer, i As Integer)
+        Select Case ctype
+            Case CTRL_MOUSE: PrintCustMouse i
+            Case CTRL_JOYSTICK: PrintCustJoy i
+            Case CTRL_KEYBOARDBTNS: PrintCustKeybd i
+            Case CTRL_KEYBOARDMOVE: PrintCustKeys i
+        End Select
+    End Sub
+
+    '////////////////////////
+    '//
+    '// ENTER CONTROL DATA FOR ANY TYPE OF CONTROL
+    '//
+    Sub EnterCtrlData (index As Integer, allowed() As Integer, ctype As Integer)
+        Dim j As Integer, xit As Integer, tick As Integer, redraw As Integer
+        Dim which As Integer, x As Integer, picked As Integer
+        Dim button As Integer, result As Integer, z As Integer
+        Dim ci As ControlInfo
+
+        CP_ShootSnd
+        PrintY = CST_Y + 13 * index
+        IN_ClearKeysDown
+        xit = 0
+        redraw = 1
+        '
+        ' FIND FIRST SPOT IN ALLOWED ARRAY
+        '
+        For j = 0 To 3
+            If allowed(j) Then
+                which = j
+                Exit For
+            End If
+        Next j
+
+        Do
+            _Limit TickBase * 2
+            If redraw Then
+                x = CST_START + CST_SPC * which
+                DrawWindow 5, PrintY - 1, 310, 13, BKGDCOLOR
+
+                CustDrawRtn ctype, 1
+                DrawWindow x - 2, PrintY, CST_SPC, 11, TEXTCOLOR
+                DrawOutline x - 2, PrintY, CST_SPC, 11, 0, HIGHLIGHT
+                SETFONTCOLOR 0, TEXTCOLOR
+                CustPrintRtn ctype, which
+                PrintX = x
+                SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+                VW_UpdateScreen
+                WaitKeyUp
+                redraw = 0
+            End If
+
+            ReadAnyControl ci
+
+            If ctype = CTRL_MOUSE Or ctype = CTRL_JOYSTICK Then
+                If Keyboard(sc_Enter) Or Keyboard(sc_Control) Or Keyboard(sc_Alt) Then
+                    IN_ClearKeysDown
+                    ci.button0 = FALSE
+                    ci.button1 = FALSE
+                End If
+            End If
+
+            '
+            ' CHANGE BUTTON VALUE?
+            '
+            If (ci.button0 Or ci.button1 Or ci.button2 Or ci.button3) Or ((ctype = CTRL_KEYBOARDBTNS Or ctype = CTRL_KEYBOARDMOVE) And LastScan = sc_Enter) Then
+                tick = 0
+                TimeCount = 0
+                picked = 0
+                SETFONTCOLOR 0, TEXTCOLOR
+
+                ' The original cleared the keys on every pass and the keyboard interrupt set
+                ' LastScan during the pass. Here INL_KeyService can run right before such a clear,
+                ' so the keys are cleared once and each pass looks at the new key presses
+                If ctype = CTRL_KEYBOARDBTNS Or ctype = CTRL_KEYBOARDMOVE Then IN_ClearKeysDown
+
+                Do
+                    _Limit TickBase * 2
+                    result = 0
+
+                    '
+                    ' FLASH CURSOR
+                    '
+                    If TimeCount > 10 Then
+                        Select Case tick
+                            Case 0
+                                VWB_Bar x, PrintY + 1, CST_SPC - 2, 10, TEXTCOLOR
+                            Case 1
+                                PrintX = x
+                                US_Print "?"
+                                CP_PlaySound HITWALLSND
+                        End Select
+                        tick = tick Xor 1
+                        TimeCount = 0
+                        VW_UpdateScreen
+                    End If
+
+                    '
+                    ' WHICH TYPE OF INPUT DO WE PROCESS?
+                    '
+                    Select Case ctype
+                        Case CTRL_MOUSE
+                            button = IN_MouseButtons%
+                            Select Case button
+                                Case 1: result = 1
+                                Case 2: result = 2
+                                Case 4: result = 3
+                            End Select
+
+                            If result Then
+                                For z = 0 To 3
+                                    If order(which) = buttonmouse(z) Then
+                                        buttonmouse(z) = bt_nobutton
+                                        Exit For
+                                    End If
+                                Next z
+                                buttonmouse(result - 1) = order(which)
+                                picked = 1
+                                CP_PlaySound SHOOTDOORSND
+                            End If
+
+                        Case CTRL_JOYSTICK
+                            If ci.button0 Then
+                                result = 1
+                            ElseIf ci.button1 Then
+                                result = 2
+                            ElseIf ci.button2 Then
+                                result = 3
+                            ElseIf ci.button3 Then
+                                result = 4
+                            End If
+
+                            If result Then
+                                For z = 0 To 3
+                                    If order(which) = buttonjoy(z) Then
+                                        buttonjoy(z) = bt_nobutton
+                                        Exit For
+                                    End If
+                                Next z
+                                buttonjoy(result - 1) = order(which)
+                                picked = 1
+                                CP_PlaySound SHOOTDOORSND
+                            End If
+
+                        Case CTRL_KEYBOARDBTNS
+                            INL_KeyService
+                            If LastScan Then
+                                buttonscan(order(which)) = LastScan
+                                picked = 1
+                                CP_ShootSnd
+                                IN_ClearKeysDown
+                            End If
+
+                        Case CTRL_KEYBOARDMOVE
+                            INL_KeyService
+                            If LastScan Then
+                                dirscan(moveorder(which)) = LastScan
+                                picked = 1
+                                CP_ShootSnd
+                                IN_ClearKeysDown
+                            End If
+                    End Select
+
+                    '
+                    ' EXIT INPUT?
+                    '
+                    If Keyboard(sc_Escape) Then picked = 1
+                Loop While picked = 0
+
+                SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+                redraw = 1
+                WaitKeyUp
+                _Continue
+            End If
+
+            If ci.button1 Or Keyboard(sc_Escape) Then xit = 1
+
+            '
+            ' MOVE TO ANOTHER SPOT?
+            '
+            Select Case ci.dir
+                Case dir_West
+                    Do
+                        which = which - 1
+                        If which < 0 Then which = 3
+                    Loop While allowed(which) = 0
+                    redraw = 1
+                    CP_PlaySound MOVEGUN1SND
+                    Do
+                        _Limit TickBase * 2
+                        ReadAnyControl ci
+                    Loop While ci.dir <> dir_None
+                    IN_ClearKeysDown
+
+                Case dir_East
+                    Do
+                        which = which + 1
+                        If which > 3 Then which = 0
+                    Loop While allowed(which) = 0
+                    redraw = 1
+                    CP_PlaySound MOVEGUN1SND
+                    Do
+                        _Limit TickBase * 2
+                        ReadAnyControl ci
+                    Loop While ci.dir <> dir_None
+                    IN_ClearKeysDown
+
+                Case dir_North, dir_South
+                    xit = 1
+            End Select
+        Loop While xit = 0
+
+        CP_PlaySound ESCPRESSEDSND
+        WaitKeyUp
+        DrawWindow 5, PrintY - 1, 310, 13, BKGDCOLOR
+    End Sub
+
+    '////////////////////////
+    '//
+    '// FIXUP GUN CURSOR OVERDRAW SHIT
+    '//
+    Sub FixupCustom (w As Integer)
+        Static lastwhich As Integer, initialized As Integer
+        Dim y As Integer
+
+        If initialized = 0 Then
+            lastwhich = -1
+            initialized = 1
+        End If
+
+        y = CST_Y + 26 + w * 13
+        FixupCustomLines y
+
+        Select Case w
+            Case 0: DrawCustMouse 1
+            Case 3: DrawCustJoy 1
+            Case 6: DrawCustKeybd 1
+            Case 8: DrawCustKeys 1
+        End Select
+
+        If lastwhich >= 0 Then
+            y = CST_Y + 26 + lastwhich * 13
+            FixupCustomLines y
+            If lastwhich <> w Then
+                Select Case lastwhich
+                    Case 0: DrawCustMouse 0
+                    Case 3: DrawCustJoy 0
+                    Case 6: DrawCustKeybd 0
+                    Case 8: DrawCustKeys 0
+                End Select
+            End If
+        End If
+
+        lastwhich = w
+    End Sub
+
+    ' Lines restored by FixupCustom (repeated twice in the original)
+    Sub FixupCustomLines (y As Integer)
+        VWB_Hlin 7, 32, y - 1, DEACTIVE
+        VWB_Hlin 7, 32, y + 12, BORD2COLOR
+        $If SPEAR = UNDEFINED Then
+            VWB_Hlin 7, 32, y - 2, BORDCOLOR
+            VWB_Hlin 7, 32, y + 13, BORDCOLOR
+        $Else
+            VWB_Hlin 7, 32, y - 2, BORD2COLOR
+            VWB_Hlin 7, 32, y + 13, BORD2COLOR
+        $End If
+    End Sub
+
+    ' Column headings of the customize screen (repeated 3 times in the original)
+    Sub PrintCustHeadings ()
+        $If SPANISH = DEFINED Then
+            PrintX = CST_START - 16
+            US_Print STR_CRUN
+            PrintX = CST_START - 16 + CST_SPC * 1
+            US_Print STR_COPEN
+            PrintX = CST_START - 16 + CST_SPC * 2
+            US_Print STR_CFIRE
+            PrintX = CST_START - 16 + CST_SPC * 3
+            US_Print STR_CSTRAFE + Chr$(10)
+        $Else
+            PrintX = CST_START
+            US_Print STR_CRUN
+            PrintX = CST_START + CST_SPC * 1
+            US_Print STR_COPEN
+            PrintX = CST_START + CST_SPC * 2
+            US_Print STR_CFIRE
+            PrintX = CST_START + CST_SPC * 3
+            US_Print STR_CSTRAFE + Chr$(10)
+        $End If
+    End Sub
+
+    '////////////////////////
+    '//
+    '// DRAW CUSTOMIZE SCREEN
+    '//
+    Sub DrawCustomScreen ()
+        Dim i As Integer
+
+        ClearMScreen
+        WindowX = 0
+        WindowW = 320
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+        DrawStripes 10
+        VWB_DrawPic 80, 0, C_CUSTOMIZEPIC
+
+        '
+        ' MOUSE
+        '
+        SETFONTCOLOR READCOLOR, BKGDCOLOR
+        WindowX = 0
+        WindowW = 320
+
+        PrintY = CST_Y
+        US_CPrint "Mouse" + Chr$(10)
+
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+        PrintCustHeadings
+
+        DrawWindow 5, PrintY - 1, 310, 13, BKGDCOLOR
+        DrawCustMouse 0
+        US_Print Chr$(10)
+
+        '
+        ' JOYSTICK/PAD
+        '
+        SETFONTCOLOR READCOLOR, BKGDCOLOR
+        US_CPrint "Joystick/Gravis GamePad" + Chr$(10)
+
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+        PrintCustHeadings
+
+        DrawWindow 5, PrintY - 1, 310, 13, BKGDCOLOR
+        DrawCustJoy 0
+        US_Print Chr$(10)
+
+        '
+        ' KEYBOARD
+        '
+        SETFONTCOLOR READCOLOR, BKGDCOLOR
+        US_CPrint "Keyboard" + Chr$(10)
+
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+        PrintCustHeadings
+
+        DrawWindow 5, PrintY - 1, 310, 13, BKGDCOLOR
+        DrawCustKeybd 0
+        US_Print Chr$(10)
+
+        '
+        ' KEYBOARD MOVE KEYS
+        '
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+        $If SPANISH = DEFINED Then
+            PrintX = 4
+            US_Print STR_LEFT
+            US_Print "/"
+            US_Print STR_RIGHT
+            US_Print "/"
+            US_Print STR_FRWD
+            US_Print "/"
+            US_Print STR_BKWD + Chr$(10)
+        $Else
+            PrintX = CST_START
+            US_Print STR_LEFT
+            PrintX = CST_START + CST_SPC * 1
+            US_Print STR_RIGHT
+            PrintX = CST_START + CST_SPC * 2
+            US_Print STR_FRWD
+            PrintX = CST_START + CST_SPC * 3
+            US_Print STR_BKWD + Chr$(10)
+        $End If
+
+        DrawWindow 5, PrintY - 1, 310, 13, BKGDCOLOR
+        DrawCustKeys 0
+
+        '
+        ' PICK STARTING POINT IN MENU
+        '
+        If CusItems.curpos < 0 Then
+            For i = 0 To CusItems.amount - 1
+                If CusMenu(i).active Then
+                    CusItems.curpos = i
+                    Exit For
+                End If
+            Next i
+        End If
+
+        VW_UpdateScreen
+        MenuFadeIn
+    End Sub
+
+    Sub PrintCustMouse (i As Integer)
+        Dim j As Integer
+
+        For j = 0 To 3
+            If order(i) = buttonmouse(j) Then
+                PrintX = CST_START + CST_SPC * i
+                US_Print "b" + LTrim$(Str$(j)) ' mbarray[j]
+                Exit For
+            End If
+        Next j
+    End Sub
+
+    Sub DrawCustMouse (hilight As Integer)
+        Dim i As Integer, clr As Integer
+
+        clr = TEXTCOLOR
+        If hilight Then clr = HIGHLIGHT
+        SETFONTCOLOR clr, BKGDCOLOR
+
+        If mouseenabled = 0 Then
+            SETFONTCOLOR DEACTIVE, BKGDCOLOR
+            CusMenu(0).active = 0
+        Else
+            CusMenu(0).active = 1
+        End If
+
+        PrintY = CST_Y + 13 * 2
+        For i = 0 To 3
+            PrintCustMouse i
+        Next i
+    End Sub
+
+    Sub PrintCustJoy (i As Integer)
+        Dim j As Integer
+
+        For j = 0 To 3
+            If order(i) = buttonjoy(j) Then
+                PrintX = CST_START + CST_SPC * i
+                US_Print "b" + LTrim$(Str$(j)) ' mbarray[j]
+                Exit For
+            End If
+        Next j
+    End Sub
+
+    Sub DrawCustJoy (hilight As Integer)
+        Dim i As Integer, clr As Integer
+
+        clr = TEXTCOLOR
+        If hilight Then clr = HIGHLIGHT
+        SETFONTCOLOR clr, BKGDCOLOR
+
+        If joystickenabled = 0 Then
+            SETFONTCOLOR DEACTIVE, BKGDCOLOR
+            CusMenu(3).active = 0
+        Else
+            CusMenu(3).active = 1
+        End If
+
+        PrintY = CST_Y + 13 * 5
+        For i = 0 To 3
+            PrintCustJoy i
+        Next i
+    End Sub
+
+    Sub PrintCustKeybd (i As Integer)
+        PrintX = CST_START + CST_SPC * i
+        US_Print IN_GetScanName$(buttonscan(order(i)))
+    End Sub
+
+    Sub DrawCustKeybd (hilight As Integer)
+        Dim i As Integer, clr As Integer
+
+        clr = TEXTCOLOR
+        If hilight Then clr = HIGHLIGHT
+        SETFONTCOLOR clr, BKGDCOLOR
+
+        PrintY = CST_Y + 13 * 8
+        For i = 0 To 3
+            PrintCustKeybd i
+        Next i
+    End Sub
+
+    Sub PrintCustKeys (i As Integer)
+        PrintX = CST_START + CST_SPC * i
+        US_Print IN_GetScanName$(dirscan(moveorder(i)))
+    End Sub
+
+    Sub DrawCustKeys (hilight As Integer)
+        Dim i As Integer, clr As Integer
+
+        clr = TEXTCOLOR
+        If hilight Then clr = HIGHLIGHT
+        SETFONTCOLOR clr, BKGDCOLOR
+
+        PrintY = CST_Y + 13 * 10
+        For i = 0 To 3
+            PrintCustKeys i
+        Next i
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// CHANGE SCREEN VIEWING SIZE
+    '//
+    '////////////////////////////////////////////////////////////////////
     Sub CP_ChangeView ()
-        ' TODO: change view (step 5b)
+        Dim xit As Integer, oldview As Integer, newview As Integer
+        Dim ci As ControlInfo
+
+        WindowX = 0
+        WindowY = 0
+        WindowW = 320
+        WindowH = 200
+        oldview = viewwidth \ 16
+        newview = oldview
+        DrawChangeView oldview
+
+        Do
+            _Limit TickBase * 2
+            CheckPause
+            ReadAnyControl ci
+            Select Case ci.dir
+                Case dir_South, dir_West
+                    newview = newview - 1
+                    If newview < 4 Then newview = 4
+                    ShowViewSize newview
+                    VW_UpdateScreen
+                    CP_PlaySound HITWALLSND
+                    TicDelay 10
+
+                Case dir_North, dir_East
+                    newview = newview + 1
+                    If newview > 19 Then newview = 19
+                    ShowViewSize newview
+                    VW_UpdateScreen
+                    CP_PlaySound HITWALLSND
+                    TicDelay 10
+            End Select
+
+            ' TODO: screen capture (Tab + P with "goobers" parameter)
+
+            If ci.button0 Or Keyboard(sc_Enter) Then
+                xit = 1
+            ElseIf ci.button1 Or Keyboard(sc_Escape) Then
+                viewwidth = oldview * 16
+                CP_PlaySound ESCPRESSEDSND
+                MenuFadeOut
+                Exit Sub
+            End If
+        Loop While xit = 0
+
+        If oldview <> newview Then
+            CP_PlaySound SHOOTSND
+            Message STR_THINK + "..."
+            NewViewSize newview
+        End If
+
+        CP_ShootSnd
+        MenuFadeOut
     End Sub
 
+    '/////////////////////////////
+    '//
+    '// DRAW THE CHANGEVIEW SCREEN
+    '//
+    Sub DrawChangeView (vw As Integer)
+        VWB_Bar 0, 160, 320, 40, VIEWCOLOR
+        ShowViewSize vw
+
+        PrintY = 161
+        WindowX = 0
+        WindowY = 320 ' sic, the original sets WindowY (not WindowW) here
+        SETFONTCOLOR HIGHLIGHT, BKGDCOLOR
+
+        US_CPrint STR_SIZE1 + Chr$(10)
+        US_CPrint STR_SIZE2 + Chr$(10)
+        US_CPrint STR_SIZE3
+
+        VW_UpdateScreen
+        MenuFadeIn
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '// IN_GetScanName() - Returns a string containing the name of the
+    '//     specified scan code
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function IN_GetScanName$ (scan As Integer)
+        Static ScanNames As String
+        Dim i As Integer
+
+        ' ExtScanCodes / ExtScanNames - scan codes with >1 char names
+        Select Case scan
+            Case &H01: IN_GetScanName$ = "Esc": Exit Function
+            Case &H0E: IN_GetScanName$ = "BkSp": Exit Function
+            Case &H0F: IN_GetScanName$ = "Tab": Exit Function
+            Case &H1D: IN_GetScanName$ = "Ctrl": Exit Function
+            Case &H2A: IN_GetScanName$ = "LShft": Exit Function
+            Case &H39: IN_GetScanName$ = "Space": Exit Function
+            Case &H3A: IN_GetScanName$ = "CapsLk": Exit Function
+            Case &H3B To &H44: IN_GetScanName$ = "F" + LTrim$(Str$(scan - &H3B + 1)): Exit Function
+            Case &H57: IN_GetScanName$ = "F11": Exit Function
+            Case &H59: IN_GetScanName$ = "F12": Exit Function
+            Case &H46: IN_GetScanName$ = "ScrlLk": Exit Function
+            Case &H1C: IN_GetScanName$ = "Enter": Exit Function
+            Case &H36: IN_GetScanName$ = "RShft": Exit Function
+            Case &H37: IN_GetScanName$ = "PrtSc": Exit Function
+            Case &H38: IN_GetScanName$ = "Alt": Exit Function
+            Case &H47: IN_GetScanName$ = "Home": Exit Function
+            Case &H49: IN_GetScanName$ = "PgUp": Exit Function
+            Case &H4F: IN_GetScanName$ = "End": Exit Function
+            Case &H51: IN_GetScanName$ = "PgDn": Exit Function
+            Case &H52: IN_GetScanName$ = "Ins": Exit Function
+            Case &H53: IN_GetScanName$ = "Del": Exit Function
+            Case &H45: IN_GetScanName$ = "NumLk": Exit Function
+            Case &H48: IN_GetScanName$ = "Up": Exit Function
+            Case &H50: IN_GetScanName$ = "Down": Exit Function
+            Case &H4B: IN_GetScanName$ = "Left": Exit Function
+            Case &H4D: IN_GetScanName$ = "Right": Exit Function
+        End Select
+
+        ' ScanNames[] - scan code names with single chars (the font has arrow glyphs at 15, 17, 19, 21)
+        If ScanNames = "" Then
+            ScanNames = "??1234567890-+??"
+            ScanNames = ScanNames + "QWERTYUIOP[]|?AS"
+            ScanNames = ScanNames + "DFGHJKL;" + Chr$(34) + "???ZXCV"
+            ScanNames = ScanNames + "BNM,./??????????"
+            ScanNames = ScanNames + "????????" + Chr$(&HF) + "?-" + Chr$(&H15) + "5" + Chr$(&H11) + "+?"
+            ScanNames = ScanNames + Chr$(&H13) + String$(15, "?")
+            ScanNames = ScanNames + String$(32, "?")
+        End If
+
+        i = scan
+        If i < 0 Or i > 127 Then i = 0
+        IN_GetScanName$ = Mid$(ScanNames, i + 1, 1)
+    End Function
+
+    ' SD_PlaySound as a statement, the C code ignores the result in the menus
+    Sub CP_PlaySound (snd As Integer)
+        Dim played As Integer
+        played = SD_PlaySound(snd)
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// LOAD / SAVE GAME
+    '//
+    '////////////////////////////////////////////////////////////////////
     Function CP_LoadGame% (quick As Integer)
         ' TODO: load game (step 5c)
         CP_LoadGame% = 0

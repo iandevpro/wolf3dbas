@@ -143,8 +143,9 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
         KbdDefs.down = sc_DownArrow
         KbdDefs.downright = sc_PgDn
 
-        mouseenabled = TRUE ' TODO: ReadConfig
-        joystickenabled = FALSE
+        MousePresent = TRUE
+        mouseenabled = 1 ' 0/1 like the C boolean, CP_Control toggles it with Xor 1 - TODO: ReadConfig
+        joystickenabled = 0
 
         IN_ClearKeysDown
         inTimer = _FreeTimer

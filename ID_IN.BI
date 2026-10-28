@@ -129,6 +129,8 @@ $If INCLUDE_ID_IN_BI = UNDEFINED Then
     Dim Shared KbdDefs As KeyboardDef
     Dim Shared mouseenabled As Integer
     Dim Shared joystickenabled As Integer
+    Dim Shared MousePresent As Integer
+    Dim Shared JoysPresent(0 To 1) As Integer ' Joystick is not ported, always FALSE
     Dim Shared inDeferredRelease(0 To 127) As Integer ' see INL_KeyService
     Dim Shared inPressTime(0 To 127) As Double
     Dim Shared inAckButtons As Integer ' mouse buttons held at IN_StartAck

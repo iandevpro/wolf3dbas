@@ -20,6 +20,7 @@ Const TRUE = -1
 '$INCLUDE: 'ID_SD.BI'
 '$INCLUDE: 'ID_IN.BI'
 '$INCLUDE: 'ID_US.BI'
+'$INCLUDE: 'WL_PLAY.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -36,8 +37,7 @@ Const NOWAIT = 0
 
 ' Constants
 Const VIEWGLOBAL = &H10000 ' globals visible flush to wall
-Const VIEWWIDTH = 256 ' size of view window
-Const VIEWHEIGHT = 144
+Const MAXVIEWWIDTH = 320 ' the view size is in viewwidth / viewheight (SetViewSize)
 Const ANGLES = 360
 Const TILEGLOBAL = 65536
 Const MINDIST = 0.5
@@ -55,6 +55,9 @@ Dim Shared scale As Long
 Dim Shared maxslope As Long
 Dim Shared heightnumerator As Long
 Dim Shared minheightdiv As Integer
+Dim Shared viewwidth As Integer
+Dim Shared viewheight As Integer
+Dim Shared viewsize As Integer
 
 ' Game State Variables
 Dim Shared startgame As Integer
@@ -75,7 +78,7 @@ Dim Shared dirangle(8) As Integer
 Dim Shared sintable(ANGLES) As Long
 Dim Shared costable(ANGLES) As Long
 Dim Shared finetangent(ANGLES / 4) As Long
-Dim Shared pixelangle(VIEWWIDTH) As Integer
+Dim Shared pixelangle(MAXVIEWWIDTH) As Integer
 'Dim Shared horizwall(MAXWALLTILES) As Integer
 'Dim Shared vertwall(MAXWALLTILES) As Integer
 
@@ -346,6 +349,7 @@ Sub InitGame
 
     ' TODO: ReadConfig - with no config the sound effects default to the AdLib
     If SD_SetSoundMode(sdm_AdLib) Then CA_LoadAllSounds
+    If SD_SetMusicMode(smm_AdLib) Then MusicMode = smm_AdLib
 
 End Sub
 
@@ -387,21 +391,74 @@ Sub SetupWalls
     Next i
 End Sub
 
+'==========================
+'=
+'= SetViewSize
+'=
+'==========================
+Function SetViewSize% (width As Integer, height As Integer)
+    viewwidth = width And Not 15 ' must be divisable by 16
+    viewheight = height And Not 1 ' must be even
+    centerx = viewwidth \ 2 - 1
+    shootdelta = viewwidth \ 10
+    screenofs = ((200 - STATUSLINES - viewheight) \ 2 * 80 + (320 - viewwidth) \ 8) ' SCREENWIDTH = 80
+
+    '
+    ' calculate trace angles and projection constants
+    '
+    CalcProjection FOCALLENGTH
+
+    '
+    ' build all needed compiled scalers
+    '
+    ' TODO: SetupScaling (viewwidth * 1.5) with the renderer
+    SetViewSize% = TRUE
+End Function
+
+Sub ShowViewSize (width As Integer)
+    Dim oldwidth As Integer, oldheight As Integer
+
+    oldwidth = viewwidth
+    oldheight = viewheight
+
+    viewwidth = width * 16
+    viewheight = width * 16 * HEIGHTRATIO
+    DrawPlayBorder
+
+    viewheight = oldheight
+    viewwidth = oldwidth
+End Sub
+
 Sub NewViewSize (width As Integer)
-    ' Set view size and calculate projection constants
-    Dim newwidth As Integer
-    Dim newheight As Integer
+    Dim result As Integer
 
-    ' Calculate view dimensions
-    newwidth = width * 16 ' Must be divisible by 16
-    newheight = width * 16 * HEIGHTRATIO ' Must be even
+    ' CA_UpLevel, MM_SortMem, CA_DownLevel - memory management, not needed in QB64
+    viewsize = width
+    result = SetViewSize(width * 16, width * 16 * HEIGHTRATIO)
+End Sub
 
-    ' Calculate center and other view parameters
-    centerx = newwidth \ 2 - 1
-    shootdelta = newwidth \ 10
+'==========================
+'=
+'= NewGame
+'=
+'= Set up new game to start from the beginning
+'=
+'==========================
+Sub NewGame (difficulty As Integer, episode As Integer)
+    Dim empty As GameStateType
 
-    ' Calculate projection constants
-    Call CalcProjection(FOCALLENGTH)
+    gamestate = empty ' memset (&gamestate,0,sizeof(gamestate))
+    gamestate.difficulty = difficulty
+    gamestate.weapon = wp_pistol
+    gamestate.bestweapon = wp_pistol
+    gamestate.chosenweapon = wp_pistol
+    gamestate.health = 100
+    gamestate.ammo = STARTAMMO
+    gamestate.lives = 3
+    gamestate.nextextra = EXTRAPOINTS
+    gamestate.episode = episode
+
+    startgame = TRUE
 End Sub
 
 Sub CalcProjection (focal As Long)
@@ -418,7 +475,7 @@ Sub CalcProjection (focal As Long)
     ' Store focal length
     FOCALLENGTH = focal
     facedist = focal + MINDIST
-    halfview = VIEWWIDTH \ 2 ' Half view in pixels
+    halfview = viewwidth \ 2 ' Half view in pixels
 
     ' Calculate scale value for vertical height calculations
     ' and sprite x calculations
@@ -432,7 +489,7 @@ Sub CalcProjection (focal As Long)
     ' Calculate the angle offset from view angle of each pixel's ray
     For i = 0 To halfview - 1
         ' Start 1/2 pixel over, so viewangle bisects two middle pixels
-        tang = i * VIEWGLOBAL / VIEWWIDTH / facedist
+        tang = i * VIEWGLOBAL / viewwidth / facedist
         angle = Atn(tang)
         intang = angle * (ANGLES \ 2) / PI
         pixelangle(halfview - 1 - i) = intang
@@ -532,6 +589,11 @@ Sub DemoLoop
 
         If startgame Or loadedgame Then
             ' TODO: GameLoop
+            ' Temporary: without GameLoop no game runs, undo what starting it changed
+            startgame = FALSE
+            loadedgame = FALSE
+            MainMenu(mi_viewscores).routine = RTN_VIEWSCORES
+            MainMenu(mi_viewscores).txt = STR_VS
             VW_FadeOut
             StartCPMusic INTROSONG
         End If

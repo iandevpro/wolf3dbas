@@ -220,3 +220,24 @@ End Sub
 ''$INCLUDE: 'wl_def.bi'
 ''$INCLUDE: 'wl_input.bi'
 ''$INCLUDE: 'wl_render.bi'
+
+'===================
+'=
+'= DrawPlayBorder
+'=
+'===================
+Sub DrawPlayBorder ()
+    Dim xl As Integer, yl As Integer
+
+    VWB_Bar 0, 0, 320, 200 - STATUSLINES, 127
+
+    xl = 160 - viewwidth \ 2
+    yl = (200 - STATUSLINES - viewheight) \ 2
+    VWB_Bar xl, yl, viewwidth, viewheight, 0
+
+    VWB_Hlin xl - 1, xl + viewwidth, yl - 1, 0
+    VWB_Hlin xl - 1, xl + viewwidth, yl + viewheight, 125
+    VWB_Vlin yl - 1, yl + viewheight, xl - 1, 0
+    VWB_Vlin yl - 1, yl + viewheight, xl + viewwidth, 125
+    VWB_Plot xl - 1, yl + viewheight, 124
+End Sub

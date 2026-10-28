@@ -48,7 +48,7 @@ $If INCLUDE_WL_DEF_BI = UNDEFINED Then
         weapon As Integer
         chosenweapon As Integer
         bestweapon As Integer
-        nextextra As Integer
+        nextextra As Long ' EXTRAPOINTS = 40000 does not fit an Integer
     End Type
 
     ' Actor Type
@@ -105,6 +105,31 @@ $If INCLUDE_WL_DEF_BI = UNDEFINED Then
     End Type
 
     ' Global Variables
+    Const STATUSLINES = 40
+    Const STARTAMMO = 8
+    Const EXTRAPOINTS = 40000
+
+    ' buttons
+    Const NUMBUTTONS = 8
+    Const bt_nobutton = -1
+    Const bt_attack = 0
+    Const bt_strafe = 1
+    Const bt_run = 2
+    Const bt_use = 3
+    Const bt_readyknife = 4
+    Const bt_readypistol = 5
+    Const bt_readymachinegun = 6
+    Const bt_readychaingun = 7
+
+    ' dirscan indices
+    Const di_north = 0
+    Const di_east = 1
+    Const di_south = 2
+    Const di_west = 3
+
+    Dim Shared joypadenabled As Integer
+    Dim Shared joystickport As Integer
+
     Dim Shared ingame As Integer ' WL_MAIN.C: true while a game is running (menus show Back to Game)
     Dim Shared gamestate As GameStateType
     Dim Shared player As ActorType

@@ -29,6 +29,24 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
     ' Output gain applied to the OPL2 mix
     Const SD_MUSICGAIN = 6
 
+    ' SMMode - music device
+    Const smm_Off = 0
+    Const smm_AdLib = 1
+
+    ' SDSMode - digitized sound device (digitized sounds are not ported)
+    Const sds_Off = 0
+    Const sds_PC = 1
+    Const sds_SoundSource = 2
+    Const sds_SoundBlaster = 3
+
+    ' Hardware present: the AdLib is emulated, digitized sound devices are not ported
+    Const AdLibPresent = TRUE
+    Const SoundBlasterPresent = FALSE
+    Const SoundSourcePresent = FALSE
+
+    Dim Shared MusicMode As Integer
+    Dim Shared DigiMode As Integer
+
     ' SDMode - sound effects device
     Const sdm_Off = 0
     Const sdm_PC = 1
@@ -92,5 +110,7 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
     Declare Function SD_SoundPlaying% ()
     Declare Sub SD_StopSound ()
     Declare Sub SD_WaitSoundDone ()
+    Declare Function SD_SetMusicMode% (mode As Integer)
+    Declare Sub SD_SetDigiDevice (mode As Integer)
 
 $End If

@@ -91,7 +91,7 @@ Commit `d82e589`.
   - Effects peak at about 24,500 against about 14,000 for the intro music at the current gain (6).
 
 ## 2026-10-26: Step 5a, input layer and main menu
-Not committed yet.
+Commit `788ec93`.
 
 Step 5 is split into three parts: 5a input and main menu, 5b sub-menus, 5c Load/Save and Read This.
 
@@ -124,3 +124,40 @@ Step 5 is split into three parts: 5a input and main menu, 5b sub-menus, 5c Load/
   - `ShootSnd` became `CP_ShootSnd`;
   - the C struct field `string` became `txt`.
 - **Tested:** scripted key presses and screenshots in the running game. Menu navigation, View Scores, both confirm answers, Back to Demo and quitting all worked.
+
+## 2026-10-27: Step 5b, menu sub-menus
+Not committed yet.
+
+- **What works:**
+  - **New Game:** episode screen ("Which episode to play?"), then the difficulty screen ("How tough are you?") with the face picture following the cursor. Choosing a difficulty calls `NewGame`.
+    - Without `GameLoop` no game runs yet; the game returns to the title loop, and the temporary block in `DemoLoop` undoes what starting a game changes in the menu.
+  - **Sound:** effects None / PC Speaker / AdLib, and music None / AdLib. The digitized sound rows are inactive because digitized sounds aren't ported.
+  - **Control:** Mouse Enabled toggle, Mouse Sensitivity slider, Customize Controls. The joystick rows are inactive (joystick not ported).
+  - **Customize Controls:** shows the mouse, joystick and keyboard bindings and lets you rebind them. Key names come from `IN_GetScanName$`, including the arrow glyphs.
+  - **Change View:** resizes the view box (`ShowViewSize` / `DrawPlayBorder`); Enter applies it with `NewViewSize`, Esc cancels.
+- **Still empty:** Load Game (5c), Read This (5c).
+- **Sound manager:**
+  - `MusicMode` with `SD_SetMusicMode`; `SD_StartMusic` only plays when the music mode is AdLib.
+  - `DigiMode` with an `SD_SetDigiDevice` stub (only Off).
+  - `AdLibPresent` = TRUE; the Sound Blaster and Sound Source present flags are FALSE.
+- **New globals:**
+  - `WL_PLAY.BI` (new): `dirscan()`, `buttonscan()`, `buttonmouse()`, `buttonjoy()` with the original defaults.
+  - `WL_DEF.BI`: `NUMBUTTONS`, `bt_*`, `di_*`, `STATUSLINES`, `STARTAMMO`, `EXTRAPOINTS`, `joypadenabled`, `joystickport`.
+  - `ID_IN.BI`: `MousePresent`, `JoysPresent()`.
+- **View size (`WOLF3D.BAS`):**
+  - New `viewwidth` / `viewheight` / `viewsize` globals and `SetViewSize`. `NewViewSize` now follows the original.
+  - The port's made-up `VIEWWIDTH` / `VIEWHEIGHT` constants were replaced with the original `MAXVIEWWIDTH`, and `CalcProjection` now uses `viewwidth` as in the C code.
+- **Other code:** `NewGame` (`WOLF3D.BAS`), `ShowViewSize` (`WOLF3D.BAS`), `DrawPlayBorder` (`WL_GAME.BM`), `VWB_Plot` (`ID_VH.BM`).
+- **Fixes:**
+  - `GameStateType.nextextra` is now a `Long`, because `EXTRAPOINTS` (40000) doesn't fit an `Integer`.
+  - `EpisodeSelect(0)` is set to 1 (C: `EpisodeSelect[6]={1}`); otherwise episode 1 would ask you to order it.
+- **Porting notes:**
+  - Draw and print routines that the C code passed as function pointers (`HandleMenu`, `EnterCtrlData`) are selected by integer IDs or the control type.
+  - In `EnterCtrlData`, keys are cleared once before waiting for the new binding, not on every pass as in the original, because the keyboard timer could otherwise update the keys right before such a clear and the press would be lost.
+  - `mouseenabled` is now 0/1 like the C boolean, since the menu toggles it with `Xor 1`.
+  - `SD_PlaySound` as a statement is `CP_PlaySound`.
+- **Renames** (QB64 names are case-insensitive or reserved): the C enums `FIRE`/`RUN`/`OPEN`/`STRAFE` and `LEFT`/`RIGHT`/`FWRD`/`BKWD` became the matching `bt_*` / `di_*` constants; `MOUSE`..`KEYBOARDMOVE` became `CTRL_*`; the `CP_Control` enum became `CTL_*`.
+- **Tested:** scripted key presses and screenshots in the running game.
+  - New Game episode and difficulty screens, and returning to the title after choosing a difficulty.
+  - Sound, Control, Customize, Mouse Sensitivity (slider moved) and Change View (view resized) screens all match the original.
+  - Rebinding Run from RShft to Z on the keyboard row worked.

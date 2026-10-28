@@ -124,6 +124,11 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
     '= VWB_Hlin
     '=
     '=================
+    Sub VWB_Plot (x As Integer, y As Integer, color_bar As Integer)
+        ' TODO - port VW_MarkUpdateBlock (x, y, x, y)
+        PSet (x, y), color_bar ' VL_Plot
+    End Sub
+
     Sub VWB_Hlin (x1 As Integer, x2 As Integer, y As Integer, color_bar As Integer)
         ' If VW_MarkUpdateBlock(x1, y, x2, y) Then
         If TRUE Then
