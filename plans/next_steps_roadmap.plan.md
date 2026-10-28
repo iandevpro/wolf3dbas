@@ -41,11 +41,7 @@ The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step
 - **5c — DONE 2026-10-27:** Load/Save menus (`LoadTheGame` / `SaveTheGame` are stubs until the game exists), Read This (`HelpScreens`, WL_TEXT.C).
 
 ### 6. The game (largest) — next
-- Map loading: `CA_CacheMap` with Carmack and RLEW decompression.
-- The VSWAP page manager (`PM_*`): walls, sprites, digitized sounds.
-- The raycaster (`WL_DRAW`), sprite scaling (`WL_SCALE`) and status bar.
-- The game loop (`WL_PLAY`), plus actors and player (`WL_ACT1`, `WL_ACT2`, `WL_STATE`, `WL_AGENT`).
-- Demo playback (`PlayDemo`) comes last, since it depends on the game loop.
+Planned in sub-steps 6a-6k in `step6_game.plan.md`: groundwork, map and VSWAP data, play screen and level setup, raycaster and movement, sprites and items, doors and level exit, enemies, bosses, digitized sounds, demos, config and save/load.
 
 ## Cross-cutting decisions
 - **Back buffer:** before the menu or the game, draw into an offscreen 8-bit image and have `VW_UpdateScreen` copy it to the screen with `_PutImage` + `_Display`. That avoids tearing and gives `VW_UpdateScreen` its real job; it becomes required once the renderer exists.
