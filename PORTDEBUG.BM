@@ -1,0 +1,183 @@
+' PORTDEBUG.BM - debug views of the QB64 port, NOT part of the original game
+' Start with: WOLF3D.exe /mapview
+'
+' Tab switches view: maps from above (plane 0 walls/floors/doors, plane 1 objects),
+' wall pages, sprite pages. Left/Right: previous/next map or page. Esc: quit.
+' On start it writes MAPCHECK.TXT: per map the name, the sums of both planes and the
+' number of player starts, to compare with an independent decoder.
+
+$If INCLUDE_PORTDEBUG_BM = UNDEFINED Then
+    $Let INCLUDE_PORTDEBUG_BM = 1
+
+    Sub PortDebugView ()
+        Dim mode As Integer, mapnum As Integer, pagenum(0 To 2) As Integer
+        Dim done As Integer, sc As Integer, ascii As Integer
+
+        PortDebugMapCheck
+
+        VL_SetPalette gamepal()
+        mode = 0
+        mapnum = 0
+        pagenum(1) = 0
+        pagenum(2) = 0
+
+        Do
+            VWB_Bar 0, 0, 320, 200, 0
+            Select Case mode
+                Case 0: PortDebugDrawMap mapnum
+                Case 1: PortDebugDrawWall pagenum(1)
+                Case 2: PortDebugDrawSprite pagenum(2)
+            End Select
+            VW_UpdateScreen
+
+            Do
+                _Limit TickBase
+            Loop Until IN_GetKeyPress(sc, ascii)
+
+            Select Case sc
+                Case sc_Tab
+                    mode = (mode + 1) Mod 3
+                Case sc_LeftArrow
+                    If mode = 0 Then
+                        If mapnum > 0 Then mapnum = mapnum - 1
+                    ElseIf pagenum(mode) > 0 Then
+                        pagenum(mode) = pagenum(mode) - 1
+                    End If
+                Case sc_RightArrow
+                    If mode = 0 Then
+                        If mapnum < NUMMAPS - 1 Then mapnum = mapnum + 1
+                    ElseIf mode = 1 Then
+                        If pagenum(1) < PMSpriteStart - 1 Then pagenum(1) = pagenum(1) + 1
+                    Else
+                        If pagenum(2) < PMSoundStart - PMSpriteStart - 1 Then pagenum(2) = pagenum(2) + 1
+                    End If
+                Case sc_Escape
+                    done = TRUE
+            End Select
+        Loop Until done
+    End Sub
+
+    ' Writes MAPCHECK.TXT with checksums of all maps
+    Sub PortDebugMapCheck ()
+        Dim f As Long, m As Integer, i As Long, starts As Integer, v As Long
+        Dim sum0 As Long, sum1 As Long
+
+        f = FreeFile
+        Open "MAPCHECK.TXT" For Output As #f
+        Print #f, "RLEWtag"; RLEWtag
+        For m = 0 To NUMMAPS - 1
+            If planestart(m, 0) > 0 Then
+                CA_CacheMap m
+                sum0 = 0: sum1 = 0: starts = 0
+                For i = 0 To 64 * 64 - 1
+                    sum0 = (sum0 + mapsegs(0, i)) And &HFFFFFF
+                    v = mapsegs(1, i)
+                    sum1 = (sum1 + v) And &HFFFFFF
+                    If v >= 19 And v <= 22 Then starts = starts + 1
+                Next i
+                Print #f, m; ","; US_CString$(mapname(m)); ","; sum0; ","; sum1; ","; starts
+            End If
+        Next m
+        Close #f
+    End Sub
+
+    ' A map from above, 3 pixels per tile
+    Sub PortDebugDrawMap (mapnum As Integer)
+        Dim x As Integer, y As Integer, t As Long, o As Long, clr As Integer
+        Dim walls As Integer, doors As Integer, objs As Integer, wallpage As Long
+
+        CA_CacheMap mapnum
+        For y = 0 To 63
+            For x = 0 To 63
+                t = MAPSPOT(x, y, 0)
+                If t = 0 Then
+                    clr = 0
+                ElseIf t >= 90 And t <= 101 Then ' doors
+                    clr = 14
+                    doors = doors + 1
+                ElseIf t < AREATILE Then ' walls: a pixel of the wall texture
+                    wallpage = PM_GetPage((t - 1) * 2)
+                    clr = _MemGet(PMData, PMData.OFFSET + wallpage + 32 * 64 + 32, _Unsigned _Byte)
+                    walls = walls + 1
+                Else ' floor areas
+                    clr = &H19
+                End If
+                Line (x * 3, y * 3 + 4)-(x * 3 + 2, y * 3 + 6), clr, BF
+
+                o = MAPSPOT(x, y, 1)
+                If o >= 19 And o <= 22 Then ' player start
+                    Line (x * 3, y * 3 + 4)-(x * 3 + 2, y * 3 + 6), 15, BF
+                ElseIf o > 0 Then
+                    PSet (x * 3 + 1, y * 3 + 5), 4
+                    objs = objs + 1
+                End If
+            Next x
+        Next y
+
+        fontnumber = 0
+        SETFONTCOLOR 15, 0
+        WindowX = 200: PrintX = 200: PrintY = 8
+        US_Print "MAP" + Str$(mapnum) + Chr$(10)
+        US_Print US_CString$(mapname(mapnum)) + Chr$(10) + Chr$(10)
+        US_Print "walls" + Str$(walls) + Chr$(10)
+        US_Print "doors" + Str$(doors) + Chr$(10)
+        US_Print "objects" + Str$(objs) + Chr$(10) + Chr$(10)
+        US_Print "Tab: walls/sprites" + Chr$(10)
+        US_Print "Left/Right: map" + Chr$(10)
+        US_Print "Esc: quit"
+    End Sub
+
+    ' A wall page, 64x64 stored by column, drawn at 2x
+    Sub PortDebugDrawWall (pagenum As Integer)
+        Dim x As Integer, y As Integer, page As Long, clr As Integer
+
+        page = PM_GetPage(pagenum)
+        For x = 0 To 63
+            For y = 0 To 63
+                clr = _MemGet(PMData, PMData.OFFSET + page + x * 64 + y, _Unsigned _Byte)
+                Line (16 + x * 2, 16 + y * 2)-(17 + x * 2, 17 + y * 2), clr, BF
+            Next y
+        Next x
+
+        fontnumber = 0
+        SETFONTCOLOR 15, 0
+        WindowX = 170: PrintX = 170: PrintY = 16
+        US_Print "WALL PAGE" + Str$(pagenum) + Chr$(10)
+        US_Print "of" + Str$(PMSpriteStart) + Chr$(10)
+        US_Print "length" + Str$(PMPageLength(pagenum))
+    End Sub
+
+    ' A sprite page (t_compshape), unscaled posts drawn at 2x on a gray background
+    Sub PortDebugDrawSprite (spritenum As Integer)
+        Dim shape As Long, leftpix As Long, rightpix As Long, x As Long
+        Dim cmd As Long, endy As Long, newstart As Long, starty As Long, y As Long
+        Dim clr As Integer
+
+        Line (16, 16)-(143, 143), &H1D, BF
+        shape = PM_GetSpritePage(spritenum)
+        leftpix = _MemGet(PMData, PMData.OFFSET + shape, _Unsigned Integer)
+        rightpix = _MemGet(PMData, PMData.OFFSET + shape + 2, _Unsigned Integer)
+        For x = leftpix To rightpix
+            cmd = _MemGet(PMData, PMData.OFFSET + shape + 4 + (x - leftpix) * 2, _Unsigned Integer) ' dataofs[]
+            Do
+                endy = _MemGet(PMData, PMData.OFFSET + shape + cmd, _Unsigned Integer) \ 2
+                If endy = 0 Then Exit Do
+                newstart = _MemGet(PMData, PMData.OFFSET + shape + cmd + 2, Integer) ' signed
+                starty = _MemGet(PMData, PMData.OFFSET + shape + cmd + 4, _Unsigned Integer) \ 2
+                For y = starty To endy - 1
+                    clr = _MemGet(PMData, PMData.OFFSET + shape + newstart + y, _Unsigned _Byte)
+                    Line (16 + x * 2, 16 + y * 2)-(17 + x * 2, 17 + y * 2), clr, BF
+                Next y
+                cmd = cmd + 6
+            Loop
+        Next x
+
+        fontnumber = 0
+        SETFONTCOLOR 15, 0
+        WindowX = 170: PrintX = 170: PrintY = 16
+        US_Print "SPRITE" + Str$(spritenum) + Chr$(10)
+        US_Print "page" + Str$(PMSpriteStart + spritenum) + Chr$(10)
+        US_Print "columns" + Str$(leftpix) + " -" + Str$(rightpix)
+    End Sub
+
+$EndIf

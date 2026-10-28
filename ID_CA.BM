@@ -14,10 +14,9 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim tempwidth As Integer, tempheight As Integer
         Dim tempname As String * 16
         Dim tempplanestart(0 To 2) As Long
-        Dim tempplanelength(0 To 2) As Integer
+        Dim tempplanelength(0 To 2) As _Unsigned Integer
         ' QB64 editor removed () from Dim fileBytes() As _Unsigned _Byte
         Dim fileBytes As _Unsigned _Byte
-        Dim tempMem As _MEM
 
         ' Load maphead.ext (offsets and tileinfo for map file)
         $If MAPHEADERLINKED = UNDEFINED Then
@@ -42,6 +41,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             Get #handle, , fileBytes()
             _MemPut tinf, tinf.OFFSET, fileBytes()
             Close #handle
+            RLEWtag = _MemGet(tinf, tinf.OFFSET, _Unsigned Integer) ' ((mapfiletype _seg *)tinf)->RLEWtag
         $Else
             ' Linked map header code would go here
             ' For now, we'll just set up a basic structure
@@ -101,15 +101,179 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             mapname(i) = tempname
         Next i
 
-        ' Allocate space for map planes (64x64 each)
-        For i = 0 To MAPPLANES - 1
-            tempMem = _MemNew(64 * 64 * 2)  ' 2 bytes per tile
-            If tempMem.SIZE = 0 Then
-                CA_CannotOpen "Memory allocation failed for map segment"
-            End If
-            mapsegs(i) = tempMem.OFFSET
-        Next i
+        ' The map planes (64x64 each) are the mapsegs() array, nothing to allocate
     End Sub
+
+    '======================
+    '=
+    '= CAL_CarmackExpand
+    '=
+    '= Length is the length of the EXPANDED data
+    '= source() holds bytes (from srcpos on), dest() receives words
+    '=
+    '======================
+    Sub CAL_CarmackExpand (source() As _Unsigned _Byte, srcpos As Long, dest() As _Unsigned Integer, length As Long)
+        Const NEARTAG = &HA7
+        Const FARTAG = &HA8
+        Dim ch As Long, chhigh As Long, count As Long, offset As Long
+        Dim inptr As Long, outptr As Long, copyptr As Long, words As Long
+
+        words = length \ 2
+        inptr = srcpos
+        outptr = 0
+
+        Do While words > 0
+            ch = source(inptr) + source(inptr + 1) * 256&
+            inptr = inptr + 2
+            chhigh = ch \ 256
+            If chhigh = NEARTAG Then
+                count = ch And &HFF
+                If count = 0 Then
+                    ' have to insert a word containing the tag byte
+                    ch = ch Or source(inptr)
+                    inptr = inptr + 1
+                    dest(outptr) = ch
+                    outptr = outptr + 1
+                    words = words - 1
+                Else
+                    offset = source(inptr)
+                    inptr = inptr + 1
+                    copyptr = outptr - offset
+                    words = words - count
+                    Do While count > 0
+                        dest(outptr) = dest(copyptr)
+                        outptr = outptr + 1
+                        copyptr = copyptr + 1
+                        count = count - 1
+                    Loop
+                End If
+            ElseIf chhigh = FARTAG Then
+                count = ch And &HFF
+                If count = 0 Then
+                    ' have to insert a word containing the tag byte
+                    ch = ch Or source(inptr)
+                    inptr = inptr + 1
+                    dest(outptr) = ch
+                    outptr = outptr + 1
+                    words = words - 1
+                Else
+                    offset = source(inptr) + source(inptr + 1) * 256&
+                    inptr = inptr + 2
+                    copyptr = offset ' dest + offset
+                    words = words - count
+                    Do While count > 0
+                        dest(outptr) = dest(copyptr)
+                        outptr = outptr + 1
+                        copyptr = copyptr + 1
+                        count = count - 1
+                    Loop
+                End If
+            Else
+                dest(outptr) = ch
+                outptr = outptr + 1
+                words = words - 1
+            End If
+        Loop
+    End Sub
+
+    '======================
+    '=
+    '= CA_RLEWexpand
+    '=
+    '= length is the EXPANDED length in bytes; source() words from srcpos on,
+    '= expanded into map plane "plane" (the C version took any destination buffer,
+    '= only the map planes use it)
+    '=
+    '======================
+    Sub CA_RLEWexpand (source() As _Unsigned Integer, srcpos As Long, plane As Integer, length As Long, rlewtag As Long)
+        Dim value As Long, count As Long, i As Long
+        Dim si As Long, di As Long, dend As Long
+
+        si = srcpos
+        di = 0
+        dend = length \ 2
+
+        '
+        ' expand it
+        '
+        Do While di < dend
+            value = source(si)
+            si = si + 1
+            If value <> rlewtag Then
+                '
+                ' uncompressed
+                '
+                mapsegs(plane, di) = value
+                di = di + 1
+            Else
+                '
+                ' compressed string
+                '
+                count = source(si)
+                value = source(si + 1)
+                si = si + 2
+                For i = 1 To count
+                    If di < dend Then mapsegs(plane, di) = value ' the original trusted the data
+                    di = di + 1
+                Next i
+            End If
+        Loop
+    End Sub
+
+    '======================
+    '=
+    '= CA_CacheMap
+    '=
+    '= WOLF does not use the huffman or carmack compression on the map planes,
+    '= except with CARMACIZED (defined in VERSION.BI): GAMEMAPS is carmack + RLEW
+    '=
+    '======================
+    Sub CA_CacheMap (mapnum As Integer)
+        Dim position As Long, compressed As Long, expanded As Long
+        Dim plane As Integer
+        Dim source() As _Unsigned _Byte
+        Dim buffer2seg() As _Unsigned Integer
+        Dim size As Long
+
+        mapon = mapnum
+
+        '
+        ' load the planes into the allready allocated buffers
+        '
+        size = 64 * 64 * 2
+
+        For plane = 0 To MAPPLANES - 1
+            position = planestart(mapnum, plane)
+            compressed = planelength(mapnum, plane)
+
+            ReDim source(0 To compressed + 1) As _Unsigned _Byte ' 2 spare bytes at the end
+            Seek #maphandle, position + 1 ' QB64 uses 1-based file positions
+            Get #maphandle, , source() ' CA_FarRead
+
+            $If CARMACIZED = DEFINED Then
+                '
+                ' unhuffman, then unRLEW
+                ' The huffman chunk has a two byte expanded length first
+                ' The resulting RLEW chunk also does, even though it is not really
+                ' needed
+                '
+                expanded = source(0) + source(1) * 256&
+                ReDim buffer2seg(0 To expanded \ 2 + 2) As _Unsigned Integer
+                CAL_CarmackExpand source(), 2, buffer2seg(), expanded
+                CA_RLEWexpand buffer2seg(), 1, plane, size, RLEWtag
+            $Else
+                '
+                ' unRLEW, skipping expanded length
+                '
+                ' TODO: map files that are not carmackized (MAPTEMP)
+            $End If
+        Next plane
+    End Sub
+
+    ' #define MAPSPOT(x,y,plane) (*(mapsegs[plane]+farmapylookup[y]+x))
+    Function MAPSPOT& (x As Integer, y As Integer, plane As Integer)
+        MAPSPOT& = mapsegs(plane, y * 64 + x)
+    End Function
 
     Sub CAL_SetupGrFile ()
         Print "Setting up graphics file..."

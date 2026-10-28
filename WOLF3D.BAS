@@ -21,6 +21,7 @@ Const TRUE = -1
 '$INCLUDE: 'ID_US.BI'
 '$INCLUDE: 'WL_PLAY.BI'
 '$INCLUDE: 'WL_TEXT.BI'
+'$INCLUDE: 'ID_PM.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -101,6 +102,12 @@ Call InitGame
 'PC-13
 'Wolfenstein 3D
 'Options
+' Port debug views (PORTDEBUG.BM, not in the original): WOLF3D.exe /mapview
+If InStr(UCase$(Command$), "/MAPVIEW") Then
+    PortDebugView
+    Quit ""
+End If
+
 Call DemoLoop
 
 ' Main game loop
@@ -142,6 +149,8 @@ System
 '$INCLUDE:'ID_IN.BM'
 '$INCLUDE:'ID_US_1.BM'
 '$INCLUDE:'WL_TEXT.BM'
+'$INCLUDE:'ID_PM.BM'
+'$INCLUDE:'PORTDEBUG.BM'
 
 '==========================
 '=
@@ -152,6 +161,7 @@ Sub Quit (errmsg As String)
     ' TODO: WriteConfig, and the ORDERSCREEN / ERRORSCREEN text mode screens
     IN_Shutdown
     SD_Shutdown
+    PM_Shutdown
 
     If Len(errmsg) Then
         Palette ' default colors, the screen may be faded out
@@ -337,7 +347,7 @@ Sub InitGame
 
     'VW_Startup (); orig C - Video Startup - not needed in QB64, modern OSes
     IN_Startup ' Input Manager Startup - keyboard scan codes from _KeyHit
-    'PM_Startup (); orig C - Page Manager Startup - not needed in QB64, modern OSes
+    PM_Startup ' Page Manager Startup - loads VSWAP
     'PM_UnlockMainMem (); orig C - related to memory management - not needed in QB64, modern OSes
     SD_Startup ' Sound Manager Startup - OPL2 emulator + _SndRaw output
     CA_Startup

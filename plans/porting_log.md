@@ -193,7 +193,7 @@ Commit `046f8ea`. This finishes step 5 (the menus).
   - Choosing a slot in Load Game (the "Loading..." window) was not tested.
 
 ## 2026-10-28: Step 6a, groundwork for the game
-Not committed yet. Plan: `step6_game.plan.md`; the four decisions listed there are applied.
+Commit `d02513f`. Plan: `step6_game.plan.md`; the four decisions listed there are applied.
 
 - **Early drafts removed:**
   - `WL_RENDER.BAS`, `WL_GRAPH.BAS`, `WL_INPUT.BAS`, `WL_INPUT.BI` deleted; none of them was included in the build.
@@ -227,3 +227,23 @@ Not committed yet. Plan: `step6_game.plan.md`; the four decisions listed there a
   - `FixedByFrac` in a scratch harness: 1.0 × 0.5, ±3.0 × ±0.5 and 3000 × 0.99998 all gave the expected results.
   - The game: signon, the memory screen, NonShareware, PG13, title, menu, help, the Quit confirm and exit all work with manual display (screenshots).
   - QB64 2.1 console note found along the way: `Print a, b` (comma zones) in `$Console:Only` printed endless spaces, so use `;`.
+
+## 2026-10-28: Step 6b, map and VSWAP data
+Not committed yet.
+
+- **Maps (`ID_CA`):**
+  - `CA_CacheMap` with `CAL_CarmackExpand` and `CA_RLEWexpand`; GAMEMAPS.WL6 is carmack + RLEW compressed (`CARMACIZED`).
+  - The two planes are now the array `mapsegs(plane, y * 64 + x)` instead of C pointers to allocated buffers. `MAPSPOT(x, y, plane)` reads it, like the C macro.
+  - `RLEWtag` is read from MAPHEAD.WL6 (it was never set). `planelength` and `RLEWtag` are read as unsigned words.
+- **Page manager (`ID_PM.BI` / `ID_PM.BM`, new):**
+  - `PM_Startup` reads the VSWAP header (`ChunksInFile`, `PMSpriteStart`, `PMSoundStart`) and the page offset and length tables, then loads the whole file (1.5 MB) into one `_MEM` block (`PMData`). No EMS/XMS paging is needed.
+  - `PM_GetPage` / `PM_GetSpritePage` / `PM_GetSoundPage` return the byte offset of a page inside `PMData`.
+  - `InitGame` calls `PM_Startup` and `Quit` calls `PM_Shutdown`.
+- **Port debug views (`PORTDEBUG.BM`, new, NOT part of the original):**
+  - Start with `WOLF3D.exe /mapview`. It shows the maps from above (walls in their texture color, doors, floors, objects, the player start), the wall pages, and the sprite pages decoded from the `t_compshape` format.
+  - It writes `MAPCHECK.TXT` with checksums of all maps.
+  - The original debug views can't be used yet: `ShapeTest` needs the scalers (6d/6e), and `ViewMap` is disabled (`#if 0`).
+- **Fix found by the user:** the page tables were declared as fixed-size arrays (`Dim Shared PMPageOffset(0)`), so the `ReDim` in `PML_OpenPageFile` stopped with "Duplicate definition". Resizable shared arrays are declared with `ReDim Shared`.
+- **Tested:**
+  - The checksums of both planes of all 60 maps match an independent Python decoder of GAMEMAPS.WL6 (0 mismatches). The RLEW tag is &HABCD, and every map has exactly one player start.
+  - Screenshots: E1M1 ("Wolf1 Map1") has its familiar layout, with 22 doors and 182 objects; wall page 3 is the gray stone wall (106 wall pages); sprite 50 is the standing guard, matching `SPR_GRD_S_1` = 50 from the generated `WL_SPR.BI`.

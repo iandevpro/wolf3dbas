@@ -23,13 +23,13 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
 
     ' Map header fields as separate arrays (was maptype)
     Dim Shared planestart(0 To NUMMAPS - 1, 0 To 2) As Long
-    Dim Shared planelength(0 To NUMMAPS - 1, 0 To 2) As Integer
+    Dim Shared planelength(0 To NUMMAPS - 1, 0 To 2) As Long ' unsigned word
     Dim Shared mapwidth(0 To NUMMAPS - 1) As Integer
     Dim Shared mapheight(0 To NUMMAPS - 1) As Integer
     Dim Shared mapname(0 To NUMMAPS - 1) As String * 16
 
     ' Map file fields (was mapfiletype)
-    Dim Shared RLEWtag As Integer
+    Dim Shared RLEWtag As Long ' unsigned word, mapfiletype.RLEWtag in MAPHEAD
     Dim Shared headeroffsets(0 To 99) As Long
     ' tileinfo can be a separate dynamic array if needed
     ' Dim Shared tileinfo() As Byte
@@ -59,7 +59,8 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
 
     ' Map related variables
     Dim Shared tinf As _MEM  ' Pointer to tile info
-    Dim Shared mapsegs(MAPPLANES - 1) As _Offset  ' Array of pointers to map segments
+    ' unsigned _seg *mapsegs[MAPPLANES]: the expanded 64x64 planes, index y * 64 + x (farmapylookup[y] + x)
+    Dim Shared mapsegs(0 To MAPPLANES - 1, 0 To 64 * 64 - 1) As _Unsigned Integer
     ' mapheaderseg is no longer needed as a pointer array
     Dim Shared maphandle As Long  ' Handle to map file
 

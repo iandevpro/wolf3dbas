@@ -1,0 +1,111 @@
+' ID_PM.C - Page Manager (VSWAP walls, sprites and digitized sounds)
+' See ID_PM.BI: the page file is loaded completely, there is no paging.
+'
+' Page file layout (PML_OpenPageFile):
+'   word ChunksInFile, word PMSpriteStart, word PMSoundStart
+'   longword offset[ChunksInFile], word length[ChunksInFile], then the chunks
+' Walls are 64x64 bytes stored by column, sprites are t_compshape (ID_PM.BM / WL_SCALE)
+
+$If INCLUDE_ID_PM_BM = UNDEFINED Then
+    $Let INCLUDE_ID_PM_BM = 1
+
+    '$INCLUDE: 'ID_PM.BI'
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  PML_OpenPageFile() - Opens the page file and sets up the page info
+    '//      (here the whole file is read into PMData)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub PML_OpenPageFile ()
+        Dim handle As Long, i As Long, length As Long
+        Dim w As _Unsigned Integer, l As _Unsigned Long
+        Dim fileBytes() As _Unsigned _Byte
+        Dim fname As String
+
+        fname = RTrim$(PageFileName)
+        If Not _FileExists(fname) Then Quit "PML_OpenPageFile: Unable to open page file"
+
+        handle = FreeFile
+        Open fname For Binary As #handle
+
+        ' Read in header variables
+        Get #handle, , w: ChunksInFile = w
+        Get #handle, , w: PMSpriteStart = w
+        Get #handle, , w: PMSoundStart = w
+
+        ReDim PMPageOffset(0 To ChunksInFile - 1) As Long
+        ReDim PMPageLength(0 To ChunksInFile - 1) As Long
+
+        ' Read in the chunk offsets
+        For i = 0 To ChunksInFile - 1
+            Get #handle, , l
+            PMPageOffset(i) = l
+        Next i
+
+        ' Read in the chunk lengths
+        For i = 0 To ChunksInFile - 1
+            Get #handle, , w
+            PMPageLength(i) = w
+        Next i
+
+        ' The whole file into memory
+        length = LOF(handle)
+        ReDim fileBytes(0 To length - 1) As _Unsigned _Byte
+        Get #handle, 1, fileBytes()
+        Close #handle
+
+        PMData = _MemNew(length)
+        _MemPut PMData, PMData.OFFSET, fileBytes()
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  PM_Startup() - Start up the Page Mgr
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub PM_Startup ()
+        If PMStarted Then Exit Sub
+
+        ' XMS / EMS / main memory setup is not needed, the file is loaded completely
+        PML_OpenPageFile
+
+        PMStarted = TRUE
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  PM_Shutdown() - Shut down the Page Mgr
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub PM_Shutdown ()
+        If Not PMStarted Then Exit Sub
+
+        _MemFree PMData
+        PMStarted = FALSE
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  PM_GetPage() - Returns the offset of the specified page in PMData
+    '//      (the original returned its address, paging it in if needed)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function PM_GetPage& (pagenum As Integer)
+        If pagenum < 0 Or pagenum >= ChunksInFile Then Quit "PM_GetPage: Invalid page request"
+        If PMPageOffset(pagenum) = 0 Then Quit "PM_GetPage: Tried to load a sparse page!"
+
+        PM_GetPage& = PMPageOffset(pagenum)
+    End Function
+
+    ' #define PM_GetSpritePage(v) PM_GetPage(PMSpriteStart + (v))
+    Function PM_GetSpritePage& (v As Integer)
+        PM_GetSpritePage& = PM_GetPage(PMSpriteStart + v)
+    End Function
+
+    ' #define PM_GetSoundPage(v) PM_GetPage(PMSoundStart + (v))
+    Function PM_GetSoundPage& (v As Integer)
+        PM_GetSoundPage& = PM_GetPage(PMSoundStart + v)
+    End Function
+
+$EndIf

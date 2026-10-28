@@ -47,7 +47,7 @@ Each sub-step below ends with something visible to test against the original in 
 - Add the fixed-point helpers.
 - **Test:** title, menus, help and fades all still look and behave as now.
 
-### 6b. Map and VSWAP data
+### 6b. Map and VSWAP data — DONE 2026-10-28
 - `CA_CacheMap` (ID_CA.C) with `CAL_CarmackExpand` and `CA_RLEWexpand`; map headers and names from MAPHEAD.WL6 / GAMEMAPS.WL6.
 - `PM_Startup` / `PM_GetPage` (ID_PM.C): load VSWAP.WL6 (1.5 MB) into one `_MEM` block. That gives the page offset table, the wall pages (64x64, stored in columns), the sprite pages (`t_compshape`) and the digitized sound pages, with no paging needed.
 - **Test:** a temporary debug view that draws E1M1's wall plane from above, and shows wall and sprite pages on screen. Compare map names ("Wolf1 Map1"...) and tile counts with what the files contain.
