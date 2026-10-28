@@ -163,7 +163,7 @@ Commit `478f25c`.
   - Rebinding Run from RShft to Z on the keyboard row worked.
 
 ## 2026-10-27: Step 5c, Load/Save and Read This
-Not committed yet. This finishes step 5 (the menus).
+Commit `046f8ea`. This finishes step 5 (the menus).
 
 - **What works:**
   - **Read This!** shows the help article ("pg 1 of 41") with the original layout: page frame, colors, pictures with the text flowing around them, and page numbers. Arrows, PgUp/PgDn and Enter change the page; Esc returns to the menu. It plays the corner music, as in the original.
@@ -191,3 +191,39 @@ Not committed yet. This finishes step 5 (the menus).
   - The Load Game list with the existing save.
   - Saving, with a temporary build that enabled Save Game outside a game: the name typed into an empty slot was written ("test save" + zero padding) and listed by Load Game. The test file was then deleted and the switch reverted.
   - Choosing a slot in Load Game (the "Loading..." window) was not tested.
+
+## 2026-10-28: Step 6a, groundwork for the game
+Not committed yet. Plan: `step6_game.plan.md`; the four decisions listed there are applied.
+
+- **Early drafts removed:**
+  - `WL_RENDER.BAS`, `WL_GRAPH.BAS`, `WL_INPUT.BAS`, `WL_INPUT.BI` deleted; none of them was included in the build.
+  - `WL_GAME.BM` now only holds the ported `DrawPlayBorder`.
+- **`WL_DEF.BI` rewritten from WL_DEF.H:**
+  - The constants (tile numbers, angles, `GLOBAL1`, `MINDIST` = &H5800 instead of the port's 0.5, page sizes, `FL_*` flags...).
+  - The enums: `door_t`, `activetype`, `classtype`, `stat_t`, `dirtype`, `enemy_t`, weapons, difficulty, and `exit_t` with the original values (the port had e.g. `ex_abort` = 4, the original 7).
+  - The structures `statetype`, `statobj_t`, `doorobj_t`, `objtype` and `gametype`.
+  - The global arrays `objlist()`, `statobjlist()`, `doorobjlist()`, `tilemap()`, `spotvis()`, `actorat()`.
+  - The invented types (`GameStateType`, `ActorType`, `WallType`, `DoorType`, `walls()`...) are gone.
+- **Pointers as indices:** object links are `nextobj` / `prevobj` indices (-1 = NULL); `actorat()` stores objects as `OBJ_BASE` (256) + index; `objtype.state`, `statetype.nextstate` and the routine ids are indices. Explained at the top of `WL_DEF.BI`.
+- **Generated from the C headers:**
+  - `WL_SPR.BI`: 436 sprite numbers (`SPR_*`, WL6 build), matching the 436 sprite pages in VSWAP.WL6.
+  - `MAPSWL6.BI`: 62 map name values (60 maps and two placeholders), now included by `ID_HEADS.BI`.
+- **`FixedByFrac`** (`WOLF3D.BAS`): 16.16 value times a sintable fraction (sign bit + 16-bit fraction), with `_Integer64`. The original was assembly that isn't in these sources.
+- **Display:**
+  - `VW_UpdateScreen` calls `_Display` (manual display), so half-drawn frames never show.
+  - `VL_SetPalette` / `VL_FillPalette` also call `_Display`, so fades show.
+  - The exit paths (`End`, `Quit` with an error, the error handler) turn automatic display back on, so their messages appear.
+- **`$Debug` removed** from WOLF3D.BAS (it made the compiled code about 5x slower).
+- **Renames** (QB64 names are case-insensitive or keywords):
+  - `dirtype` values are prefixed `dt_` (they clash with `NORTH`/`EAST`... and with the input `dir_*`);
+  - `doorobj_t.lock` became `doorlock`;
+  - the `new` object pointer became `newobj`;
+  - object and state links are `nextobj` / `prevobj` / `nextstate`.
+- **Fixes:**
+  - `&H80000000` without the `&` suffix is a positive 64-bit number in QB64, not the Long sign bit. `BuildTables` used it for the negative `sintable` entries; it now uses `&H80000000&`.
+  - Duplicate constants in WOLF3D.BAS were removed (they're in WL_DEF.BI now).
+- **Not yet:** `BuildTables` / `CalcProjection` still don't match the original (`FINEANGLES` tables); they are re-ported with the raycaster in 6d.
+- **Tested:**
+  - `FixedByFrac` in a scratch harness: 1.0 × 0.5, ±3.0 × ±0.5 and 3000 × 0.99998 all gave the expected results.
+  - The game: signon, the memory screen, NonShareware, PG13, title, menu, help, the Quit confirm and exit all work with manual display (screenshots).
+  - QB64 2.1 console note found along the way: `Print a, b` (comma zones) in `$Console:Only` printed endless spaces, so use `;`.

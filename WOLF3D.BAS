@@ -1,4 +1,3 @@
-$Debug
 $RESIZE:SMOOTH
 ' WOLF3D.BAS - QB64 Port of Wolfenstein 3D
 ' Original by id Software, Port by Ian Dichkovskyi
@@ -37,14 +36,8 @@ Const tedlevel = 0 ' Stub, not implemented
 Const NOWAIT = 0
 
 ' Constants
+' (game constants: WL_DEF.BI)
 Const VIEWGLOBAL = &H10000 ' globals visible flush to wall
-Const MAXVIEWWIDTH = 320 ' the view size is in viewwidth / viewheight (SetViewSize)
-Const ANGLES = 360
-Const TILEGLOBAL = 65536
-Const MINDIST = 0.5
-Const PI = 3.141592653589793
-Const HEIGHTRATIO = 0.5
-Const MAXWALLTILES = 64
 
 ' Global Variables
 Dim Shared FOCALLENGTH As Long
@@ -86,8 +79,6 @@ Dim Shared sintable(ANGLES) As Long
 Dim Shared costable(ANGLES) As Long
 Dim Shared finetangent(ANGLES / 4) As Long
 Dim Shared pixelangle(MAXVIEWWIDTH) As Integer
-'Dim Shared horizwall(MAXWALLTILES) As Integer
-'Dim Shared vertwall(MAXWALLTILES) As Integer
 
 ' Main Program
 
@@ -125,12 +116,14 @@ Call DemoLoop
 IN_Shutdown
 SD_Shutdown
 VL_SetPalette gamepal() ' undo VW_FadeOut, so QB64's end prompt is readable
+_AutoDisplay ' VW_UpdateScreen switched to manual display
 End
 
 ErrorHandler:
 IN_Shutdown
 SD_Shutdown
 Palette ' the screen may be faded to black
+_AutoDisplay ' VW_UpdateScreen switched to manual display
 Print "Error: "; Err; " - Line: "; _ErrorLine
 Print "ErrorMessage: "; _ErrorMessage$
 Print "_InclErrorFile: "; _InclErrorFile$; "_InclErrorLine:"; _InclErrorLine
@@ -162,6 +155,7 @@ Sub Quit (errmsg As String)
 
     If Len(errmsg) Then
         Palette ' default colors, the screen may be faded out
+        _AutoDisplay ' VW_UpdateScreen switched to manual display
         Cls
         Print errmsg
         Sleep
@@ -384,11 +378,32 @@ Sub BuildTables
         sintable(i) = value
         sintable(i + ANGLES / 2) = value
         sintable(ANGLES / 2 - 1 - i) = value
-        sintable(ANGLES - 1 - i) = value Or &H80000000
-        sintable(ANGLES / 2 + i) = value Or &H80000000
+        sintable(ANGLES - 1 - i) = value Or &H80000000&
+        sintable(ANGLES / 2 + i) = value Or &H80000000&
         angle = angle + anglestep
     Next i
 End Sub
+
+'===================
+'=
+'= FixedByFrac
+'=
+'= Multiplies a 16.16 fixed point value by a fraction in the sintable / costable format:
+'= sign bit (bit 31) + 16 bit fraction (bits 16-30 are 0). The original was assembly
+'= (not in these sources); the result is truncated like its unsigned multiply
+'=
+'===================
+Function FixedByFrac& (a As Long, b As Long)
+    Dim frac As _Integer64, ua As _Integer64, value As _Integer64
+    Dim negative As Integer
+
+    negative = (a < 0) Xor ((b And &H80000000&) <> 0)
+    ua = Abs(CLng(a))
+    frac = b And &HFFFF&
+    value = (ua * frac) \ 65536
+    If negative Then value = -value
+    FixedByFrac& = value
+End Function
 
 Sub SetupWalls
     ' Initialize wall tile mappings
@@ -469,7 +484,7 @@ End Function
 '=
 '==========================
 Sub NewGame (difficulty As Integer, episode As Integer)
-    Dim empty As GameStateType
+    Dim empty As gametype
 
     gamestate = empty ' memset (&gamestate,0,sizeof(gamestate))
     gamestate.difficulty = difficulty

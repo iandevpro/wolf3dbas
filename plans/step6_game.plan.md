@@ -41,7 +41,7 @@ Each sub-step below ends with something visible to test against the original in 
 
 ## Sub-steps
 
-### 6a. Groundwork
+### 6a. Groundwork — DONE 2026-10-28
 - Make decisions 1-3 above.
 - Port the WL_DEF.H game structures and constants: `objtype`, `statobj_t`, `doorobj_t`, `gametype`, `statetype`, the enums (`classtype`, `activetype`, `dirtype`, `exit_t`, weapons, sprite numbers `SPR_*`), and `MAPSWL6.BI` from MAPSWL6.H.
 - Add the fixed-point helpers.

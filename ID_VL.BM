@@ -44,6 +44,7 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
         For i = 0 To 255
             _PaletteColor i, palette_array(i)
         Next i
+        _Display ' manual display: a palette change shows on the next display
     End Sub
 
     Sub VL_FillPalette (red As Integer, green As Integer, blue As Integer)
@@ -53,6 +54,7 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
         For i = 0 To 255
             _PaletteColor i, _RGB32(red, green, blue)
         Next i
+        _Display ' manual display: a palette change shows on the next display
     End Sub
 
     ' Example usage:

@@ -12,8 +12,10 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
     End Sub
 
     ' VW_UpdateScreen copied the buffer page to the displayed page.
-    ' Everything is drawn straight to the Screen 13 page here, so there is nothing to copy
+    ' Here everything is drawn to the Screen 13 page and shown with manual display (_Display),
+    ' so half drawn frames never appear. The first call turns QB64's automatic display off
     Sub VW_UpdateScreen
+        _Display
     End Sub
 
     '=================

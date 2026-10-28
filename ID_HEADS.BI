@@ -18,7 +18,7 @@ $If INCLUDE_ID_HEADS_BI = UNDEFINED Then
             ' IAN: This should be included for Wolf 3D
             '$INCLUDE:'GFXV_WL6.BI'
             '$INCLUDE:'AUDIOWL6.BI'
-            'REM: TODO: create file '$INCLUDE:'MAPSWL6.BI'
+            '$INCLUDE:'MAPSWL6.BI'
         $Else
             $If SPEARDEMO = UNDEFINED Then
                     'REM '$INCLUDE:'GFXV_SOD.BI'
