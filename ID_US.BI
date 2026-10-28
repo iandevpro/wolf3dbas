@@ -35,5 +35,6 @@ $If INCLUDE_ID_US_BI = UNDEFINED Then
     Declare Sub US_PrintCentered (s As String)
     Declare Sub US_CPrintLine (s As String)
     Declare Sub US_CPrint (s As String)
+    Declare Function US_LineInput% (x As Integer, y As Integer, buf As String, defaultstr As String, escok As Integer, maxchars As Integer, maxwidth As Integer)
 
 $End If

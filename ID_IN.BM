@@ -114,6 +114,12 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
                     inDeferredRelease(scan) = FALSE
                     LastScan = scan
                     If k = 8 Or k = 9 Or k = 13 Or k = 27 Or (k >= 32 And k <= 126) Then LastASCII = k
+                    ' queue the press, a full queue drops it
+                    If (inQueueTail + 1) Mod IN_KEYQUEUESIZE <> inQueueHead Then
+                        inQueueScan(inQueueTail) = scan
+                        If k = 8 Or k = 9 Or k = 13 Or k = 27 Or (k >= 32 And k <= 126) Then inQueueASCII(inQueueTail) = k Else inQueueASCII(inQueueTail) = 0
+                        inQueueTail = (inQueueTail + 1) Mod IN_KEYQUEUESIZE
+                    End If
                 ElseIf pressed(scan) Then
                     inDeferredRelease(scan) = TRUE
                 Else
@@ -179,7 +185,21 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
             Keyboard(i) = FALSE
             inDeferredRelease(i) = FALSE
         Next i
+        inQueueHead = inQueueTail
     End Sub
+
+    ' Takes the oldest queued key press, returns FALSE when there is none
+    Function IN_GetKeyPress% (scan As Integer, ascii As Integer)
+        INL_KeyService
+        If inQueueHead = inQueueTail Then
+            IN_GetKeyPress% = FALSE
+            Exit Function
+        End If
+        scan = inQueueScan(inQueueHead)
+        ascii = inQueueASCII(inQueueHead)
+        inQueueHead = (inQueueHead + 1) Mod IN_KEYQUEUESIZE
+        IN_GetKeyPress% = TRUE
+    End Function
 
     '///////////////////////////////////////////////////////////////////////////
     '//

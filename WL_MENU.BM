@@ -64,11 +64,12 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         End If
 
         ' Append extension to all file names
-        configname = configname + extension
-        SaveName = SaveName + extension
-        PageFileName = PageFileName + extension
-        audioname = audioname + extension
-        demoname = demoname + extension
+        ' RTrim$: the names are fixed length strings padded with spaces
+        configname = RTrim$(configname) + RTrim$(extension)
+        SaveName = RTrim$(SaveName) + RTrim$(extension)
+        PageFileName = RTrim$(PageFileName) + RTrim$(extension)
+        audioname = RTrim$(audioname) + RTrim$(extension)
+        demoname = RTrim$(demoname) + RTrim$(extension)
         ' TODO
         '#ifdef SPEAR
         '#ifndef SPEARDEMO
@@ -151,7 +152,8 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 DrawNewGameDiff w
             Case DRAWRTN_FIXUPCUSTOM
                 FixupCustom w
-                ' TODO: TrackWhichGame with load / save (step 5c)
+            Case DRAWRTN_TRACKWHICHGAME
+                TrackWhichGame w
         End Select
     End Sub
 
@@ -177,7 +179,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             Case sc_F1, sc_F2, sc_F3, sc_F4, sc_F5, sc_F6
                 Select Case scancode
                     Case sc_F1
-                        ' TODO: HelpScreens (BossKey for SPEAR / GOODTIMES)
+                        $If SPEAR = UNDEFINED Then
+                            HelpScreens ' TODO: BossKey for GOODTIMES
+                        $Else
+                            ' TODO: BossKey
+                        $End If
                     Case sc_F2
                         result = CP_SaveGame(0)
                     Case sc_F3
@@ -293,8 +299,9 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '//
     '////////////////////////////////////////////////////////////////////
     Sub CP_ReadThis ()
-        ' TODO: HelpScreens (WL_TEXT.C)
-        ' StartCPMusic CORNER_MUS: HelpScreens: StartCPMusic MENUSONG
+        StartCPMusic CORNER_MUS
+        HelpScreens
+        StartCPMusic MENUSONG
     End Sub
 
     '////////////////////////////////////////////////////////////////////
@@ -1607,18 +1614,288 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
     '////////////////////////////////////////////////////////////////////
     '//
-    '// LOAD / SAVE GAME
+    '// LOAD / SAVE GAME (LoadTheGame / SaveTheGame are stubs until the game is ported)
+    '//
+    '////////////////////////////////////////////////////////////////////
+    ' SaveName "SAVEGAM?.WL6" with the ? replaced by the save slot
+    Function SaveGameFileName$ (which As Integer)
+        Dim nm As String
+        nm = RTrim$(SaveName)
+        Mid$(nm, 8, 1) = Chr$(Asc("0") + which) ' name[7]=which+'0'
+        SaveGameFileName$ = nm
+    End Function
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// DRAW LOAD/SAVE IN PROGRESS
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Sub DrawLSAction (which As Integer)
+        DrawWindow LSA_X, LSA_Y, LSA_W, LSA_H, TEXTCOLOR
+        DrawOutline LSA_X, LSA_Y, LSA_W, LSA_H, 0, HIGHLIGHT
+        VWB_DrawPic LSA_X + 8, LSA_Y + 5, C_DISKLOADING1PIC
+
+        fontnumber = 1
+        SETFONTCOLOR 0, TEXTCOLOR
+        PrintX = LSA_X + 46
+        PrintY = LSA_Y + 13
+
+        If which = 0 Then
+            US_Print STR_LOADING + "..."
+        Else
+            US_Print STR_SAVING + "..."
+        End If
+
+        VW_UpdateScreen
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// LOAD SAVED GAMES
     '//
     '////////////////////////////////////////////////////////////////////
     Function CP_LoadGame% (quick As Integer)
-        ' TODO: load game (step 5c)
-        CP_LoadGame% = 0
+        Dim handle As Long, which As Integer, xit As Integer, result As Integer
+
+        '
+        ' QUICKLOAD?
+        '
+        If quick Then
+            which = LSItems.curpos
+
+            If SaveGamesAvail(which) Then
+                handle = FreeFile
+                Open SaveGameFileName$(which) For Binary As #handle
+                Seek #handle, 33 ' lseek(handle,32,SEEK_SET)
+                loadedgame = TRUE
+                result = LoadTheGame(handle, 0, 0)
+                loadedgame = FALSE
+                Close #handle
+
+                ' TODO: DrawFace, DrawHealth, DrawLives, DrawLevel, DrawAmmo, DrawKeys,
+                ' DrawWeapon, DrawScore - the status bar comes with the game
+                CP_LoadGame% = 1
+                Exit Function
+            End If
+        End If
+
+        DrawLoadSaveScreen 0
+
+        Do
+            which = HandleMenu(LSItems, LSMenu(), DRAWRTN_TRACKWHICHGAME)
+            If which >= 0 Then
+                If SaveGamesAvail(which) Then
+                    CP_ShootSnd
+
+                    handle = FreeFile
+                    Open SaveGameFileName$(which) For Binary As #handle
+                    Seek #handle, 33 ' lseek(handle,32,SEEK_SET)
+
+                    DrawLSAction 0
+                    loadedgame = TRUE
+
+                    result = LoadTheGame(handle, LSA_X + 8, LSA_Y + 5)
+                    Close #handle
+
+                    StartGameMenu = 1
+                    CP_ShootSnd
+                    '
+                    ' CHANGE "READ THIS!" TO NORMAL COLOR
+                    '
+                    $If READTHIS_ITEM = 1 Then
+                        MainMenu(mi_readthis).active = 1
+                    $End If
+
+                    xit = 1
+                    Exit Do
+                End If
+            End If
+        Loop While which >= 0
+
+        MenuFadeOut
+
+        CP_LoadGame% = xit
     End Function
 
+    '///////////////////////////////////
+    '//
+    '// HIGHLIGHT CURRENT SELECTED ENTRY
+    '//
+    Sub TrackWhichGame (w As Integer)
+        Static lastgameon As Integer
+
+        PrintLSEntry lastgameon, TEXTCOLOR
+        PrintLSEntry w, HIGHLIGHT
+
+        lastgameon = w
+    End Sub
+
+    '////////////////////////////
+    '//
+    '// DRAW THE LOAD/SAVE SCREEN
+    '//
+    Sub DrawLoadSaveScreen (loadsave As Integer)
+        Dim i As Integer
+
+        ClearMScreen
+        fontnumber = 1
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+        DrawWindow LSM_X - 10, LSM_Y - 5, LSM_W, LSM_H, BKGDCOLOR
+        DrawStripes 10
+
+        If loadsave = 0 Then
+            VWB_DrawPic 60, 0, C_LOADGAMEPIC
+        Else
+            VWB_DrawPic 60, 0, C_SAVEGAMEPIC
+        End If
+
+        For i = 0 To 9
+            PrintLSEntry i, TEXTCOLOR
+        Next i
+
+        DrawMenu LSItems, LSMenu()
+        VW_UpdateScreen
+        MenuFadeIn
+        WaitKeyUp
+    End Sub
+
+    '///////////////////////////////////////////
+    '//
+    '// PRINT LOAD/SAVE GAME ENTRY W/BOX OUTLINE
+    '//
+    Sub PrintLSEntry (w As Integer, clr As Integer)
+        SETFONTCOLOR clr, BKGDCOLOR
+        DrawOutline LSM_X + LSItems.indent, LSM_Y + w * 13, LSM_W - LSItems.indent - 15, 11, clr, clr
+        PrintX = LSM_X + LSItems.indent + 2
+        PrintY = LSM_Y + w * 13 + 1
+        fontnumber = 0
+
+        If SaveGamesAvail(w) Then
+            US_Print SaveGameNames(w)
+        Else
+            US_Print "      - " + STR_EMPTY + " -"
+        End If
+
+        fontnumber = 1
+    End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// SAVE CURRENT GAME
+    '//
+    '////////////////////////////////////////////////////////////////////
     Function CP_SaveGame% (quick As Integer)
-        ' TODO: save game (step 5c)
-        CP_SaveGame% = 0
+        Dim handle As Long, which As Integer, xit As Integer, result As Integer
+        Dim inputname As String
+
+        '
+        ' QUICKSAVE?
+        '
+        If quick Then
+            which = LSItems.curpos
+
+            If SaveGamesAvail(which) Then
+                handle = SaveGameCreate(which, SaveGameNames(which))
+                result = SaveTheGame(handle, 0, 0)
+                Close #handle
+
+                CP_SaveGame% = 1
+                Exit Function
+            End If
+        End If
+
+        DrawLoadSaveScreen 1
+
+        Do
+            which = HandleMenu(LSItems, LSMenu(), DRAWRTN_TRACKWHICHGAME)
+            If which >= 0 Then
+                '
+                ' OVERWRITE EXISTING SAVEGAME?
+                '
+                If SaveGamesAvail(which) Then
+                    If Confirm(GAMESVD) = 0 Then
+                        DrawLoadSaveScreen 1
+                        _Continue
+                    Else
+                        DrawLoadSaveScreen 1
+                        PrintLSEntry which, HIGHLIGHT
+                        VW_UpdateScreen
+                    End If
+                End If
+
+                CP_ShootSnd
+
+                inputname = SaveGameNames(which)
+                fontnumber = 0
+                If SaveGamesAvail(which) = 0 Then VWB_Bar LSM_X + LSItems.indent + 1, LSM_Y + which * 13 + 1, LSM_W - LSItems.indent - 16, 10, BKGDCOLOR
+                VW_UpdateScreen
+
+                If US_LineInput(LSM_X + LSItems.indent + 2, LSM_Y + which * 13 + 1, inputname, inputname, TRUE, 31, LSM_W - LSItems.indent - 30) Then
+                    SaveGamesAvail(which) = 1
+                    SaveGameNames(which) = inputname
+
+                    handle = SaveGameCreate(which, inputname)
+
+                    DrawLSAction 1
+                    result = SaveTheGame(handle, LSA_X + 8, LSA_Y + 5)
+                    Close #handle
+
+                    CP_ShootSnd
+                    xit = 1
+                Else
+                    VWB_Bar LSM_X + LSItems.indent + 1, LSM_Y + which * 13 + 1, LSM_W - LSItems.indent - 16, 10, BKGDCOLOR
+                    PrintLSEntry which, HIGHLIGHT
+                    VW_UpdateScreen
+                    CP_PlaySound ESCPRESSEDSND
+                    _Continue
+                End If
+
+                fontnumber = 1
+                Exit Do
+            End If
+        Loop While which >= 0
+
+        MenuFadeOut
+
+        CP_SaveGame% = xit
     End Function
+
+    ' unlink + creat + write the 32 byte name, returns the file handle positioned at offset 32
+    Function SaveGameCreate& (which As Integer, gamename As String)
+        Dim handle As Long
+        Dim header As String * 32
+
+        If _FileExists(SaveGameFileName$(which)) Then Kill SaveGameFileName$(which)
+        handle = FreeFile
+        Open SaveGameFileName$(which) For Binary As #handle
+        header = Left$(gamename, 31) + String$(32, 0) ' zero terminated, the rest zero filled
+        Put #handle, 1, header
+        SaveGameCreate& = handle
+    End Function
+
+    ' SEE WHICH SAVE GAME FILES ARE AVAILABLE & READ STRING IN (from SetupControlPanel)
+    Sub ScanSaveGames ()
+        Dim which As Integer, handle As Long
+        Dim header As String * 32
+
+        For which = 0 To 9
+            If _FileExists(SaveGameFileName$(which)) Then
+                SaveGamesAvail(which) = 1
+                handle = FreeFile
+                Open SaveGameFileName$(which) For Binary As #handle
+                Get #handle, 1, header
+                Close #handle
+                SaveGameNames(which) = US_CString$(header)
+            End If
+        Next which
+    End Sub
+
+    ' FreeMusic - the original freed the music chunk while it was still being played,
+    ' here the music is stopped first, so the sequencer never reads freed memory
+    Sub FreeMusic ()
+        SD_MusicOff
+        CA_FreeAudioChunk STARTMUSIC + lastmusic_gbl
+    End Sub
 
     '////////////////////////////////////////////////////////////////////
     '//
@@ -1718,7 +1995,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             MainMenu(mi_savegame).active = 1
         End If
 
-        ' TODO: SEE WHICH SAVE GAME FILES ARE AVAILABLE & READ STRING IN (step 5c)
+        '
+        ' SEE WHICH SAVE GAME FILES ARE AVAILABLE & READ STRING IN
+        '
+        ScanSaveGames
+
         ' TODO: CENTER MOUSE
     End Sub
 

@@ -1,0 +1,567 @@
+' WL_TEXT.C - help and end of episode articles
+'
+' TEXT FORMATTING COMMANDS
+' ------------------------
+' ^C<hex digit>          Change text color
+' ^E[enter]              End of layout (all pages)
+' ^G<y>,<x>,<pic>[enter] Draw a graphic and push margins
+' ^P[enter]              start new page, must be the first chars in a layout
+' ^L<x>,<y>[ENTER]       Locate to a specific spot, x in pixels, y in lines
+'
+' The C code walked a char pointer through the text, here layouttext is walked with textpos.
+' Only the ARTSEXTERN build is ported: the articles are graphics chunks (T_HELPART, T_ENDART1...)
+
+$If INCLUDE_WL_TEXT_BM = UNDEFINED Then
+    $Let INCLUDE_WL_TEXT_BM = 1
+
+    '$INCLUDE: 'WL_TEXT.BI'
+
+    ' *text - the character at the current position, 0 past the end
+    Function TextCh% ()
+        If textpos >= 1 And textpos <= Len(layouttext) Then TextCh% = Asc(layouttext, textpos) Else TextCh% = 0
+    End Function
+
+    ' toupper(*text)
+    Function TextUpper% ()
+        TextUpper% = Asc(UCase$(Chr$(TextCh%)))
+    End Function
+
+    '=====================
+    '=
+    '= RipToEOL
+    '=
+    '=====================
+    Sub RipToEOL ()
+        Do ' scan to end of line
+            textpos = textpos + 1
+        Loop Until TextChAt%(textpos - 1) = 10 Or textpos > Len(layouttext)
+    End Sub
+
+    ' *(text+n) - the character at position p
+    Function TextChAt% (p As Long)
+        If p >= 1 And p <= Len(layouttext) Then TextChAt% = Asc(layouttext, p) Else TextChAt% = 0
+    End Function
+
+    '=====================
+    '=
+    '= ParseNumber
+    '=
+    '=====================
+    Function ParseNumber% ()
+        Dim ch As Integer
+        Dim num As String
+
+        '
+        ' scan until a number is found
+        '
+        ch = TextCh%
+        Do While (ch < 48 Or ch > 57) And textpos <= Len(layouttext)
+            textpos = textpos + 1
+            ch = TextCh%
+        Loop
+
+        '
+        ' copy the number out
+        '
+        Do
+            num = num + Chr$(ch)
+            textpos = textpos + 1
+            ch = TextCh%
+        Loop While ch >= 48 And ch <= 57
+
+        ParseNumber% = Val(num)
+    End Function
+
+    '=====================
+    '=
+    '= ParsePicCommand
+    '=
+    '= Call with text pointing just after a ^P
+    '= Upon exit text points to the start of next line
+    '=
+    '=====================
+    Sub ParsePicCommand ()
+        picy = ParseNumber
+        picx = ParseNumber
+        picnum = ParseNumber
+        RipToEOL
+    End Sub
+
+    Sub ParseTimedCommand ()
+        picy = ParseNumber
+        picx = ParseNumber
+        picnum = ParseNumber
+        picdelay = ParseNumber
+        RipToEOL
+    End Sub
+
+    '=====================
+    '=
+    '= TimedPicCommand
+    '=
+    '= Call with text pointing just after a ^P
+    '= Upon exit text points to the start of next line
+    '=
+    '=====================
+    Sub TimedPicCommand ()
+        ParseTimedCommand
+
+        '
+        ' update the screen, and wait for time delay
+        '
+        VW_UpdateScreen
+
+        '
+        ' wait for time
+        '
+        TimeCount = 0
+        Do While TimeCount < picdelay
+            _Limit TickBase * 2
+        Loop
+
+        '
+        ' draw pic
+        '
+        VWB_DrawPic picx And Not 7, picy, picnum
+    End Sub
+
+    ' Hex digit value of a character, used by ^C
+    Function HexDigit% (ch As Integer)
+        Select Case ch
+            Case 48 To 57: HexDigit% = ch - 48
+            Case 65 To 70: HexDigit% = ch - 65 + 10
+        End Select
+    End Function
+
+    '=====================
+    '=
+    '= HandleCommand
+    '=
+    '=====================
+    Sub HandleCommand ()
+        Dim i As Integer, margin As Integer, top As Integer, bottom As Integer
+        Dim picwidth As Integer, picheight As Integer, picmid As Integer
+
+        textpos = textpos + 1
+        Select Case TextUpper%
+            Case Asc("B")
+                picy = ParseNumber
+                picx = ParseNumber
+                picwidth = ParseNumber
+                picheight = ParseNumber
+                VWB_Bar picx, picy, picwidth, picheight, TEXTBACKCOLOR
+                RipToEOL
+
+            Case Asc(";") ' comment
+                RipToEOL
+
+            Case Asc("P"), Asc("E") ' ^P is start of next page, ^E is end of file
+                layoutdone = TRUE
+                textpos = textpos - 1 ' back up to the '^'
+
+            Case Asc("C") ' ^c<hex digit> changes text color
+                textpos = textpos + 1
+                fontcolor = HexDigit(TextUpper%) * 16
+                textpos = textpos + 1
+                fontcolor = fontcolor + HexDigit(TextUpper%)
+                textpos = textpos + 1
+
+            Case Asc(">")
+                px = 160
+                textpos = textpos + 1
+
+            Case Asc("L")
+                py = ParseNumber
+                rowon = (py - TOPMARGIN) \ FONTHEIGHT
+                py = TOPMARGIN + rowon * FONTHEIGHT
+                px = ParseNumber
+                RipToEOL ' scan to end of line
+
+            Case Asc("T") ' ^Tyyy,xxx,ppp,ttt waits ttt tics, then draws pic
+                TimedPicCommand
+
+            Case Asc("G") ' ^Gyyy,xxx,ppp draws graphic
+                ParsePicCommand
+                VWB_DrawPic picx And Not 7, picy, picnum
+                picwidth = pictable(picnum - STARTPICS).width
+                picheight = pictable(picnum - STARTPICS).height
+                '
+                ' adjust margins
+                '
+                picmid = picx + picwidth \ 2
+                If picmid > SCREENMID Then
+                    margin = picx - PICMARGIN ' new right margin
+                Else
+                    margin = picx + picwidth + PICMARGIN ' new left margin
+                End If
+
+                top = (picy - TOPMARGIN) \ FONTHEIGHT
+                If top < 0 Then top = 0
+                bottom = (picy + picheight - TOPMARGIN) \ FONTHEIGHT
+                If bottom >= TEXTROWS Then bottom = TEXTROWS - 1
+
+                For i = top To bottom
+                    If picmid > SCREENMID Then
+                        rightmargin(i) = margin
+                    Else
+                        leftmargin(i) = margin
+                    End If
+                Next i
+
+                '
+                ' adjust this line if needed
+                '
+                If px < leftmargin(rowon) Then px = leftmargin(rowon)
+        End Select
+    End Sub
+
+    '=====================
+    '=
+    '= NewLine
+    '=
+    '=====================
+    Sub NewLine ()
+        Dim ch As Integer
+
+        rowon = rowon + 1
+        If rowon = TEXTROWS Then
+            '
+            ' overflowed the page, so skip until next page break
+            '
+            layoutdone = TRUE
+            Do
+                If TextCh% = Asc("^") Then
+                    ch = Asc(UCase$(Chr$(TextChAt%(textpos + 1))))
+                    If ch = Asc("E") Or ch = Asc("P") Then
+                        layoutdone = TRUE
+                        Exit Sub
+                    End If
+                End If
+                textpos = textpos + 1
+            Loop While textpos <= Len(layouttext)
+            Exit Sub
+        End If
+        px = leftmargin(rowon)
+        py = py + FONTHEIGHT
+    End Sub
+
+    '=====================
+    '=
+    '= HandleCtrls
+    '=
+    '=====================
+    Sub HandleCtrls ()
+        Dim ch As Integer
+
+        ch = TextCh% ' get the character and advance
+        textpos = textpos + 1
+        If ch = 10 Then
+            NewLine
+            Exit Sub
+        End If
+    End Sub
+
+    '=====================
+    '=
+    '= HandleWord
+    '=
+    '=====================
+    Sub HandleWord ()
+        Dim wrd As String
+        Dim wwidth As Integer, wheight As Integer, newpos As Integer
+
+        '
+        ' copy the next word into [word]
+        '
+        wrd = Chr$(TextCh%)
+        textpos = textpos + 1
+        Do While TextCh% > 32
+            wrd = wrd + Chr$(TextCh%)
+            textpos = textpos + 1
+            If Len(wrd) = WORDLIMIT Then Quit "PageLayout: Word limit exceeded"
+        Loop
+
+        '
+        ' see if it fits on this line
+        '
+        VW_MeasurePropString wrd, wwidth, wheight
+
+        Do While px + wwidth > rightmargin(rowon)
+            NewLine
+            If layoutdone Then Exit Sub ' overflowed page
+        Loop
+
+        '
+        ' print it
+        '
+        newpos = px + wwidth
+        VWB_DrawPropString wrd
+        px = newpos
+
+        '
+        ' suck up any extra spaces
+        '
+        Do While TextCh% = 32
+            px = px + SPACEWIDTH
+            textpos = textpos + 1
+        Loop
+    End Sub
+
+    '=====================
+    '=
+    '= PageLayout
+    '=
+    '= Clears the screen, draws the pics on the page, and word wraps the text.
+    '= Returns a pointer to the terminating command
+    '=
+    '=====================
+    Sub PageLayout (shownumber As Integer)
+        Dim i As Integer, oldfontcolor As Integer, ch As Integer
+        Dim s As String
+
+        oldfontcolor = fontcolor
+
+        fontcolor = 0
+
+        '
+        ' clear the screen
+        '
+        VWB_Bar 0, 0, 320, 200, TEXTBACKCOLOR
+        VWB_DrawPic 0, 0, H_TOPWINDOWPIC
+        VWB_DrawPic 0, 8, H_LEFTWINDOWPIC
+        VWB_DrawPic 312, 8, H_RIGHTWINDOWPIC
+        VWB_DrawPic 8, 176, H_BOTTOMINFOPIC
+
+        For i = 0 To TEXTROWS - 1
+            leftmargin(i) = LEFTMARGIN
+            rightmargin(i) = SCREENPIXWIDTH - RIGHTMARGIN
+        Next i
+
+        px = LEFTMARGIN
+        py = TOPMARGIN
+        rowon = 0
+        layoutdone = FALSE
+
+        '
+        ' make sure we are starting layout text (^P first command)
+        '
+        Do While TextCh% <= 32 And textpos <= Len(layouttext)
+            textpos = textpos + 1
+        Loop
+
+        If TextCh% <> Asc("^") Then Quit "PageLayout: Text not headed with ^P"
+        textpos = textpos + 1
+        If TextUpper% <> Asc("P") Then Quit "PageLayout: Text not headed with ^P"
+        RipToEOL
+
+        '
+        ' process text stream
+        '
+        Do
+            ch = TextCh%
+
+            If ch = Asc("^") Then
+                HandleCommand
+            ElseIf ch = 9 Then
+                px = (px + 8) And &HF8
+                textpos = textpos + 1
+            ElseIf ch <= 32 Then
+                HandleCtrls
+            Else
+                HandleWord
+            End If
+            If textpos > Len(layouttext) Then layoutdone = TRUE ' no ^E, don't run past the end
+        Loop While Not layoutdone
+
+        pagenum = pagenum + 1
+
+        If shownumber Then
+            $If SPANISH = DEFINED Then
+                s = "Hoja " + LTrim$(Str$(pagenum)) + " de "
+                py = 183
+                px = 208
+            $Else
+                s = "pg " + LTrim$(Str$(pagenum)) + " of "
+                py = 183
+                px = 213
+            $End If
+            s = s + LTrim$(Str$(numpages))
+            fontcolor = &H4F ' 12^TEXTBACKCOLOR
+
+            VWB_DrawPropString s
+        End If
+
+        fontcolor = oldfontcolor
+    End Sub
+
+    '=====================
+    '=
+    '= BackPage
+    '=
+    '= Scans for a previous ^P
+    '=
+    '=====================
+    Sub BackPage ()
+        pagenum = pagenum - 1
+        Do
+            textpos = textpos - 1
+            If TextCh% = Asc("^") And Asc(UCase$(Chr$(TextChAt%(textpos + 1)))) = Asc("P") Then Exit Sub
+        Loop While textpos > 1
+    End Sub
+
+    '=====================
+    '=
+    '= CacheLayoutGraphics
+    '=
+    '= Scans an entire layout file (until a ^E) marking all graphics used, and
+    '= counting pages, then caches the graphics in
+    '=
+    '=====================
+    Sub CacheLayoutGraphics ()
+        Dim textstart As Long
+        Dim ch As Integer
+
+        textstart = textpos
+        numpages = 0
+        pagenum = 0
+
+        Do
+            If TextCh% = Asc("^") Then
+                textpos = textpos + 1
+                ch = TextUpper%
+                If ch = Asc("P") Then numpages = numpages + 1 ' start of a page
+                If ch = Asc("E") Then ' end of file, so load graphics and return
+                    ' CA_MarkGrChunk + CA_CacheMarks
+                    CA_CacheGrChunk H_TOPWINDOWPIC
+                    CA_CacheGrChunk H_LEFTWINDOWPIC
+                    CA_CacheGrChunk H_RIGHTWINDOWPIC
+                    CA_CacheGrChunk H_BOTTOMINFOPIC
+                    textpos = textstart
+                    Exit Sub
+                End If
+                If ch = Asc("G") Then ' draw graphic command, so mark graphics
+                    ParsePicCommand
+                    CA_CacheGrChunk picnum
+                End If
+                If ch = Asc("T") Then ' timed draw graphic command, so mark graphics
+                    ParseTimedCommand
+                    CA_CacheGrChunk picnum
+                End If
+            Else
+                textpos = textpos + 1
+            End If
+        Loop While textpos <= Len(layouttext)
+
+        Quit "CacheLayoutGraphics: No ^E to terminate file!"
+    End Sub
+
+    '=====================
+    '=
+    '= ShowArticle
+    '=
+    '=====================
+    Sub ShowArticle (article As String)
+        Dim oldfontnumber As Integer
+        Dim newpage As Integer, firstpage As Integer
+
+        layouttext = article
+        textpos = 1
+        oldfontnumber = fontnumber
+        fontnumber = 0
+        CA_CacheGrChunk STARTFONT ' CA_MarkGrChunk
+        VWB_Bar 0, 0, 320, 200, TEXTBACKCOLOR
+        CacheLayoutGraphics
+
+        newpage = TRUE
+        firstpage = TRUE
+
+        Do
+            If newpage Then
+                newpage = FALSE
+                PageLayout TRUE
+                VW_UpdateScreen
+                If firstpage Then
+                    VL_FadeIn 0, 255, gamepal(), 10
+                    ' VW_FadeIn ()
+                    firstpage = FALSE
+                End If
+            End If
+
+            LastScan = 0
+            Do
+                _Limit TickBase * 2
+                INL_KeyService
+            Loop Until LastScan
+
+            Select Case LastScan
+                Case sc_UpArrow, sc_PgUp, sc_LeftArrow
+                    If pagenum > 1 Then
+                        BackPage
+                        BackPage
+                        newpage = TRUE
+                    End If
+
+                Case sc_Enter, sc_DownArrow, sc_PgDn, sc_RightArrow ' the text allready points at next page
+                    If pagenum < numpages Then
+                        newpage = TRUE
+                    End If
+            End Select
+
+            ' TODO: screen capture (Tab + P with "goobers" parameter)
+        Loop While LastScan <> sc_Escape
+
+        IN_ClearKeysDown
+        fontnumber = oldfontnumber
+    End Sub
+
+    ' Copies a cached text chunk (graphics chunk) into a String
+    Function ArticleText$ (artnum As Integer)
+        Dim s As String
+
+        s = Space$(SDL_OffsetToLong&(grsegsMem(artnum).SIZE))
+        _MemGet grsegsMem(artnum), grsegsMem(artnum).OFFSET, s
+        ArticleText$ = s
+    End Function
+
+    '=================
+    '=
+    '= HelpScreens
+    '=
+    '=================
+    $If SPEAR = UNDEFINED Then
+        Sub HelpScreens ()
+            Dim artnum As Integer
+
+            ' CA_UpLevel, MM_SortMem - memory management, not needed in QB64
+            artnum = T_HELPART ' helpextern
+            CA_CacheGrChunk artnum
+            ShowArticle ArticleText$(artnum)
+            UNCACHEGRCHUNK artnum ' MM_FreePtr
+
+            VW_FadeOut
+
+            FreeMusic
+        End Sub
+    $End If
+
+    '
+    ' END ARTICLES
+    '
+    Sub EndText ()
+        Dim artnum As Integer
+
+        ' ClearMemory, CA_UpLevel, MM_SortMem - memory management, not needed in QB64
+        artnum = T_ENDART1 + gamestate.episode ' endextern+gamestate.episode
+        CA_CacheGrChunk artnum
+        ShowArticle ArticleText$(artnum)
+        UNCACHEGRCHUNK artnum ' MM_FreePtr
+
+        VW_FadeOut
+        SETFONTCOLOR 0, 15
+        IN_ClearKeysDown
+        ' TODO: if (MousePresent) Mouse(MDelta) - clear accumulated mouse movement
+
+        FreeMusic
+    End Sub
+
+$EndIf

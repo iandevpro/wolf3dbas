@@ -3,7 +3,7 @@
 The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step makes the next visible thing in the real startup sequence work. Check each step against the original running in DOSBox-X (`C:\Games\DOSBox-X\dosbox-x.exe`, then `cd C:\WOLF3D`, `wolf3d.exe`).
 
 ## Where we are
-- **Done:** signon, NonShareware, intro music (OPL2 emulator, see `qb64_opl2_emulator_fee1c44b.plan.md`), PG13, title and credits, fonts and US_Print, high scores, AdLib sound effects (`SD_PlaySound`), main menu and its sub-menus (5a, 5b).
+- **Done:** signon, NonShareware, intro music (OPL2 emulator, see `qb64_opl2_emulator_fee1c44b.plan.md`), PG13, title and credits, fonts and US_Print, high scores, AdLib sound effects (`SD_PlaySound`), all menus (5a-5c), help screens.
 - **Next in the original:** the `while (1)` loop: title, credits, high scores, a demo, and on a key press the main menu (`US_ControlPanel`), then `GameLoop`.
 - **Temporary:** the `DemoLoop` attract loop shows title, credits and high scores (no demo yet). A key press opens the main menu.
 
@@ -31,16 +31,16 @@ The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step
 - Service the effect from `SD_PumpAudio`, which already counts samples. The original rate is TickBase * 2, i.e. 140 Hz.
 - Digitized sounds (from VSWAP) come later, with the page manager in step 6.
 
-### 5. Main menu (`US_ControlPanel`, origsrc/WL_MENU.C, about 4000 lines)
+### 5. Main menu — DONE 2026-10-27 (`US_ControlPanel`, origsrc/WL_MENU.C, about 4000 lines)
 - **5a — DONE 2026-10-26:** input layer and main menu.
   - ID_IN: `Keyboard()` scan codes from `_KeyHit` via `INL_KeyService` on `ON TIMER`, plus `IN_ReadControl`, `IN_Startup`/`IN_Shutdown` and `TimeCount` (70 Hz, from the audio pump).
   - WL_MENU: `HandleMenu` with the gun cursor, `DrawMenu`, `DrawWindow`, `Message`, `Confirm`, `US_ControlPanel`, `DrawMainMenu`, View Scores, Quit, Back to Demo.
   - `DemoLoop` opens the control panel on a key press; `Quit` exits.
   - Mouse: buttons only, motion TODO. Joystick TODO.
 - **5b — DONE 2026-10-27:** sub-menus New Game (episode, difficulty), Sound, Control (mouse sensitivity, customize controls), Change View. Still empty: Load Game, Read This.
-- **5c (next):** Load/Save (saved game files), Read This (`HelpScreens`, WL_TEXT.C).
+- **5c — DONE 2026-10-27:** Load/Save menus (`LoadTheGame` / `SaveTheGame` are stubs until the game exists), Read This (`HelpScreens`, WL_TEXT.C).
 
-### 6. The game (largest)
+### 6. The game (largest) — next
 - Map loading: `CA_CacheMap` with Carmack and RLEW decompression.
 - The VSWAP page manager (`PM_*`): walls, sprites, digitized sounds.
 - The raycaster (`WL_DRAW`), sprite scaling (`WL_SCALE`) and status bar.

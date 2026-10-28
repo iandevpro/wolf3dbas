@@ -134,11 +134,19 @@ $If INCLUDE_ID_IN_BI = UNDEFINED Then
     Dim Shared inDeferredRelease(0 To 127) As Integer ' see INL_KeyService
     Dim Shared inPressTime(0 To 127) As Double
     Dim Shared inAckButtons As Integer ' mouse buttons held at IN_StartAck
+    ' Key press queue (scan code + ASCII), the original only had LastScan / LastASCII.
+    ' INL_KeyService handles all key events of up to ~16 ms at once, so text input
+    ' (US_LineInput) reads the presses from here to not lose fast typed characters
+    Const IN_KEYQUEUESIZE = 32
+    Dim Shared inQueueScan(0 To IN_KEYQUEUESIZE - 1) As Integer
+    Dim Shared inQueueASCII(0 To IN_KEYQUEUESIZE - 1) As Integer
+    Dim Shared inQueueHead As Integer, inQueueTail As Integer
     Dim Shared inTimer As Long ' ON TIMER handle of INL_KeyService, 0 = not started
 
     Declare Sub IN_Startup ()
     Declare Sub IN_Shutdown ()
     Declare Sub IN_ClearKeysDown ()
+    Declare Function IN_GetKeyPress% (scan As Integer, ascii As Integer)
     Declare Sub IN_ReadControl (player As Integer, info As ControlInfo)
     Declare Function IN_MouseButtons% ()
     Declare Function IN_CheckAck% ()

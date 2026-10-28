@@ -126,7 +126,7 @@ Step 5 is split into three parts: 5a input and main menu, 5b sub-menus, 5c Load/
 - **Tested:** scripted key presses and screenshots in the running game. Menu navigation, View Scores, both confirm answers, Back to Demo and quitting all worked.
 
 ## 2026-10-27: Step 5b, menu sub-menus
-Not committed yet.
+Commit `478f25c`.
 
 - **What works:**
   - **New Game:** episode screen ("Which episode to play?"), then the difficulty screen ("How tough are you?") with the face picture following the cursor. Choosing a difficulty calls `NewGame`.
@@ -161,3 +161,33 @@ Not committed yet.
   - New Game episode and difficulty screens, and returning to the title after choosing a difficulty.
   - Sound, Control, Customize, Mouse Sensitivity (slider moved) and Change View (view resized) screens all match the original.
   - Rebinding Run from RShft to Z on the keyboard row worked.
+
+## 2026-10-27: Step 5c, Load/Save and Read This
+Not committed yet. This finishes step 5 (the menus).
+
+- **What works:**
+  - **Read This!** shows the help article ("pg 1 of 41") with the original layout: page frame, colors, pictures with the text flowing around them, and page numbers. Arrows, PgUp/PgDn and Enter change the page; Esc returns to the menu. It plays the corner music, as in the original.
+  - **Load Game** lists the 10 save slots, reading the 32-byte name from `SAVEGAM?.WL6` (for example "oleg 6/2" from the existing `SAVEGAM0.WL6`). Choosing a saved slot shows the "Loading..." window.
+  - **Save Game** (active only during a game, as in the original) lets you type a name (`US_LineInput`), asks before overwriting a slot, and writes the file with the 32-byte name.
+  - F1 in the control panel opens the help.
+- **Stubs:** `LoadTheGame` / `SaveTheGame` (`WOLF3D.BAS`) do nothing yet, because the game state they serialize isn't ported. Loading returns to the title loop for now, and a saved file only holds the name.
+- **`WL_TEXT.BI` / `WL_TEXT.BM` (new):**
+  - The page layout engine (`PageLayout`, `HandleCommand`, `HandleWord`, `NewLine`, `BackPage`, `CacheLayoutGraphics`) and `ShowArticle`, `HelpScreens` and `EndText` (end of episode text, used later).
+  - The C code walked a char pointer through the text; here the article is copied from its graphics chunk into a string, and a position index (`textpos`) moves through it.
+- **WL_MENU:**
+  - `CP_LoadGame`, `CP_SaveGame`, `DrawLoadSaveScreen`, `PrintLSEntry`, `TrackWhichGame`, `DrawLSAction`.
+  - `ScanSaveGames` (the save file scan from `SetupControlPanel`), `CP_ReadThis`, `FreeMusic`.
+- **`US_LineInput` and `USL_XORICursor` (`ID_US_1.BM`):** text entry with the blinking cursor, Home/End, Backspace and Delete.
+- **Input:** a key press queue (`IN_GetKeyPress`). The original only kept the latest key (`LastScan` / `LastASCII`), and the keyboard service handles up to ~16 ms of key events at once, so fast typing lost characters ("test save" came out as "te") until text input read from the queue.
+- **Fixes:**
+  - Font 0 (`STARTFONT`) was never loaded at startup. The original loads it in `InitGame`; without it, the save slot names were invisible unless the help or high scores had been shown before.
+  - The file names (`configname`, `SaveName`, ...) were reset by `InitGame` after `CheckForEpisodes` had added the extension, and appending to a fixed-length string didn't work anyway. They are now initialized at the top of the program with the original values, `SaveName` is `SAVEGAM?.` (it was "SAVE."), and `CheckForEpisodes` appends with `RTrim$`.
+  - `FreeMusic` stops the music before freeing its chunk. The original freed the chunk while it was still being played, which here would read freed memory.
+- **Renames** (QB64 keywords or case-insensitive clashes):
+  - `BACKCOLOR` (WL_TEXT.C) became `TEXTBACKCOLOR`.
+  - The `def` parameter of `US_LineInput` became `defaultstr`, since both `DEF` and `DEFSTR` are keywords.
+- **Tested:** scripted key presses and screenshots in the running game.
+  - Help pages 1, 2 and 5 (with a picture), paging back and forward, Esc back to the menu.
+  - The Load Game list with the existing save.
+  - Saving, with a temporary build that enabled Save Game outside a game: the name typed into an empty slot was written ("test save" + zero padding) and listed by Load Game. The test file was then deleted and the switch reverted.
+  - Choosing a slot in Load Game (the "Loading..." window) was not tested.

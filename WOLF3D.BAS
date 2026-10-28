@@ -21,6 +21,7 @@ Const TRUE = -1
 '$INCLUDE: 'ID_IN.BI'
 '$INCLUDE: 'ID_US.BI'
 '$INCLUDE: 'WL_PLAY.BI'
+'$INCLUDE: 'WL_TEXT.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -71,6 +72,12 @@ Dim Shared SaveName As String * 13
 Dim Shared PageFileName As String * 13
 Dim Shared audioname As String * 13
 Dim Shared demoname As String * 13
+' Initialized here like the C static initializers, CheckForEpisodes appends the extension
+configname = "CONFIG." ' WL_MAIN.C
+SaveName = "SAVEGAM?." ' WL_MENU.C, ? = save slot digit
+PageFileName = "VSWAP." ' ID_PM.C
+audioname = "AUDIO." ' ID_CA.C
+demoname = "DEMO?." ' WL_GAME.C, ? = demo number
 Dim Shared EpisodeSelect(5) As Integer
 
 ' Arrays
@@ -141,6 +148,7 @@ System
 '$INCLUDE:'ID_SD.BM'
 '$INCLUDE:'ID_IN.BM'
 '$INCLUDE:'ID_US_1.BM'
+'$INCLUDE:'WL_TEXT.BM'
 
 '==========================
 '=
@@ -328,12 +336,7 @@ Sub InitGame
     virtualreality = 0 ' VR mode off by default
     mouseadjustment = 5
 
-    ' Initialize file names
-    configname = "CONFIG."
-    SaveName = "SAVE."
-    PageFileName = "PAGE."
-    audioname = "AUDIO."
-    demoname = "DEMO."
+    ' File names are initialized at the top of the program and completed by CheckForEpisodes
 
     ' Show signon screen
     SignonScreen
@@ -350,6 +353,11 @@ Sub InitGame
     ' TODO: ReadConfig - with no config the sound effects default to the AdLib
     If SD_SetSoundMode(sdm_AdLib) Then CA_LoadAllSounds
     If SD_SetMusicMode(smm_AdLib) Then MusicMode = smm_AdLib
+
+    '
+    ' load in and lock down some basic chunks
+    '
+    CA_CacheGrChunk STARTFONT
 
 End Sub
 
@@ -436,6 +444,22 @@ Sub NewViewSize (width As Integer)
     viewsize = width
     result = SetViewSize(width * 16, width * 16 * HEIGHTRATIO)
 End Sub
+
+'==================================
+'=
+'= SaveTheGame / LoadTheGame
+'=
+'= TODO: save and load the game state (gamestate, levels, actors, statics, doors...)
+'= when the game is ported. The menus write and read the 32 byte save game name.
+'=
+'==================================
+Function SaveTheGame% (handle As Long, x As Integer, y As Integer)
+    SaveTheGame% = TRUE
+End Function
+
+Function LoadTheGame% (handle As Long, x As Integer, y As Integer)
+    LoadTheGame% = TRUE
+End Function
 
 '==========================
 '=

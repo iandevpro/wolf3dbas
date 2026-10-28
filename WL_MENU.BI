@@ -328,5 +328,35 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     NewMenu(2).active = 1: NewMenu(2).txt = STR_BRINGEM
     NewMenu(3).active = 1: NewMenu(3).txt = STR_DEATH
 
+    ' Load / save menu
+    Const LSM_X = 85
+    Const LSM_Y = 55
+    Const LSM_W = 175
+    Const LSM_H = 10 * 13 + 10
+
+    ' DrawLSAction window
+    Const LSA_X = 96
+    Const LSA_Y = 80
+    Const LSA_W = 130
+    Const LSA_H = 42
+
+    Const DRAWRTN_TRACKWHICHGAME = 3
+
+    Const STR_LOADING = "Loading"
+    Const STR_SAVING = "Saving"
+    Const STR_EMPTY = "empty"
+
+    Dim Shared LSItems As CP_iteminfo
+    Dim Shared LSMenu(0 To 9) As CP_itemtype
+    Dim Shared SaveGameNames(0 To 9) As String ' char SaveGameNames[10][32]
+    Dim Shared GAMESVD As String
+
+    GAMESVD = "There's already a game" + Chr$(10) + "saved at this position." + Chr$(10) + "      Overwrite?"
+
+    ' LSItems={LSM_X,LSM_Y,10,0,24}
+    LSItems.x = LSM_X: LSItems.y = LSM_Y: LSItems.amount = 10: LSItems.curpos = 0: LSItems.indent = 24
+    LSMenu(0).active = 1: LSMenu(1).active = 1: LSMenu(2).active = 1: LSMenu(3).active = 1: LSMenu(4).active = 1
+    LSMenu(5).active = 1: LSMenu(6).active = 1: LSMenu(7).active = 1: LSMenu(8).active = 1: LSMenu(9).active = 1
+
 
 $End If

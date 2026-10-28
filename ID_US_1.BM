@@ -146,4 +146,181 @@ $If INCLUDE_ID_US_1_BM = UNDEFINED Then
         Loop
     End Sub
 
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  USL_XORICursor() - XORs the I-bar text cursor. Used by US_LineInput()
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub USL_XORICursor (x As Integer, y As Integer, s As String, cursor As Integer)
+        Static status As Integer ' VGA doesn't XOR...
+        Dim w As Integer, h As Integer, temp As Integer
+
+        VW_MeasurePropString Left$(s, cursor), w, h
+
+        px = x + w - 1
+        py = y
+        status = status Xor 1
+        If status Then
+            VWB_DrawPropString Chr$(&H80)
+        Else
+            temp = fontcolor
+            fontcolor = backcolor
+            VWB_DrawPropString Chr$(&H80)
+            fontcolor = temp
+        End If
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_LineInput() - Gets a line of user input at (x,y), the string defaults
+    '//      to whatever is pointed at by def. Input is restricted to maxchars
+    '//      chars or maxwidth pixels wide. If the user hits escape (and escok is
+    '//      true), nothing is copied into buf, and false is returned. If the
+    '//      user hits return, the current string is copied into buf, and true is
+    '//      returned
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function US_LineInput% (x As Integer, y As Integer, buf As String, defaultstr As String, escok As Integer, maxchars As Integer, maxwidth As Integer)
+        Const MaxString = 128 ' Maximum input string size
+        Dim redraw As Integer, cursorvis As Integer, cursormoved As Integer
+        Dim done As Integer, result As Integer
+        Dim sc As Integer, c As Integer
+        Dim s As String, olds As String
+        Dim cursor As Integer, w As Integer, h As Integer, lenS As Integer, temp As Integer
+        Dim lasttime As Long
+
+        s = defaultstr
+        olds = ""
+        cursor = Len(s)
+        cursormoved = TRUE
+        redraw = TRUE
+        cursorvis = FALSE
+        done = FALSE
+        lasttime = TimeCount
+        LastASCII = 0 ' key_None
+        LastScan = sc_None
+        inQueueHead = inQueueTail ' drop older key presses
+
+        Do While Not done
+            _Limit TickBase * 2 ' the original was a busy loop
+
+            If cursorvis Then USL_XORICursor x, y, s, cursor
+
+            ' The original read and cleared LastScan / LastASCII (with interrupts off).
+            ' The key queue is used instead, so fast typing does not lose characters
+            If IN_GetKeyPress(sc, c) = FALSE Then
+                sc = sc_None
+                c = 0
+            End If
+            LastScan = sc_None
+            LastASCII = 0
+
+            Select Case sc
+                Case sc_LeftArrow
+                    If cursor Then cursor = cursor - 1
+                    c = 0
+                    cursormoved = TRUE
+                Case sc_RightArrow
+                    If cursor < Len(s) Then cursor = cursor + 1
+                    c = 0
+                    cursormoved = TRUE
+                Case sc_Home
+                    cursor = 0
+                    c = 0
+                    cursormoved = TRUE
+                Case sc_End
+                    cursor = Len(s)
+                    c = 0
+                    cursormoved = TRUE
+
+                Case sc_Return
+                    buf = s
+                    done = TRUE
+                    result = TRUE
+                    c = 0
+                Case sc_Escape
+                    If escok Then
+                        done = TRUE
+                        result = FALSE
+                    End If
+                    c = 0
+
+                Case sc_BackSpace
+                    If cursor Then
+                        s = Left$(s, cursor - 1) + Mid$(s, cursor + 1)
+                        cursor = cursor - 1
+                        redraw = TRUE
+                    End If
+                    c = 0
+                    cursormoved = TRUE
+                Case sc_Delete
+                    If cursor < Len(s) Then
+                        s = Left$(s, cursor) + Mid$(s, cursor + 2)
+                        redraw = TRUE
+                    End If
+                    c = 0
+                    cursormoved = TRUE
+
+                Case &H4C, sc_UpArrow, sc_DownArrow, sc_PgUp, sc_PgDn, sc_Insert ' &H4C = Keypad 5
+                    c = 0
+            End Select
+
+            If c Then
+                lenS = Len(s)
+                VW_MeasurePropString s, w, h
+
+                ' isprint(c)
+                If c >= 32 And c <= 126 Then
+                    If lenS < MaxString - 1 And (maxchars = 0 Or lenS < maxchars) And (maxwidth = 0 Or w < maxwidth) Then
+                        s = Left$(s, cursor) + Chr$(c) + Mid$(s, cursor + 1)
+                        cursor = cursor + 1
+                        redraw = TRUE
+                    End If
+                End If
+            End If
+
+            If redraw Then
+                px = x
+                py = y
+                temp = fontcolor
+                fontcolor = backcolor
+                VWB_DrawPropString olds
+                fontcolor = temp
+                olds = s
+
+                px = x
+                py = y
+                VWB_DrawPropString s
+
+                redraw = FALSE
+            End If
+
+            If cursormoved Then
+                cursorvis = FALSE
+                lasttime = TimeCount - TickBase
+
+                cursormoved = FALSE
+            End If
+            If TimeCount - lasttime > TickBase \ 2 Then
+                lasttime = TimeCount
+
+                cursorvis = Not cursorvis
+            End If
+            If cursorvis Then USL_XORICursor x, y, s, cursor
+
+            VW_UpdateScreen
+        Loop
+
+        If cursorvis Then USL_XORICursor x, y, s, cursor
+        If Not result Then
+            px = x
+            py = y
+            VWB_DrawPropString olds
+        End If
+        VW_UpdateScreen
+
+        IN_ClearKeysDown
+        US_LineInput% = result
+    End Function
+
 $EndIf
