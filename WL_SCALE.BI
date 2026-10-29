@@ -15,4 +15,20 @@ $If INCLUDE_WL_SCALE_BI = UNDEFINED Then
     ReDim Shared scalerbottom(0) As Integer
     Dim Shared scalerof(0 To MAXSCALEHEIGHT + 2) As Integer
 
+    ' For the sprites the other way round, per source texel src (0-64) of scaler i:
+    ' scalerwidth(i, src) is t_compscale width[src] (screen pixels of the unclipped texel),
+    ' and the texel is drawn on view rows scalerfirst(i, src) to scalerlast(i, src) (clipped,
+    ' none when first > last) - the rows the compiled code for that texel wrote
+    ReDim Shared scalerwidth(0, 0) As Integer
+    ReDim Shared scalerfirst(0, 0) As Integer
+    ReDim Shared scalerlast(0, 0) As Integer
+
+    '
+    ' ScaleLine parameters (C: slinex, slinewidth, linecmds, linescale)
+    '
+    Dim Shared slinex As Integer, slinewidth As Integer
+    Dim Shared linecmds As Long ' offset of the segment list of a shape column, in the shape
+    Dim Shared lineshape As Long ' the shape: offset of its sprite page in PMData
+    Dim Shared linescale As Integer ' the scaler (C: segment of the compiled scaler)
+
 $End If

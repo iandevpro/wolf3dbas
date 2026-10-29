@@ -72,7 +72,11 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
     Dim Shared alLengthLeft As Long
     Dim Shared alBlock As Integer
     Dim Shared TimeCount As Long ' 70Hz tick counter (TIME macro in ID_SD_A.ASM)
-    Dim Shared sdCountTime As Integer ' count_time: TimeCount advances every 2nd effects tick
+    ' The original advanced TimeCount every 2nd effects tick (count_time) of the 700Hz interrupt.
+    ' The audio here is generated in bursts as the sound device drains its buffer, so TimeCount
+    ' counts the clock instead (SDL_TimeCountService, from the same ON TIMER event)
+    Dim Shared sdClockLast As Double ' Timer(.001) of the last TimeCount update
+    Dim Shared sdClockAcc As Double ' tics not yet added to TimeCount
     Dim Shared sdCountFx As Integer ' count_fx in ID_SD_A.ASM: effects run every 5th 700Hz tick (140Hz)
 
     ' Music playback state variables (IMF format)

@@ -20,7 +20,7 @@ $If INCLUDE_WL_STATE_BI = UNDEFINED Then
     '
     ' WL_AGENT.C: statetype s_player = {false,0,0,T_Player,NULL,NULL};
     Const s_player = 1
-    ' TODO 6e: s_attack = {false,0,0,T_Attack,NULL,NULL}
+    ' TODO 6g: s_attack = {false,0,0,T_Attack,NULL,NULL}
 
     Declare Sub InitStates ()
     Declare Sub CallStateRoutine (routine As Integer, ob As Integer)

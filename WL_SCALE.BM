@@ -1,5 +1,5 @@
 ' WL_SCALE.C - scalers for walls and sprites
-' Ported so far: SetupScaling / BuildCompScale as tables (step 6d). Sprites: 6e
+' The compiled scalers (machine code per height) are tables here, see WL_SCALE.BI
 
 $If INCLUDE_WL_SCALE_BM = UNDEFINED Then
     $Let INCLUDE_WL_SCALE_BM = 1
@@ -22,6 +22,9 @@ $If INCLUDE_WL_SCALE_BM = UNDEFINED Then
         ReDim scalersrc(0 To msh + 2, 0 To viewheight - 1) As Integer
         ReDim scalertop(0 To msh + 2) As Integer
         ReDim scalerbottom(0 To msh + 2) As Integer
+        ReDim scalerwidth(0 To msh + 2, 0 To 64) As Integer
+        ReDim scalerfirst(0 To msh + 2, 0 To 64) As Integer
+        ReDim scalerlast(0 To msh + 2, 0 To 64) As Integer
 
         '
         ' build the compiled scalers
@@ -74,6 +77,15 @@ $If INCLUDE_WL_SCALE_BM = UNDEFINED Then
             fixv = fixv + stepv
             endpix = fixv \ 65536
 
+            If endpix > startpix Then
+                scalerwidth(which, src) = endpix - startpix
+            Else
+                scalerwidth(which, src) = 0
+            End If
+
+            scalerfirst(which, src) = viewheight
+            scalerlast(which, src) = -1
+
             '
             ' compile some code if the source pixel generates any screen pixels
             '
@@ -88,10 +100,281 @@ $If INCLUDE_WL_SCALE_BM = UNDEFINED Then
                     scalersrc(which, startpix) = src
                     If startpix < scalertop(which) Then scalertop(which) = startpix
                     If startpix > scalerbottom(which) Then scalerbottom(which) = startpix
+                    If startpix < scalerfirst(which, src) Then scalerfirst(which, src) = startpix
+                    scalerlast(which, src) = startpix
                 End If
                 startpix = startpix + 1
             Loop
         Next src
+    End Sub
+
+    '=======================
+    '=
+    '= ScaleLine
+    '=
+    '= Draws one column of a shape, slinewidth pixels wide from view column slinex:
+    '= every segment of the column's list (linecmds) through scaler linescale
+    '=
+    '= each segment is 3 words: end texel*2 (0 ends the list), the corrected top
+    '= (the texel src is at shape + top + src), start texel*2
+    '=
+    '=======================
+    $Checking:Off
+    Sub ScaleLine ()
+        Dim cmd As Long, endy As Long, newstart As Long, starty As Long, src As Long
+        Dim x As Long, y As Long, x0 As Long, x1 As Long, clr As _Unsigned _Byte
+        Dim rowofs As _Offset, shp As _Offset
+
+        x0 = slinex
+        x1 = slinex + slinewidth - 1
+        ' port safety: the VGA code had no clipping here either, but never wrote outside the view
+        If x0 < 0 Then x0 = 0
+        If x1 > viewwidth - 1 Then x1 = viewwidth - 1
+        If x0 > x1 Then Exit Sub
+
+        shp = PMData.OFFSET + lineshape
+        cmd = linecmds
+        Do
+            endy = _MemGet(PMData, shp + cmd, _Unsigned Integer) \ 2
+            If endy = 0 Then Exit Do ' 0 signals end of segment list
+            newstart = _MemGet(PMData, shp + cmd + 2, Integer)
+            starty = _MemGet(PMData, shp + cmd + 4, _Unsigned Integer) \ 2
+            cmd = cmd + 6
+
+            For src = starty To endy - 1
+                If scalerfirst(linescale, src) <= scalerlast(linescale, src) Then
+                    clr = _MemGet(PMData, shp + newstart + src, _Unsigned _Byte)
+                    For y = scalerfirst(linescale, src) To scalerlast(linescale, src)
+                        rowofs = drawscreen.OFFSET + (viewscreeny + y) * 320 + viewscreenx
+                        For x = x0 To x1
+                            _MemPut drawscreen, rowofs + x, clr
+                        Next x
+                    Next y
+                End If
+            Next src
+        Loop
+    End Sub
+    $Checking:On
+
+    ' dataofs[srcx - leftpix] of the shape: the segment list of column srcx
+    Function ShapeColumn& (srcx As Long, leftpix As Long)
+        ShapeColumn& = _MemGet(PMData, PMData.OFFSET + lineshape + 4 + (srcx - leftpix) * 2, _Unsigned Integer)
+    End Function
+
+    '=======================
+    '=
+    '= ScaleShape
+    '=
+    '= Draws a compiled shape at [scale] pixels high
+    '=
+    '= each vertical line of the shape has a pointer to segment data:
+    '=  end of segment pixel*2 (0 terminates line) used to patch rtl in scaler
+    '=  top of virtual line with segment in proper place
+    '=  start of segment pixel*2, used to jsl into compiled scaler
+    '=  <repeat>
+    '=
+    '=======================
+    Sub ScaleShape (xcenter As Integer, shapenum As Integer, height As Long)
+        Dim sc As Long, srcx As Long, stopx As Long, leftpix As Long
+        Dim leftvis As Integer, rightvis As Integer
+
+        lineshape = PM_GetSpritePage(shapenum)
+
+        sc = height \ 8 ' low three bits are fractional
+        If sc = 0 Or sc > maxscale Then Exit Sub ' too close or far away
+        linescale = scalerof(sc) ' comptable = scaledirectory[scale]
+
+        leftpix = _MemGet(PMData, PMData.OFFSET + lineshape, _Unsigned Integer)
+
+        '
+        ' scale to the left (from pixel 31 to shape->leftpix)
+        '
+        ' (srcx is unsigned in C: with leftpix 0 the loop would only end on slinex)
+        srcx = 32
+        slinex = xcenter
+        stopx = leftpix
+
+        Do
+            srcx = srcx - 1
+            If srcx < stopx Or slinex <= 0 Then Exit Do
+
+            linecmds = ShapeColumn(srcx, leftpix)
+            slinewidth = scalerwidth(linescale, srcx)
+            If slinewidth = 0 Then _Continue
+
+            If slinewidth = 1 Then
+                slinex = slinex - 1
+                If slinex < viewwidth Then
+                    If wallheight(slinex) >= height Then _Continue ' obscured by closer wall
+                    ScaleLine
+                End If
+                _Continue
+            End If
+
+            '
+            ' handle multi pixel lines
+            '
+            If slinex > viewwidth Then
+                slinex = slinex - slinewidth
+                slinewidth = viewwidth - slinex
+                If slinewidth < 1 Then _Continue ' still off the right side
+            Else
+                If slinewidth > slinex Then slinewidth = slinex
+                slinex = slinex - slinewidth
+            End If
+
+            leftvis = (wallheight(slinex) < height)
+            rightvis = (wallheight(slinex + slinewidth - 1) < height)
+
+            If leftvis Then
+                If rightvis Then
+                    ScaleLine
+                Else
+                    Do While wallheight(slinex + slinewidth - 1) >= height
+                        slinewidth = slinewidth - 1
+                    Loop
+                    ScaleLine
+                End If
+            Else
+                If Not rightvis Then _Continue ' totally obscured
+
+                Do While wallheight(slinex) >= height
+                    slinex = slinex + 1
+                    slinewidth = slinewidth - 1
+                Loop
+                ScaleLine
+                Exit Do ' the rest of the shape is gone
+            End If
+        Loop
+
+        '
+        ' scale to the right
+        '
+        slinex = xcenter
+        stopx = _MemGet(PMData, PMData.OFFSET + lineshape + 2, _Unsigned Integer) ' rightpix
+        If leftpix < 31 Then
+            srcx = 31
+        Else
+            srcx = leftpix - 1
+        End If
+        slinewidth = 0
+
+        Do
+            srcx = srcx + 1
+            If srcx > stopx Then Exit Do
+            slinex = slinex + slinewidth
+            If slinex >= viewwidth Then Exit Do
+
+            linecmds = ShapeColumn(srcx, leftpix)
+            slinewidth = scalerwidth(linescale, srcx)
+            If slinewidth = 0 Then _Continue
+
+            If slinewidth = 1 Then
+                If slinex >= 0 Then
+                    If wallheight(slinex) < height Then ScaleLine
+                End If
+                _Continue
+            End If
+
+            '
+            ' handle multi pixel lines
+            '
+            If slinex < 0 Then
+                If slinewidth <= -slinex Then _Continue ' still off the left edge
+
+                slinewidth = slinewidth + slinex
+                slinex = 0
+            Else
+                If slinex + slinewidth > viewwidth Then slinewidth = viewwidth - slinex
+            End If
+
+            leftvis = (wallheight(slinex) < height)
+            rightvis = (wallheight(slinex + slinewidth - 1) < height)
+
+            If leftvis Then
+                If rightvis Then
+                    ScaleLine
+                Else
+                    Do While wallheight(slinex + slinewidth - 1) >= height
+                        slinewidth = slinewidth - 1
+                    Loop
+                    ScaleLine
+                    Exit Do ' the rest of the shape is gone
+                End If
+            Else
+                If rightvis Then
+                    Do While wallheight(slinex) >= height
+                        slinex = slinex + 1
+                        slinewidth = slinewidth - 1
+                    Loop
+                    ScaleLine
+                Else
+                    _Continue ' totally obscured
+                End If
+            End If
+        Loop
+    End Sub
+
+    '=======================
+    '=
+    '= SimpleScaleShape
+    '=
+    '= NO CLIPPING, height in pixels
+    '=
+    '= Draws a compiled shape at [scale] pixels high
+    '=
+    '=======================
+    Sub SimpleScaleShape (xcenter As Integer, shapenum As Integer, height As Long)
+        Dim srcx As Long, stopx As Long, leftpix As Long
+
+        lineshape = PM_GetSpritePage(shapenum)
+
+        linescale = scalerof(height \ 2) ' scale = height>>1
+
+        leftpix = _MemGet(PMData, PMData.OFFSET + lineshape, _Unsigned Integer)
+
+        '
+        ' scale to the left (from pixel 31 to shape->leftpix)
+        '
+        srcx = 32
+        slinex = xcenter
+        stopx = leftpix
+
+        Do
+            srcx = srcx - 1
+            If srcx < stopx Then Exit Do
+
+            linecmds = ShapeColumn(srcx, leftpix)
+            slinewidth = scalerwidth(linescale, srcx)
+            If slinewidth = 0 Then _Continue
+
+            slinex = slinex - slinewidth
+            ScaleLine
+        Loop
+
+        '
+        ' scale to the right
+        '
+        slinex = xcenter
+        stopx = _MemGet(PMData, PMData.OFFSET + lineshape + 2, _Unsigned Integer) ' rightpix
+        If leftpix < 31 Then
+            srcx = 31
+        Else
+            srcx = leftpix - 1
+        End If
+        slinewidth = 0
+
+        Do
+            srcx = srcx + 1
+            If srcx > stopx Then Exit Do
+
+            linecmds = ShapeColumn(srcx, leftpix)
+            slinewidth = scalerwidth(linescale, srcx)
+            If slinewidth = 0 Then _Continue
+
+            ScaleLine
+            slinex = slinex + slinewidth
+        Loop
     End Sub
 
 $EndIf

@@ -1,5 +1,5 @@
 ' WL_AGENT.C - the player: status bar, movement, weapons, bonus items
-' Ported so far: the status bar, SpawnPlayer, movement (6c / 6d). Weapons: 6e, Cmd_Use: 6f
+' Ported so far: the status bar, SpawnPlayer, movement, bonus items (6c - 6e). Cmd_Use: 6f, attacks: 6g
 
 $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
     $Let INCLUDE_WL_AGENT_BM = 1
@@ -197,6 +197,177 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         If gamestate.ammo > 99 Then gamestate.ammo = 99
         DrawAmmo
     End Sub
+
+    '===============
+    '=
+    '= HealSelf
+    '=
+    '===============
+    Sub HealSelf (points As Integer)
+        gamestate.health = gamestate.health + points
+        If gamestate.health > 100 Then gamestate.health = 100
+
+        DrawHealth
+        gotgatgun = 0 ' JR
+        DrawFace
+    End Sub
+
+    '===============
+    '=
+    '= GiveExtraMan
+    '=
+    '===============
+    Sub GiveExtraMan ()
+        Dim played As Integer
+
+        If gamestate.lives < 9 Then gamestate.lives = gamestate.lives + 1
+        DrawLives
+        played = SD_PlaySound(BONUS1UPSND)
+    End Sub
+
+    '===============
+    '=
+    '= GivePoints
+    '=
+    '===============
+    Sub GivePoints (points As Long)
+        gamestate.score = gamestate.score + points
+        Do While gamestate.score >= gamestate.nextextra
+            gamestate.nextextra = gamestate.nextextra + EXTRAPOINTS
+            GiveExtraMan
+        Loop
+        DrawScore
+    End Sub
+
+    '==================
+    '=
+    '= GiveKey
+    '=
+    '==================
+    Sub GiveKey (keynum As Integer)
+        gamestate.keys = gamestate.keys Or (2 ^ keynum) ' 1<<key
+        DrawKeys
+    End Sub
+
+    '
+    ' =============================================================================
+    '                              MOVEMENT
+    ' =============================================================================
+    '
+
+    '===================
+    '=
+    '= GetBonus
+    '=
+    '===================
+    Sub GetBonus (check As Integer)
+        Dim played As Integer
+
+        Select Case statobjlist(check).itemnumber
+            Case bo_firstaid
+                If gamestate.health = 100 Then Exit Sub
+
+                played = SD_PlaySound(HEALTH2SND)
+                HealSelf 25
+
+            Case bo_key1, bo_key2, bo_key3, bo_key4
+                GiveKey statobjlist(check).itemnumber - bo_key1
+                played = SD_PlaySound(GETKEYSND)
+
+            Case bo_cross
+                played = SD_PlaySound(BONUS1SND)
+                GivePoints 100
+                gamestate.treasurecount = gamestate.treasurecount + 1
+            Case bo_chalice
+                played = SD_PlaySound(BONUS2SND)
+                GivePoints 500
+                gamestate.treasurecount = gamestate.treasurecount + 1
+            Case bo_bible
+                played = SD_PlaySound(BONUS3SND)
+                GivePoints 1000
+                gamestate.treasurecount = gamestate.treasurecount + 1
+            Case bo_crown
+                played = SD_PlaySound(BONUS4SND)
+                GivePoints 5000
+                gamestate.treasurecount = gamestate.treasurecount + 1
+
+            Case bo_clip
+                If gamestate.ammo = 99 Then Exit Sub
+
+                played = SD_PlaySound(GETAMMOSND)
+                GiveAmmo 8
+            Case bo_clip2
+                If gamestate.ammo = 99 Then Exit Sub
+
+                played = SD_PlaySound(GETAMMOSND)
+                GiveAmmo 4
+
+            Case bo_25clip ' the case is only in Spear (a $If between Case lines breaks Select Case)
+                If GetAmmoBox = FALSE Then Exit Sub
+
+            Case bo_machinegun
+                played = SD_PlaySound(GETMACHINESND)
+                GiveWeapon wp_machinegun
+            Case bo_chaingun
+                played = SD_PlaySound(GETGATLINGSND)
+                GiveWeapon wp_chaingun
+
+                StatusDrawPic 17, 4, GOTGATLINGPIC
+                facecount = 0
+                gotgatgun = 1
+
+            Case bo_fullheal
+                played = SD_PlaySound(BONUS1UPSND)
+                HealSelf 99
+                GiveAmmo 25
+                GiveExtraMan
+                gamestate.treasurecount = gamestate.treasurecount + 1
+
+            Case bo_food
+                If gamestate.health = 100 Then Exit Sub
+
+                played = SD_PlaySound(HEALTH1SND)
+                HealSelf 10
+
+            Case bo_alpo
+                If gamestate.health = 100 Then Exit Sub
+
+                played = SD_PlaySound(HEALTH1SND)
+                HealSelf 4
+
+            Case bo_gibs
+                If gamestate.health > 10 Then Exit Sub
+
+                played = SD_PlaySound(SLURPIESND)
+                HealSelf 1
+
+            Case bo_spear
+                spearflag = TRUE
+                spearx = objlist(player).x
+                speary = objlist(player).y
+                spearangle = objlist(player).angle
+                playstate = ex_completed
+        End Select
+
+        StartBonusFlash
+        statobjlist(check).shapenum = -1 ' remove from list
+    End Sub
+
+    ' case bo_25clip of GetBonus (#ifdef SPEAR): FALSE when the bonus stays (C: return)
+    Function GetAmmoBox% ()
+        GetAmmoBox% = TRUE
+        $If SPEAR = DEFINED Then
+            Dim played As Integer
+
+            If gamestate.ammo = 99 Then
+                GetAmmoBox% = FALSE
+                Exit Function
+            End If
+
+            played = SD_PlaySound(GETAMMOBOXSND)
+            GiveAmmo 25
+        $End If
+    End Function
 
     '
     ' =============================================================================
@@ -442,7 +613,7 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         CheckWeaponChange
 
         ' TODO 6f: If buttonstate(bt_use) Then Cmd_Use
-        ' TODO 6e: If buttonstate(bt_attack) And Not buttonheld(bt_attack) Then Cmd_Fire
+        ' TODO 6g: If buttonstate(bt_attack) And Not buttonheld(bt_attack) Then Cmd_Fire
 
         ControlMovement ob
         If gamestate.victoryflag Then Exit Sub ' watching the BJ actor

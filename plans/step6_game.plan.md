@@ -66,7 +66,7 @@ Each sub-step below ends with something visible to test against the original in 
 - WL_PLAY / WL_AGENT movement: `PlayLoop`, `PollControls` (keyboard, mouse buttons, mouse motion), `ControlMovement`, `Thrust`, `ClipMove`, `CheckKeys` (Esc opens the menu with "Back to Game").
 - **Test:** walk around E1M1. The views should match DOSBox-X from the same spots, and walking speed should match. Check the frame rate.
 
-### 6e. Sprites, items and weapons on screen
+### 6e. Sprites, items and weapons on screen — DONE 2026-10-28
 - WL_SCALE `ScaleShape` and `SimpleScaleShape`; WL_DRAW `DrawScaleds` (visible statics and actors, `spotvis`) and `DrawPlayerWeapon`.
 - WL_ACT1 statics (`SpawnStatic`, `PlaceItemType`); WL_AGENT `GetBonus` and the status bar updates; `StartBonusFlash` / palette shifts.
 - **Test:** see lamps, tables and items in E1M1; picking up food, ammo and treasure updates the status bar and flashes.

@@ -384,6 +384,145 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         ' TODO: DebugKeys (WL_DEBUG.C)
     End Sub
 
+    '
+    ' =============================================================================
+    '                          PALETTE SHIFTING STUFF
+    ' =============================================================================
+    '
+
+    '=====================
+    '=
+    '= InitRedShifts
+    '=
+    '= The shifts are computed on the 6-bit VGA values like the original and stored
+    '= scaled to 8-bit like gamepal()
+    '=
+    '=====================
+    Sub InitRedShifts ()
+        Dim i As Integer, j As Integer
+        Dim r As Integer, g As Integer, b As Integer
+
+        '
+        ' fade through intermediate frames
+        '
+        For i = 1 To NUMREDSHIFTS
+            For j = 0 To 255
+                GamePal6 j, r, g, b
+                redshifts(i - 1, j) = Pal8(r + (64 - r) * i \ REDSTEPS, g + (-g) * i \ REDSTEPS, b + (-b) * i \ REDSTEPS)
+            Next j
+        Next i
+
+        For i = 1 To NUMWHITESHIFTS
+            For j = 0 To 255
+                GamePal6 j, r, g, b
+                whiteshifts(i - 1, j) = Pal8(r + (64 - r) * i \ WHITESTEPS, g + (62 - g) * i \ WHITESTEPS, b + (0 - b) * i \ WHITESTEPS)
+            Next j
+        Next i
+    End Sub
+
+    ' The 6-bit VGA values of gamepal(j) (LoadGamePalette scaled them by 255 \ 63)
+    Sub GamePal6 (j As Integer, r As Integer, g As Integer, b As Integer)
+        r = (_Red32(gamepal(j)) * 63 + 127) \ 255
+        g = (_Green32(gamepal(j)) * 63 + 127) \ 255
+        b = (_Blue32(gamepal(j)) * 63 + 127) \ 255
+    End Sub
+
+    ' A 6-bit VGA color as an 8-bit palette value (the DAC uses the low 6 bits)
+    Function Pal8~& (r As Integer, g As Integer, b As Integer)
+        Pal8~& = _RGB32(((r And 63) * 255) \ 63, ((g And 63) * 255) \ 63, ((b And 63) * 255) \ 63)
+    End Function
+
+    '=====================
+    '=
+    '= ClearPaletteShifts
+    '=
+    '=====================
+    Sub ClearPaletteShifts ()
+        bonuscount = 0
+        damagecount = 0
+    End Sub
+
+    '=====================
+    '=
+    '= StartBonusFlash
+    '=
+    '=====================
+    Sub StartBonusFlash ()
+        bonuscount = NUMWHITESHIFTS * WHITETICS ' white shift palette
+    End Sub
+
+    '=====================
+    '=
+    '= StartDamageFlash
+    '=
+    '=====================
+    Sub StartDamageFlash (damage As Integer)
+        damagecount = damagecount + damage
+    End Sub
+
+    '=====================
+    '=
+    '= UpdatePaletteShifts
+    '=
+    '= (VW_WaitVBL (1) before each change is left out: the change shows with the next
+    '= frame's _Display anyway)
+    '=
+    '=====================
+    Sub UpdatePaletteShifts ()
+        Dim red As Integer, white As Integer, i As Integer
+
+        If bonuscount Then
+            white = bonuscount \ WHITETICS + 1
+            If white > NUMWHITESHIFTS Then white = NUMWHITESHIFTS
+            bonuscount = bonuscount - tics
+            If bonuscount < 0 Then bonuscount = 0
+        Else
+            white = 0
+        End If
+
+        If damagecount Then
+            red = damagecount \ 10 + 1
+            If red > NUMREDSHIFTS Then red = NUMREDSHIFTS
+
+            damagecount = damagecount - tics
+            If damagecount < 0 Then damagecount = 0
+        Else
+            red = 0
+        End If
+
+        If red Then
+            For i = 0 To 255 ' VL_SetPalette (redshifts[red-1])
+                _PaletteColor i, redshifts(red - 1, i)
+            Next i
+            palshifted = TRUE
+        ElseIf white Then
+            For i = 0 To 255 ' VL_SetPalette (whiteshifts[white-1])
+                _PaletteColor i, whiteshifts(white - 1, i)
+            Next i
+            palshifted = TRUE
+        ElseIf palshifted Then
+            For i = 0 To 255 ' VL_SetPalette (&gamepal) - back to normal
+                _PaletteColor i, gamepal(i)
+            Next i
+            palshifted = FALSE
+        End If
+    End Sub
+
+    '=====================
+    '=
+    '= FinishPaletteShifts
+    '=
+    '= Resets palette to normal if needed
+    '=
+    '=====================
+    Sub FinishPaletteShifts ()
+        If palshifted Then
+            palshifted = 0
+            VL_WaitVBL 1
+            VL_SetPalette gamepal()
+        End If
+    End Sub
+
     '=========================
     '=
     '= DoActor
@@ -392,7 +531,9 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
     Sub DoActor (ob As Integer)
         Dim think As Integer
 
-        If objlist(ob).active = ac_no And Not areabyplayer(objlist(ob).areanumber) Then Exit Sub
+        ' C && short-circuits: areabyplayer is only read for inactive actors (the player's area
+        ' number is out of range inside a wall with noclip)
+        If objlist(ob).active = ac_no Then If Not areabyplayer(objlist(ob).areanumber) Then Exit Sub
 
         If (objlist(ob).flags And (FL_NONMARK Or FL_NEVERMARK)) = 0 Then actorat(objlist(ob).tilex, objlist(ob).tiley) = 0
 
@@ -485,7 +626,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         For i = 0 To NUMBUTTONS - 1 ' memset (buttonstate,0,sizeof(buttonstate))
             buttonstate(i) = FALSE
         Next i
-        ' TODO 6e: ClearPaletteShifts
+        ClearPaletteShifts
         ' TODO: clear accumulated mouse movement
 
         If demoplayback Then IN_StartAck
@@ -506,7 +647,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
                 obj = objlist(obj).nextobj
             Loop
 
-            ' TODO 6e: UpdatePaletteShifts
+            UpdatePaletteShifts
 
             ThreeDRefresh
 
@@ -529,7 +670,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             End If
         Loop While playstate = 0 And Not startgame
 
-        ' TODO 6e: If playstate <> ex_died Then FinishPaletteShifts
+        If playstate <> ex_died Then FinishPaletteShifts
     End Sub
 
 $EndIf

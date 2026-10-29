@@ -6,6 +6,26 @@ $If INCLUDE_WL_DRAW_BI = UNDEFINED Then
 
     ' long tileglobal / mindist are the constants TILEGLOBAL / MINDIST (names are case-insensitive)
 
+    Const ACTORSIZE = &H4000
+
+    '
+    ' DrawScaleds: the visible objects
+    '
+    Const MAXVISABLE = 50
+
+    Type visobj_t
+        viewx As Integer
+        viewheight As Integer
+        shapenum As Integer
+    End Type
+
+    Dim Shared vislist(0 To MAXVISABLE - 1) As visobj_t
+
+    ' int weaponscale[NUMWEAPONS] = {SPR_KNIFEREADY,SPR_PISTOLREADY,SPR_MACHINEGUNREADY,SPR_CHAINREADY}
+    Dim Shared weaponscale(0 To NUMWEAPONS - 1) As Integer
+    weaponscale(0) = SPR_KNIFEREADY: weaponscale(1) = SPR_PISTOLREADY
+    weaponscale(2) = SPR_MACHINEGUNREADY: weaponscale(3) = SPR_CHAINREADY
+
     '
     ' math tables (built by BuildTables in WOLF3D.BAS)
     '

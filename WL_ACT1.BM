@@ -1,10 +1,17 @@
 ' WL_ACT1.C - static objects, doors, push walls
-' Ported so far: the lists and door spawning (step 6c). Statics: 6e, door movement: 6f
+' Ported so far: statics, the lists and door spawning (6c / 6e). Door movement: 6f
 
 $If INCLUDE_WL_ACT1_BM = UNDEFINED Then
     $Let INCLUDE_WL_ACT1_BM = 1
 
     '$INCLUDE: 'WL_ACT1.BI'
+
+    ' One statinfo[] entry (the table is filled in WL_ACT1.BI)
+    Sub StatInfo (picnum As Integer, stype As Integer, n As Integer)
+        statpicnum(n) = picnum
+        stattype(n) = stype
+        n = n + 1
+    End Sub
 
     '===============
     '=
@@ -21,7 +28,80 @@ $If INCLUDE_WL_ACT1_BM = UNDEFINED Then
     '=
     '===============
     Sub SpawnStatic (tilex As Integer, tiley As Integer, ttype As Integer)
-        ' TODO 6e: statinfo[] table, lamps, bonus items, treasure count
+        statobjlist(laststatobj).shapenum = statpicnum(ttype)
+        statobjlist(laststatobj).tilex = tilex
+        statobjlist(laststatobj).tiley = tiley
+        statobjlist(laststatobj).visspot = tilex * MAPSIZE + tiley ' &spotvis[tilex][tiley]
+
+        Select Case stattype(ttype)
+            Case block
+                actorat(tilex, tiley) = 1 ' consider it a blocking tile
+                statobjlist(laststatobj).flags = 0
+
+            Case dressing
+                statobjlist(laststatobj).flags = 0
+
+            Case bo_cross, bo_chalice, bo_bible, bo_crown, bo_fullheal
+                If Not loadedgame Then gamestate.treasuretotal = gamestate.treasuretotal + 1
+                statobjlist(laststatobj).flags = FL_BONUS
+                statobjlist(laststatobj).itemnumber = stattype(ttype)
+
+            Case bo_firstaid, bo_key1, bo_key2, bo_key3, bo_key4, bo_clip, bo_25clip, bo_machinegun, bo_chaingun, bo_food, bo_alpo, bo_gibs, bo_spear
+                statobjlist(laststatobj).flags = FL_BONUS
+                statobjlist(laststatobj).itemnumber = stattype(ttype)
+        End Select
+
+        laststatobj = laststatobj + 1
+
+        If laststatobj = MAXSTATS Then Quit "Too many static objects!" + Chr$(10)
+    End Sub
+
+    '===============
+    '=
+    '= PlaceItemType
+    '=
+    '= Called during game play to drop actors' items.  It finds the proper
+    '= item number based on the item type (bo_???).  If there are no free item
+    '= spots, nothing is done.
+    '=
+    '===============
+    Sub PlaceItemType (itemtype As Integer, tilex As Integer, tiley As Integer)
+        Dim ttype As Integer, spot As Integer
+
+        '
+        ' find the item number
+        '
+        ttype = 0
+        Do
+            If statpicnum(ttype) = -1 Then Quit "PlaceItemType: couldn't find type!" ' end of list
+            If stattype(ttype) = itemtype Then Exit Do
+            ttype = ttype + 1
+        Loop
+
+        '
+        ' find a spot in statobjlist to put it in
+        '
+        spot = 0
+        Do
+            If spot = laststatobj Then
+                If spot = MAXSTATS Then Exit Sub ' no free spots
+                laststatobj = laststatobj + 1 ' space at end
+                Exit Do
+            End If
+
+            If statobjlist(spot).shapenum = -1 Then Exit Do ' -1 is a free spot
+            spot = spot + 1
+        Loop
+
+        '
+        ' place it
+        '
+        statobjlist(spot).shapenum = statpicnum(ttype)
+        statobjlist(spot).tilex = tilex
+        statobjlist(spot).tiley = tiley
+        statobjlist(spot).visspot = tilex * MAPSIZE + tiley ' &spotvis[tilex][tiley]
+        statobjlist(spot).flags = FL_BONUS
+        statobjlist(spot).itemnumber = stattype(ttype)
     End Sub
 
     '

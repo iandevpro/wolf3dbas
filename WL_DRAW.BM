@@ -2,7 +2,6 @@
 '
 ' The original drew into one of three VGA pages and flipped them; here the frame is drawn
 ' straight into the Screen 13 page (through drawscreen = _MemImage) and shown with _Display.
-' Scaled sprites and the player's weapon come in step 6e.
 
 $If INCLUDE_WL_DRAW_BM = UNDEFINED Then
     $Let INCLUDE_WL_DRAW_BM = 1
@@ -671,6 +670,332 @@ $If INCLUDE_WL_DRAW_BM = UNDEFINED Then
     End Sub
     $Checking:On
 
+    ' A C int: the low 16 bits of a value as a signed number
+    Function Wrap16% (v As Long)
+        Dim w As Long
+        w = v And &HFFFF&
+        If w >= 32768 Then w = w - 65536
+        Wrap16% = w
+    End Function
+
+    ' heightnumerator / (nx>>8): idiv [WORD PTR nx+1], the quotient (AX)
+    Function ShapeHeight& (nx As Long)
+        Dim divisor As Long
+
+        divisor = Wrap16%(SarL&(nx, 8))
+        If divisor = 0 Then divisor = 1
+        ShapeHeight& = Wrap16%(heightnumerator \ divisor)
+    End Function
+
+    '========================
+    '=
+    '= TransformActor
+    '=
+    '= Takes paramaters:
+    '=   gx,gy               : globalx/globaly of point
+    '=
+    '= globals:
+    '=   viewx,viewy         : point of view
+    '=   viewcos,viewsin     : sin/cos of viewangle
+    '=   scale               : conversion from global value to screen value
+    '=
+    '= sets:
+    '=   screenx,transx,transy,screenheight: projected edge location and size
+    '=
+    '========================
+    Sub TransformActor (ob As Integer)
+        Dim gx As Long, gy As Long, gxt As Long, gyt As Long, nx As Long, ny As Long
+
+        '
+        ' translate point to view centered coordinates
+        '
+        gx = objlist(ob).x - viewx
+        gy = objlist(ob).y - viewy
+
+        '
+        ' calculate newx
+        '
+        gxt = FixedByFrac(gx, viewcos)
+        gyt = FixedByFrac(gy, viewsin)
+        nx = gxt - gyt - ACTORSIZE ' fudge the shape forward a bit, because
+        ' the midpoint could put parts of the shape
+        ' into an adjacent wall
+
+        '
+        ' calculate newy
+        '
+        gxt = FixedByFrac(gx, viewsin)
+        gyt = FixedByFrac(gy, viewcos)
+        ny = gyt + gxt
+
+        '
+        ' calculate perspective ratio
+        '
+        objlist(ob).transx = nx
+        objlist(ob).transy = ny
+
+        If nx < MINDIST Then ' too close, don't overflow the divide
+            objlist(ob).viewheight = 0
+            Exit Sub
+        End If
+
+        objlist(ob).viewx = Wrap16%(centerx + Mul32&(ny, scale) \ nx) ' DEBUG: use assembly divide
+
+        '
+        ' calculate height (heightnumerator/(nx>>8))
+        '
+        objlist(ob).viewheight = ShapeHeight&(nx) And &HFFFF& ' unsigned
+    End Sub
+
+    '========================
+    '=
+    '= TransformTile
+    '=
+    '= Takes paramaters:
+    '=   tx,ty               : tile the object is centered in
+    '=
+    '= globals:
+    '=   viewx,viewy         : point of view
+    '=   viewcos,viewsin     : sin/cos of viewangle
+    '=   scale               : conversion from global value to screen value
+    '=
+    '= sets:
+    '=   screenx,transx,transy,screenheight: projected edge location and size
+    '=
+    '= Returns true if the tile is withing getting distance
+    '=
+    '========================
+    Function TransformTile% (tx As Integer, ty As Integer, dispx As Integer, dispheight As Integer)
+        Dim gx As Long, gy As Long, gxt As Long, gyt As Long, nx As Long, ny As Long
+
+        '
+        ' translate point to view centered coordinates
+        '
+        gx = tx * TILEGLOBAL + &H8000& - viewx ' ((long)tx<<TILESHIFT)+0x8000-viewx
+        gy = ty * TILEGLOBAL + &H8000& - viewy
+
+        '
+        ' calculate newx
+        '
+        gxt = FixedByFrac(gx, viewcos)
+        gyt = FixedByFrac(gy, viewsin)
+        nx = gxt - gyt - &H2000 ' 0x2000 is size of object
+
+        '
+        ' calculate newy
+        '
+        gxt = FixedByFrac(gx, viewsin)
+        gyt = FixedByFrac(gy, viewcos)
+        ny = gyt + gxt
+
+        '
+        ' calculate perspective ratio
+        '
+        If nx < MINDIST Then ' too close, don't overflow the divide
+            dispheight = 0
+            TransformTile% = FALSE
+            Exit Function
+        End If
+
+        dispx = Wrap16%(centerx + Mul32&(ny, scale) \ nx) ' DEBUG: use assembly divide
+
+        '
+        ' calculate height (heightnumerator/(nx>>8))
+        '
+        dispheight = ShapeHeight&(nx)
+
+        '
+        ' see if it should be grabbed
+        '
+        If nx < TILEGLOBAL And ny > -TILEGLOBAL \ 2 And ny < TILEGLOBAL \ 2 Then
+            TransformTile% = TRUE
+        Else
+            TransformTile% = FALSE
+        End If
+    End Function
+
+    '=====================
+    '=
+    '= CalcRotate
+    '=
+    '=====================
+    Function CalcRotate% (ob As Integer)
+        Dim angl As Integer, vangle As Integer
+
+        ' this isn't exactly correct, as it should vary by a trig value,
+        ' but it is close enough with only eight rotations
+
+        vangle = objlist(player).angle + (centerx - objlist(ob).viewx) \ 8
+
+        If objlist(ob).obclass = rocketobj Or objlist(ob).obclass = hrocketobj Then
+            angl = (vangle - 180) - objlist(ob).angle
+        Else
+            angl = (vangle - 180) - dirangle(objlist(ob).dir)
+        End If
+
+        angl = angl + ANGLES \ 16
+        Do While angl >= ANGLES
+            angl = angl - ANGLES
+        Loop
+        Do While angl < 0
+            angl = angl + ANGLES
+        Loop
+
+        If states(objlist(ob).state).rotate = 2 Then ' 2 rotation pain frame
+            CalcRotate% = 4 * (angl \ (ANGLES \ 2)) ' seperated by 3 (art layout...)
+            Exit Function
+        End If
+
+        CalcRotate% = angl \ (ANGLES \ 8)
+    End Function
+
+    ' One tile of the 9 around an actor, by the offset of the C byte pointers:
+    ' spotvis / tilemap are [x][y], so +-1 is y and +-64 is x
+    Function SpotSeen% (spotloc As Long)
+        SpotSeen% = spotvis(spotloc \ MAPSIZE, spotloc Mod MAPSIZE)
+    End Function
+
+    Function SpotOpen% (spotloc As Long)
+        SpotOpen% = (tilemap(spotloc \ MAPSIZE, spotloc Mod MAPSIZE) = 0)
+    End Function
+
+    Function NearSpotSeen% (spotloc As Long, delta As Long)
+        NearSpotSeen% = FALSE
+        If SpotSeen(spotloc + delta) Then If SpotOpen(spotloc + delta) Then NearSpotSeen% = TRUE
+    End Function
+
+    '=====================
+    '=
+    '= DrawScaleds
+    '=
+    '= Draws all objects that are visable
+    '=
+    '=====================
+    Sub DrawScaleds ()
+        Dim i As Integer, least As Integer, numvisable As Integer, height As Integer
+        Dim visptr As Integer, visstep As Integer, farthest As Integer
+        Dim statptr As Integer, ob As Integer, spotloc As Long, seen As Integer
+
+        visptr = 0 ' &vislist[0]
+
+        '
+        ' place static objects
+        '
+        For statptr = 0 To laststatobj - 1
+            vislist(visptr).shapenum = statobjlist(statptr).shapenum
+            If vislist(visptr).shapenum = -1 Then _Continue ' object has been deleted
+
+            If spotvis(statobjlist(statptr).tilex, statobjlist(statptr).tiley) = 0 Then _Continue ' not visable
+
+            If TransformTile(statobjlist(statptr).tilex, statobjlist(statptr).tiley, vislist(visptr).viewx, vislist(visptr).viewheight) Then
+                If statobjlist(statptr).flags And FL_BONUS Then
+                    GetBonus statptr
+                    _Continue
+                End If
+            End If
+
+            If vislist(visptr).viewheight = 0 Then _Continue ' to close to the object
+
+            If visptr < MAXVISABLE - 1 Then visptr = visptr + 1 ' don't let it overflow
+        Next statptr
+
+        '
+        ' place active objects
+        '
+        ob = objlist(player).nextobj
+        Do While ob <> -1
+            vislist(visptr).shapenum = states(objlist(ob).state).shapenum
+            If vislist(visptr).shapenum = 0 Then ' no shape
+                ob = objlist(ob).nextobj
+                _Continue
+            End If
+
+            spotloc = objlist(ob).tilex * 64 + objlist(ob).tiley ' optimize: keep in struct?
+
+            '
+            ' could be in any of the nine surrounding tiles
+            '
+            seen = SpotSeen(spotloc)
+            If Not seen Then seen = NearSpotSeen(spotloc, -1)
+            If Not seen Then seen = NearSpotSeen(spotloc, 1)
+            If Not seen Then seen = NearSpotSeen(spotloc, -65)
+            If Not seen Then seen = NearSpotSeen(spotloc, -64)
+            If Not seen Then seen = NearSpotSeen(spotloc, -63)
+            If Not seen Then seen = NearSpotSeen(spotloc, 65)
+            If Not seen Then seen = NearSpotSeen(spotloc, 64)
+            If Not seen Then seen = NearSpotSeen(spotloc, 63)
+
+            If seen Then
+                objlist(ob).active = ac_yes
+                TransformActor ob
+                If objlist(ob).viewheight <> 0 Then ' else too close or far away
+                    vislist(visptr).viewx = objlist(ob).viewx
+                    vislist(visptr).viewheight = Wrap16%(objlist(ob).viewheight)
+                    If vislist(visptr).shapenum = -1 Then vislist(visptr).shapenum = objlist(ob).temp1 ' special shape
+
+                    If states(objlist(ob).state).rotate Then vislist(visptr).shapenum = vislist(visptr).shapenum + CalcRotate(ob)
+
+                    If visptr < MAXVISABLE - 1 Then visptr = visptr + 1 ' don't let it overflow
+                    objlist(ob).flags = objlist(ob).flags Or FL_VISABLE
+                End If
+            Else
+                objlist(ob).flags = objlist(ob).flags And (Not FL_VISABLE)
+            End If
+
+            ob = objlist(ob).nextobj
+        Loop
+
+        '
+        ' draw from back to front
+        '
+        numvisable = visptr
+
+        If numvisable = 0 Then Exit Sub ' no visable objects
+
+        For i = 0 To numvisable - 1
+            least = 32000
+            For visstep = 0 To visptr - 1
+                height = vislist(visstep).viewheight
+                If height < least Then
+                    least = height
+                    farthest = visstep
+                End If
+            Next visstep
+            '
+            ' draw farthest
+            '
+            ScaleShape vislist(farthest).viewx, vislist(farthest).shapenum, vislist(farthest).viewheight And &HFFFF&
+
+            vislist(farthest).viewheight = 32000
+        Next i
+    End Sub
+
+    '==============
+    '=
+    '= DrawPlayerWeapon
+    '=
+    '= Draw the player's hands
+    '=
+    '==============
+    Sub DrawPlayerWeapon ()
+        Dim shapenum As Integer
+
+        $If SPEAR = UNDEFINED Then
+            If gamestate.victoryflag Then
+                ' TODO 6h: If player->state == &s_deathcam && (TimeCount&32) Then
+                '   SimpleScaleShape viewwidth/2, SPR_DEATHCAM, viewheight+1
+                Exit Sub
+            End If
+        $End If
+
+        If gamestate.weapon <> -1 Then
+            shapenum = weaponscale(gamestate.weapon) + gamestate.weaponframe
+            SimpleScaleShape viewwidth \ 2, shapenum, viewheight + 1
+        End If
+
+        If demorecord Or demoplayback Then SimpleScaleShape viewwidth \ 2, SPR_DEMO, viewheight + 1
+    End Sub
+
     '=====================
     '=
     '= CalcTics
@@ -852,8 +1177,8 @@ $If INCLUDE_WL_DRAW_BM = UNDEFINED Then
         '
         ' draw all the scaled images
         '
-        ' TODO 6e: DrawScaleds - draw scaled stuff
-        ' TODO 6e: DrawPlayerWeapon - draw player's hands
+        DrawScaleds ' draw scaled stuff
+        DrawPlayerWeapon ' draw player's hands
 
         _MemFree drawscreen
 

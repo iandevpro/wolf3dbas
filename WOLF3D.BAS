@@ -79,7 +79,9 @@ demoname = "DEMO?." ' WL_GAME.C, ? = demo number
 Dim Shared EpisodeSelect(5) As Integer
 
 ' Arrays
-Dim Shared dirangle(8) As Integer
+Dim Shared dirangle(8) As Integer ' WL_STATE.C: {0,ANGLES/8,2*ANGLES/8,...,8*ANGLES/8}
+dirangle(0) = 0: dirangle(1) = ANGLES \ 8: dirangle(2) = 2 * ANGLES \ 8: dirangle(3) = 3 * ANGLES \ 8: dirangle(4) = 4 * ANGLES \ 8
+dirangle(5) = 5 * ANGLES \ 8: dirangle(6) = 6 * ANGLES \ 8: dirangle(7) = 7 * ANGLES \ 8: dirangle(8) = 8 * ANGLES \ 8
 ' (sintable, costable, finetangent: WL_DRAW.BI)
 Dim Shared pixelangle(0 To MAXVIEWWIDTH - 1) As Integer
 
@@ -375,6 +377,10 @@ Sub InitGame
 
     LoadLatchMem
 
+    '
+    ' initialize variables
+    '
+    InitRedShifts
 End Sub
 
 '==================

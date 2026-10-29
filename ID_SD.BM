@@ -31,6 +31,9 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         sdPrevSample = 0
         sdCurSample = 0
 
+        sdClockLast = Timer(.001)
+        sdClockAcc = 0
+
         sdPipe = _SndOpenRaw
         sdTimer = _FreeTimer
         On Timer(sdTimer, SD_TIMERSECS) SD_PumpAudio
@@ -107,10 +110,26 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         End If
     End Sub
 
+    ' TimeCount at 70Hz from the clock (the TIME macro of the original timer interrupt)
+    Sub SDL_TimeCountService ()
+        Dim now As Double
+
+        now = Timer(.001)
+        If now < sdClockLast Then sdClockLast = sdClockLast - 86400 ' past midnight
+        sdClockAcc = sdClockAcc + (now - sdClockLast) * 70
+        sdClockLast = now
+        Do While sdClockAcc >= 1
+            TimeCount = TimeCount + 1
+            sdClockAcc = sdClockAcc - 1
+        Loop
+    End Sub
+
     ' Generates audio until SD_BUFFERSECS seconds are queued, called by ON TIMER
     Sub SD_PumpAudio ()
         Dim i As Long
         Dim s As Single
+
+        If sdPipe <> 0 Then SDL_TimeCountService
 
         If sdPipe = 0 Or sdInPump <> 0 Or sdLock <> 0 Then Exit Sub
         sdInPump = -1
@@ -125,11 +144,6 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
                     If sdCountFx >= 5 Then
                         sdCountFx = 0
                         SDL_ALSoundService
-                        sdCountTime = sdCountTime + 1
-                        If sdCountTime >= 2 Then
-                            sdCountTime = 0
-                            TimeCount = TimeCount + 1
-                        End If
                     End If
                     If sqActive Then SDL_ServiceMusicTick
                 End If

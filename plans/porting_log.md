@@ -277,7 +277,7 @@ Commit dd1a23e.
 - **Tested:** scripted key presses and screenshots: New Game → "Get Psyched!" → play screen with the correct status bar → Esc back to the title. The level music wasn't checked by ear.
 
 ## 2026-10-28: Step 6d, raycaster and player movement
-Not committed yet.
+Commit 0d0fba1.
 
 - **What works:** the 3D view. Walls with their light and dark sides, doors (drawn closed until 6f), and the level's ceiling color with the gray floor. Walking and turning with the arrow keys, Alt to strafe, Shift to run, and wall collision with the "hit wall" sound. Esc opens the menu and "Back to Game" returns to the level. End Game (menu or F7) works. The MLI and BAT cheat messages work, and so do the pause key and the F1-F10 shortcuts.
 - **`WL_DRAW.BI` / `WL_DRAW.BM` (new):**
@@ -308,3 +308,39 @@ Not committed yet.
   - Not yet compared side by side with DOSBox-X from the same spots.
   - Walking speed and frame rate not yet measured.
   - Still TODO: mouse motion turning, joystick, demo playback and recording (6j), and the debug keys.
+
+## 2026-10-28: Step 6e, sprites, items and the weapon on screen
+Not committed yet.
+
+- **What works:**
+  - The static objects of the levels show up: ceiling lights, tables, lamps, skeletons, food, ammo and treasure. They are sorted back to front, and hidden behind walls column by column.
+  - The pistol is drawn at the bottom of the view.
+  - Walking over a bonus item picks it up: the status bar updates, the sound plays and the screen flashes yellow-white.
+  - The game now runs at 70 fps (one tic per frame) instead of about 16 fps.
+- **`WL_SCALE.BM`:**
+  - `ScaleShape`, `SimpleScaleShape` and `ScaleLine` draw the compiled sprite format (`t_compshape`) column by column.
+  - The scaler tables now also record, for each texel, its width in pixels (`t_compscale` width[]) and its clipped screen rows, which stand in for the compiled code.
+  - `ScaleShape` follows the C loops exactly. That includes the multi-pixel column clipping against `wallheight()`, and the "rest of the shape is gone" exits.
+- **`WL_DRAW.BM`:** `TransformActor`, `TransformTile` (bonus pickup distance), `CalcRotate`, `DrawScaleds` (statics, then actors seen in any of the 9 tiles around them), and `DrawPlayerWeapon`. The asm `idiv` height uses the 16-bit quotient like the original.
+- **`WL_ACT1`:**
+  - The `statinfo[]` table, with `$If SPEAR` variants.
+  - `SpawnStatic`: blocking statics set `actorat` to 1, and treasures count toward the level total.
+  - `PlaceItemType`, for items that enemies drop (6g).
+- **`WL_AGENT.BM`:**
+  - `GetBonus`, `HealSelf`, `GivePoints` (extra life every 40000), `GiveExtraMan`, `GiveKey`.
+  - The Spear-only 25-clip case is in `GetAmmoBox`, because a `$If` can't go between `Case` lines.
+- **`WL_PLAY.BM`:**
+  - Palette shifts: `InitRedShifts` (computed on the 6-bit VGA values like the original), `ClearPaletteShifts`, `StartBonusFlash`, `StartDamageFlash`, `UpdatePaletteShifts`, `FinishPaletteShifts`. `InitGame` calls `InitRedShifts`.
+  - The play loop now calls the palette updates.
+- **`WOLF3D.BAS`:** `dirangle()` is filled in; it was declared but never set.
+- **Fixes found while testing:**
+  - **Frame rate:** `TimeCount` advanced only when audio was generated, and audio is generated in bursts each time the sound device drains its buffer (about every 60 ms). So `CalcTics` saw jumps of about 4 tics, and the game ran at about 16 fps. Now `SDL_TimeCountService` counts `TimeCount` at 70 Hz from the clock, called from the same `ON TIMER` event. Music and AdLib effects stay clocked by samples. Rendering a frame takes well under a millisecond.
+  - **`DoActor`:** C's `&&` short-circuits, so `areabyplayer[ob->areanumber]` is only read for inactive actors; QB64's `And` always reads it. With noclip inside a wall, the player's area number is negative, and the game stopped with "Subscript out of range". This is now a nested `If`.
+- **Tested:**
+  - With temporary noclip (doors open only in 6f), walked into E1M1's first corridor and room: ceiling lights, a skeleton, dog food, the clip and cell doors all appear in place.
+  - Walked over the clip: ammo went from 8 to 16, and the flash starts the next frame and lasts 18 tics (checked with a temporary log).
+  - The start view shows the pistol. Esc → Back to Game and F7 → Y still work.
+- **Not done yet:**
+  - Enemies are still stubs, so `DrawScaleds`' actor part and `CalcRotate` haven't run yet (6g).
+  - Firing and weapon frames (`Cmd_Fire`, `T_Attack`) are 6g.
+  - The death cam picture is 6h.

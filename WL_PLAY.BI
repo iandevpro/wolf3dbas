@@ -32,6 +32,28 @@ $If INCLUDE_WL_PLAY_BI = UNDEFINED Then
     Dim Shared thrustspeed As Long
     Dim Shared plux As Long, pluy As Long ' player coordinates scaled to unsigned
     Dim Shared playerxmove As Long, playerymove As Long
+    Dim Shared gotgatgun As Integer ' JR
+
+    ' WL_GAME.C
+    Dim Shared spearflag As Integer
+    Dim Shared spearx As Long, speary As Long
+    Dim Shared spearangle As Long ' unsigned
+
+    '
+    ' palette shifts
+    '
+    Const NUMREDSHIFTS = 6
+    Const REDSTEPS = 8
+
+    Const NUMWHITESHIFTS = 3
+    Const WHITESTEPS = 20
+    Const WHITETICS = 6
+
+    Dim Shared redshifts(0 To NUMREDSHIFTS - 1, 0 To 255) As Long
+    Dim Shared whiteshifts(0 To NUMREDSHIFTS - 1, 0 To 255) As Long
+
+    Dim Shared damagecount As Integer, bonuscount As Integer
+    Dim Shared palshifted As Integer
 
     Const MOVESCALE = 150
     Const BACKMOVESCALE = 100
