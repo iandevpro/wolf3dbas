@@ -14,6 +14,13 @@ $If INCLUDE_WL_PLAY_BI = UNDEFINED Then
     Dim Shared demorecord As Integer, demoplayback As Integer
     Dim Shared singlestep As Integer, godmode As Integer, noclip As Integer
     Dim Shared buttonheld(0 To NUMBUTTONS - 1) As Integer
+    Dim Shared controlx As Integer, controly As Integer ' range from -100 to 100 per tic
+
+    Const BASEMOVE = 35
+    Const RUNMOVE = 70
+    Const BASETURN = 35
+    Const RUNTURN = 70
+    Const JOYSCALE = 2
     Dim Shared buttonstate(0 To NUMBUTTONS - 1) As Integer
 
     ' WL_GAME
@@ -22,6 +29,13 @@ $If INCLUDE_WL_PLAY_BI = UNDEFINED Then
     ' WL_AGENT
     Dim Shared facecount As Integer
     Dim Shared LastAttacker As Integer ' objtype *LastAttacker - objlist index, -1 = NULL
+    Dim Shared thrustspeed As Long
+    Dim Shared plux As Long, pluy As Long ' player coordinates scaled to unsigned
+    Dim Shared playerxmove As Long, playerymove As Long
+
+    Const MOVESCALE = 150
+    Const BACKMOVESCALE = 100
+    Const ANGLESCALE = 20
 
     Dim Shared dirscan(0 To 3) As Integer
     Dim Shared buttonscan(0 To NUMBUTTONS - 1) As Integer

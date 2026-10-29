@@ -350,8 +350,17 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     Dim Shared LSMenu(0 To 9) As CP_itemtype
     Dim Shared SaveGameNames(0 To 9) As String ' char SaveGameNames[10][32]
     Dim Shared GAMESVD As String
+    Dim Shared ENDGAMESTR As String
+
+    Const STR_LGC = "Load Game called" ' + "\n\"" (added where used)
+    Const STR_CHEATER1 = "You now have 100% Health,"
+    Const STR_CHEATER2 = "99 Ammo and both Keys!"
+    Const STR_CHEATER3 = "Note that you have basically"
+    Const STR_CHEATER4 = "eliminated your chances of"
+    Const STR_CHEATER5 = "getting a high score!"
 
     GAMESVD = "There's already a game" + Chr$(10) + "saved at this position." + Chr$(10) + "      Overwrite?"
+    ENDGAMESTR = "Are you sure you want" + Chr$(10) + "to end the game you" + Chr$(10) + "are playing? (Y or N):"
 
     ' LSItems={LSM_X,LSM_Y,10,0,24}
     LSItems.x = LSM_X: LSItems.y = LSM_Y: LSItems.amount = 10: LSItems.curpos = 0: LSItems.indent = 24

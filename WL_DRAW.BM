@@ -1,0 +1,878 @@
+' WL_DRAW.C + WL_DR_A.ASM - the 3D refresh: ray casting, walls, doors, push walls
+'
+' The original drew into one of three VGA pages and flipped them; here the frame is drawn
+' straight into the Screen 13 page (through drawscreen = _MemImage) and shown with _Display.
+' Scaled sprites and the player's weapon come in step 6e.
+
+$If INCLUDE_WL_DRAW_BM = UNDEFINED Then
+    $Let INCLUDE_WL_DRAW_BM = 1
+
+    '$INCLUDE: 'WL_DRAW.BI'
+
+    ' #define DOORWALL (PMSpriteStart-8)
+    Function DOORWALL% ()
+        DOORWALL% = PMSpriteStart - 8
+    End Function
+
+    '========================
+    '=
+    '= FixedByFrac
+    '=
+    '= multiply a 16/16 bit, 2's complement fixed point number by a 16 bit
+    '= fraction, passed as a signed magnitude 32 bit number
+    '=
+    '= (assembly in the original: abs(a) * low word of b, high 32 bits of the product,
+    '= negated when the sign of a and the sign bit of b differ)
+    '=
+    '========================
+    Function FixedByFrac& (a As Long, b As Long)
+        Dim frac As _Integer64, ua As _Integer64, value As _Integer64
+        Dim negative As Integer
+
+        negative = (a < 0) Xor ((b And &H80000000&) <> 0)
+        ua = Abs(CLng(a))
+        frac = b And &HFFFF&
+        value = (ua * frac) \ 65536
+        If negative Then value = -value
+        FixedByFrac& = value
+    End Function
+
+    ' Wraps a 64-bit value to a signed 32-bit long, like the 32-bit adds of the C / asm code
+    Function Wrap32& (v As _Integer64)
+        Dim w As _Integer64
+        w = v And &HFFFFFFFF&&
+        If w >= &H80000000&& Then w = w - &H100000000&&
+        Wrap32& = w
+    End Function
+
+    ' 32-bit add / multiply that wrap like the C / asm code (QB64 Long math would overflow)
+    Function Add32& (a As Long, b As Long)
+        Dim t As _Integer64
+        t = a
+        t = t + b
+        Add32& = Wrap32&(t)
+    End Function
+
+    Function Mul32& (a As Long, b As Long)
+        Dim t As _Integer64
+        t = a
+        t = t * b
+        Mul32& = Wrap32&(t)
+    End Function
+
+    ' Arithmetic shift right of a long (sar), rounds down like the C / asm code
+    Function SarL& (v As Long, bits As Integer)
+        Dim t As _Integer64, p As _Integer64
+        t = v
+        p = 2 ^ bits
+        If t >= 0 Then
+            SarL& = t \ p
+        Else
+            SarL& = -((-t + p - 1) \ p)
+        End If
+    End Function
+
+    ' High word of a 32-bit value as a signed 16-bit number (the asm takes DX): v >> 16
+    Function HiWord& (v As Long)
+        HiWord& = SarL&(v, 16)
+    End Function
+
+    ' xpartialbyystep / ypartialbyxstep: long step (possibly negative) times an unsigned word,
+    ' high 32 bits, sign magnitude like FixedByFrac
+    Function PartialByStep& (stepv As Long, partial As Long)
+        Dim value As _Integer64
+        value = stepv
+        value = (Abs(value) * partial) \ 65536
+        If stepv < 0 Then value = -value
+        PartialByStep& = Wrap32&(value)
+    End Function
+
+    $Checking:Off
+    '========================
+    '=
+    '= CalcHeight
+    '=
+    '= Calculates the height of xintercept,yintercept from viewx,viewy
+    '=
+    '========================
+    Function CalcHeight& ()
+        Dim gxt As Long, gyt As Long, nx As Long, gx As Long, gy As Long
+        Dim divisor As Long
+
+        gx = xintercept - viewx
+        gxt = FixedByFrac(gx, viewcos)
+        gy = yintercept - viewy
+        gyt = FixedByFrac(gy, viewsin)
+        nx = gxt - gyt
+
+        '
+        ' calculate perspective ratio (heightnumerator/(nx>>8))
+        '
+        If nx < MINDIST Then nx = MINDIST ' don't let divide overflow
+
+        ' idiv [WORD PTR nx+1]: the 16-bit word (nx>>8), truncated division
+        divisor = (nx \ 256) And &HFFFF&
+        If divisor >= 32768 Then divisor = divisor - 65536
+        If divisor = 0 Then divisor = 1
+        CalcHeight& = heightnumerator \ divisor
+    End Function
+
+    '===================
+    '=
+    '= ScalePost
+    '=
+    '= Draws the columns postx .. postx + postwidth - 1 of a wall: texture column posttex of
+    '= page postpage, scaled by the scaler of wallheight(postx) (see WL_SCALE.BM)
+    '=
+    '===================
+    Sub ScalePost ()
+        Dim sc As Long, x As Long, y As Long, src As Long
+        Dim column As String * 64
+        Dim scr As _Offset, rowofs As Long
+
+        sc = (wallheight(postx) And &HFFF8&) \ 8 ' fractional height (low 3 bits frac)
+        If sc > maxscale Then sc = maxscale
+        sc = scalerof(sc)
+
+        _MemGet PMData, PMData.OFFSET + postpage + posttex, column
+
+        For y = scalertop(sc) To scalerbottom(sc)
+            src = scalersrc(sc, y)
+            rowofs = (viewscreeny + y) * 320 + viewscreenx + postx
+            scr = drawscreen.OFFSET + rowofs
+            For x = 0 To postwidth - 1
+                _MemPut drawscreen, scr + x, Asc(column, src + 1) As _UNSIGNED _BYTE
+            Next x
+        Next y
+    End Sub
+
+    Sub FarScalePost () ' just so other files can call
+        ScalePost
+    End Sub
+
+    '====================
+    '=
+    '= HitVertWall
+    '=
+    '= tilehit bit 7 is 0, because it's not a door tile
+    '= if bit 6 is 1 and the adjacent tile is a door tile, use door side pic
+    '=
+    '====================
+    Sub HitVertWall ()
+        Dim wallpic As Integer, texture As Long
+
+        texture = (yintercept \ 16) And &HFC0&
+        If xtilestep = -1 Then
+            texture = &HFC0& - texture
+            xintercept = xintercept + TILEGLOBAL
+        End If
+        wallheight(pixx) = CalcHeight
+
+        If lastside = 1 And lastintercept = xtile And lasttilehit = tilehit Then
+            ' in the same wall type as last time, so check for optimized draw
+            If texture = posttex Then
+                ' wide scale
+                postwidth = postwidth + 1
+                wallheight(pixx) = wallheight(pixx - 1)
+                Exit Sub
+            Else
+                ScalePost
+                posttex = texture
+                postwidth = 1
+                postx = pixx
+            End If
+        Else
+            ' new wall
+            If lastside <> -1 Then ScalePost ' if not the first scaled post
+
+            lastside = 1 ' true
+            lastintercept = xtile
+
+            lasttilehit = tilehit
+            postx = pixx
+            postwidth = 1
+
+            If tilehit And &H40 Then
+                ' check for adjacent doors
+                ytile = HiWord(yintercept) ' yintercept>>TILESHIFT
+                If tilemap(xtile - xtilestep, ytile) And &H80 Then
+                    wallpic = DOORWALL + 3
+                Else
+                    wallpic = vertwall(tilehit And Not &H40)
+                End If
+            Else
+                wallpic = vertwall(tilehit)
+            End If
+
+            postpage = PM_GetPage(wallpic)
+            posttex = texture
+        End If
+    End Sub
+
+    '====================
+    '=
+    '= HitHorizWall
+    '=
+    '= tilehit bit 7 is 0, because it's not a door tile
+    '= if bit 6 is 1 and the adjacent tile is a door tile, use door side pic
+    '=
+    '====================
+    Sub HitHorizWall ()
+        Dim wallpic As Integer, texture As Long
+
+        texture = (xintercept \ 16) And &HFC0&
+        If ytilestep = -1 Then
+            yintercept = yintercept + TILEGLOBAL
+        Else
+            texture = &HFC0& - texture
+        End If
+        wallheight(pixx) = CalcHeight
+
+        If lastside = 0 And lastintercept = ytile And lasttilehit = tilehit Then
+            ' in the same wall type as last time, so check for optimized draw
+            If texture = posttex Then
+                ' wide scale
+                postwidth = postwidth + 1
+                wallheight(pixx) = wallheight(pixx - 1)
+                Exit Sub
+            Else
+                ScalePost
+                posttex = texture
+                postwidth = 1
+                postx = pixx
+            End If
+        Else
+            ' new wall
+            If lastside <> -1 Then ScalePost ' if not the first scaled post
+
+            lastside = 0
+            lastintercept = ytile
+
+            lasttilehit = tilehit
+            postx = pixx
+            postwidth = 1
+
+            If tilehit And &H40 Then
+                ' check for adjacent doors
+                xtile = HiWord(xintercept) ' xintercept>>TILESHIFT
+                If tilemap(xtile, ytile - ytilestep) And &H80 Then
+                    wallpic = DOORWALL + 2
+                Else
+                    wallpic = horizwall(tilehit And Not &H40)
+                End If
+            Else
+                wallpic = horizwall(tilehit)
+            End If
+
+            postpage = PM_GetPage(wallpic)
+            posttex = texture
+        End If
+    End Sub
+
+    ' Page of a door, from its lock (HitHorizDoor / HitVertDoor)
+    Function DoorPage% (doornum As Long)
+        Select Case doorobjlist(doornum).doorlock
+            Case dr_normal
+                DoorPage% = DOORWALL
+            Case dr_lock1, dr_lock2, dr_lock3, dr_lock4
+                DoorPage% = DOORWALL + 6
+            Case dr_elevator
+                DoorPage% = DOORWALL + 4
+        End Select
+    End Function
+
+    '====================
+    '=
+    '= HitHorizDoor
+    '=
+    '====================
+    Sub HitHorizDoor ()
+        Dim texture As Long, doornum As Long
+
+        doornum = tilehit And &H7F
+        texture = ((xintercept - doorposition(doornum)) \ 16) And &HFC0&
+
+        wallheight(pixx) = CalcHeight
+
+        If lasttilehit = tilehit Then
+            ' in the same door as last time, so check for optimized draw
+            If texture = posttex Then
+                ' wide scale
+                postwidth = postwidth + 1
+                wallheight(pixx) = wallheight(pixx - 1)
+                Exit Sub
+            Else
+                ScalePost
+                posttex = texture
+                postwidth = 1
+                postx = pixx
+            End If
+        Else
+            If lastside <> -1 Then ScalePost ' draw last post
+            ' first pixel in this door
+            lastside = 2
+            lasttilehit = tilehit
+            postx = pixx
+            postwidth = 1
+
+            postpage = PM_GetPage(DoorPage(doornum))
+            posttex = texture
+        End If
+    End Sub
+
+    '====================
+    '=
+    '= HitVertDoor
+    '=
+    '====================
+    Sub HitVertDoor ()
+        Dim texture As Long, doornum As Long
+
+        doornum = tilehit And &H7F
+        texture = ((yintercept - doorposition(doornum)) \ 16) And &HFC0&
+
+        wallheight(pixx) = CalcHeight
+
+        If lasttilehit = tilehit Then
+            ' in the same door as last time, so check for optimized draw
+            If texture = posttex Then
+                ' wide scale
+                postwidth = postwidth + 1
+                wallheight(pixx) = wallheight(pixx - 1)
+                Exit Sub
+            Else
+                ScalePost
+                posttex = texture
+                postwidth = 1
+                postx = pixx
+            End If
+        Else
+            If lastside <> -1 Then ScalePost ' draw last post
+            ' first pixel in this door
+            lastside = 2
+            lasttilehit = tilehit
+            postx = pixx
+            postwidth = 1
+
+            postpage = PM_GetPage(DoorPage(doornum) + 1)
+            posttex = texture
+        End If
+    End Sub
+
+    '====================
+    '=
+    '= HitHorizPWall
+    '=
+    '= A pushable wall in action has been hit
+    '=
+    '====================
+    Sub HitHorizPWall ()
+        Dim wallpic As Integer, texture As Long, offset As Long
+
+        texture = (xintercept \ 16) And &HFC0&
+        offset = (pwallpos * 1024) And &HFFFF& ' unsigned offset = pwallpos<<10
+        If ytilestep = -1 Then
+            yintercept = yintercept + TILEGLOBAL - offset
+        Else
+            texture = &HFC0& - texture
+            yintercept = yintercept + offset
+        End If
+
+        wallheight(pixx) = CalcHeight
+
+        If lasttilehit = tilehit Then
+            ' in the same wall type as last time, so check for optimized draw
+            If texture = posttex Then
+                ' wide scale
+                postwidth = postwidth + 1
+                wallheight(pixx) = wallheight(pixx - 1)
+                Exit Sub
+            Else
+                ScalePost
+                posttex = texture
+                postwidth = 1
+                postx = pixx
+            End If
+        Else
+            ' new wall
+            If lastside <> -1 Then ScalePost ' if not the first scaled post
+
+            lasttilehit = tilehit
+            postx = pixx
+            postwidth = 1
+
+            wallpic = horizwall(tilehit And 63)
+
+            postpage = PM_GetPage(wallpic)
+            posttex = texture
+        End If
+    End Sub
+
+    '====================
+    '=
+    '= HitVertPWall
+    '=
+    '= A pushable wall in action has been hit
+    '=
+    '====================
+    Sub HitVertPWall ()
+        Dim wallpic As Integer, texture As Long, offset As Long
+
+        texture = (yintercept \ 16) And &HFC0&
+        offset = (pwallpos * 1024) And &HFFFF& ' unsigned offset = pwallpos<<10
+        If xtilestep = -1 Then
+            xintercept = xintercept + TILEGLOBAL - offset
+            texture = &HFC0& - texture
+        Else
+            xintercept = xintercept + offset
+        End If
+
+        wallheight(pixx) = CalcHeight
+
+        If lasttilehit = tilehit Then
+            ' in the same wall type as last time, so check for optimized draw
+            If texture = posttex Then
+                ' wide scale
+                postwidth = postwidth + 1
+                wallheight(pixx) = wallheight(pixx - 1)
+                Exit Sub
+            Else
+                ScalePost
+                posttex = texture
+                postwidth = 1
+                postx = pixx
+            End If
+        Else
+            ' new wall
+            If lastside <> -1 Then ScalePost ' if not the first scaled post
+
+            lasttilehit = tilehit
+            postx = pixx
+            postwidth = 1
+
+            wallpic = vertwall(tilehit And 63)
+
+            postpage = PM_GetPage(wallpic)
+            posttex = texture
+        End If
+    End Sub
+
+    '============================
+    '=
+    '= AsmRefresh (WL_DR_A.ASM)
+    '=
+    '= Traces a ray for every column of the view. The asm kept the core loop in registers:
+    '= BX xtile, CX high word of xintercept (xinttile), DX high word of yintercept
+    '= (yinttile), BP ytile; the C globals are used for them here. The comparisons the
+    '= asm patched in (jle / jge) are chosen with ytilestep / xtilestep.
+    '=
+    '============================
+    Sub AsmRefresh ()
+        Dim a As Long, newpos As Long, half As Long
+
+        pixx = 0
+
+        Do ' pixxloop
+            '
+            ' Setup to trace a ray through pixx view pixel
+            '
+            a = midangle + pixelangle(pixx) ' center of view area + delta for this pixel
+            If a < 0 Then a = a + FINEANGLES ' -90 is the same as 270
+            If a >= ANG360 Then a = a - FINEANGLES ' -449 is the same as 89
+
+            If a < ANG90 Then
+                ' 0-89 degree arc
+                xtilestep = 1
+                ytilestep = -1
+                xstep = finetangent(ANG90 - 1 - a)
+                ystep = -finetangent(a)
+                xpartial = xpartialup
+                ypartial = ypartialdown
+            ElseIf a < ANG180 Then
+                ' 90-179 degree arc
+                xtilestep = -1
+                ytilestep = -1
+                xstep = -finetangent(a - ANG90)
+                ystep = -finetangent(ANG180 - 1 - a)
+                xpartial = xpartialdown
+                ypartial = ypartialdown
+            ElseIf a < ANG270 Then
+                ' 180-269 degree arc
+                xtilestep = -1
+                ytilestep = 1
+                xstep = -finetangent(ANG270 - 1 - a)
+                ystep = finetangent(a - ANG180)
+                xpartial = xpartialdown
+                ypartial = ypartialup
+            Else
+                ' 270-359 degree arc
+                xtilestep = 1
+                ytilestep = 1
+                xstep = finetangent(a - ANG270)
+                ystep = finetangent(ANG360 - 1 - a)
+                xpartial = xpartialup
+                ypartial = ypartialup
+            End If
+
+            '
+            ' initialise variables for intersection testing
+            '
+            yintercept = Add32(viewy, PartialByStep(ystep, xpartial))
+            xtile = focaltx + xtilestep
+            yinttile = HiWord(yintercept)
+
+            xintercept = Add32(viewx, PartialByStep(xstep, ypartial))
+            xinttile = HiWord(xintercept)
+            ytile = focalty + ytilestep
+
+            '
+            ' trace along this angle until we hit a wall
+            '
+            vertcheck:
+            If ytilestep = -1 Then
+                If yinttile <= ytile Then GoTo horizentry
+            Else
+                If yinttile >= ytile Then GoTo horizentry
+            End If
+
+            vertentry:
+            If tilemap(xtile, yinttile) <> 0 Then GoTo hitvert
+
+            passvert:
+            spotvis(xtile, yinttile) = 1
+            xtile = xtile + xtilestep
+            yintercept = Add32(yintercept, ystep)
+            yinttile = HiWord(yintercept)
+            GoTo vertcheck
+
+            hitvert:
+            tilehit = tilemap(xtile, yinttile)
+            If tilehit And &H80 Then GoTo vertdoor
+            xintercept = xtile * 65536
+            ytile = yinttile
+            HitVertWall
+            GoTo nextpix
+
+            horizcheck:
+            If xtilestep = -1 Then
+                If xinttile <= xtile Then GoTo vertentry
+            Else
+                If xinttile >= xtile Then GoTo vertentry
+            End If
+
+            horizentry:
+            If tilemap(xinttile, ytile) <> 0 Then GoTo hithoriz
+
+            passhoriz:
+            spotvis(xinttile, ytile) = 1
+            ytile = ytile + ytilestep
+            xintercept = Add32(xintercept, xstep)
+            xinttile = HiWord(xintercept)
+            GoTo horizcheck
+
+            hithoriz:
+            tilehit = tilemap(xinttile, ytile)
+            If tilehit And &H80 Then GoTo horizdoor
+            xtile = xinttile
+            yintercept = ytile * 65536
+            HitHorizWall
+            GoTo nextpix
+
+            '
+            ' hit a special horizontal wall, so find which coordinate a door would be
+            ' intersected at, and check to see if the door is open past that point
+            '
+            horizdoor:
+            If tilehit And &H40 Then GoTo horizpushwall ' both high bits set == pushable wall
+            half = SarL(xstep, 1) ' half a step gets to door position
+            newpos = Add32(xintercept, half)
+            If HiWord(newpos) <> xinttile Then GoTo passhoriz ' midpoint is outside tile, hit the side of the wall
+            ' the trace hit the door plane at pixel position (low word), see if the door is closed that much
+            If (newpos And &HFFFF&) < doorposition(tilehit And &H7F) Then GoTo passhoriz
+            ' draw the door
+            xintercept = newpos
+            yintercept = ytile * 65536 + &H8000& ' intercept in middle of tile
+            HitHorizDoor
+            GoTo nextpix
+
+            '
+            ' hit a sliding horizontal wall
+            '
+            horizpushwall:
+            half = SarL(Mul32(xstep, pwallpos), 6) ' xstep * pwallpos / 64
+            newpos = Add32(xintercept, half)
+            If HiWord(newpos) <> xinttile Then GoTo passhoriz ' no, it hit the side
+            ' draw the pushable wall at the new height
+            xintercept = newpos
+            yintercept = ytile * 65536
+            HitHorizPWall
+            GoTo nextpix
+
+            '
+            ' hit a special vertical wall, so find which coordinate a door would be
+            ' intersected at, and check to see if the door is open past that point
+            '
+            vertdoor:
+            If tilehit And &H40 Then GoTo vertpushwall ' both high bits set == pushable wall
+            half = SarL(ystep, 1) ' half a step gets to door position
+            newpos = Add32(yintercept, half)
+            If HiWord(newpos) <> yinttile Then GoTo passvert ' midpoint is outside tile, hit the side of the wall
+            ' the trace hit the door plane at pixel position (low word), see if the door is closed that much
+            If (newpos And &HFFFF&) < doorposition(tilehit And &H7F) Then GoTo passvert
+            ' draw the door
+            yintercept = newpos
+            xintercept = xtile * 65536 + &H8000& ' intercept in middle of tile
+            HitVertDoor
+            GoTo nextpix
+
+            '
+            ' hit a sliding vertical wall
+            '
+            vertpushwall:
+            half = SarL(Mul32(ystep, pwallpos), 6) ' ystep * pwallpos / 64
+            newpos = Add32(yintercept, half)
+            If HiWord(newpos) <> yinttile Then GoTo passvert ' no, it hit the side
+            ' draw the pushable wall at the new height
+            yintercept = newpos
+            xintercept = xtile * 65536
+            HitVertPWall
+            GoTo nextpix
+
+            '
+            ' next pixel over
+            '
+            nextpix:
+            pixx = pixx + 1
+        Loop While pixx < viewwidth
+    End Sub
+
+    '=====================
+    '=
+    '= VGAClearScreen
+    '=
+    '=====================
+    Sub VGAClearScreen ()
+        Dim y As Long, ceiling As Integer
+        Dim ceilrow As String, floorrow As String
+
+        ceiling = vgaCeiling(gamestate.episode * 10 + mapon) And &HFF
+        ceilrow = String$(viewwidth, ceiling)
+        floorrow = String$(viewwidth, &H19)
+
+        '
+        ' clear the screen
+        '
+        For y = 0 To viewheight \ 2 - 1
+            _MemPut drawscreen, drawscreen.OFFSET + (viewscreeny + y) * 320 + viewscreenx, ceilrow
+        Next y
+        For y = viewheight \ 2 To (viewheight \ 2) * 2 - 1
+            _MemPut drawscreen, drawscreen.OFFSET + (viewscreeny + y) * 320 + viewscreenx, floorrow
+        Next y
+    End Sub
+    $Checking:On
+
+    '=====================
+    '=
+    '= CalcTics
+    '=
+    '=====================
+    Sub CalcTics ()
+        Dim newtime As Long
+
+        '
+        ' calculate tics since last refresh for adaptive timing
+        '
+        If lasttimecount > TimeCount Then TimeCount = lasttimecount ' if the game was paused a LONG time
+
+        Do
+            newtime = TimeCount
+            tics = newtime - lasttimecount
+            If tics = 0 Then _Limit 1000 ' (the original spun here; TimeCount comes from the audio pump)
+        Loop While tics = 0 ' make sure at least one tic passes
+
+        lasttimecount = newtime
+
+        If tics > MAXTICS Then
+            TimeCount = TimeCount - (tics - MAXTICS)
+            tics = MAXTICS
+        End If
+    End Sub
+
+    '====================
+    '=
+    '= WallRefresh
+    '=
+    '====================
+    Sub WallRefresh ()
+        '
+        ' set up variables for this view
+        '
+        viewangle = objlist(player).angle
+        midangle = viewangle * (FINEANGLES \ ANGLES)
+        viewsin = sintable(viewangle)
+        viewcos = costable(viewangle)
+        viewx = objlist(player).x - FixedByFrac(FOCALLENGTH, viewcos)
+        viewy = objlist(player).y + FixedByFrac(FOCALLENGTH, viewsin)
+
+        focaltx = HiWord(viewx) ' viewx>>TILESHIFT
+        focalty = HiWord(viewy)
+
+        viewtx = HiWord(objlist(player).x)
+        viewty = HiWord(objlist(player).y)
+
+        xpartialdown = viewx And (TILEGLOBAL - 1)
+        xpartialup = (TILEGLOBAL - xpartialdown) And &HFFFF& ' unsigned: 0x10000 becomes 0
+        ypartialdown = viewy And (TILEGLOBAL - 1)
+        ypartialup = (TILEGLOBAL - ypartialdown) And &HFFFF&
+
+        lastside = -1 ' the first pixel is on a new wall
+        AsmRefresh
+        ScalePost ' no more optimization on last post
+    End Sub
+
+    '===================
+    '=
+    '= FizzleFade
+    '=
+    '= The original copied pixels from the buffer page to the displayed page in a
+    '= pseudo random order (17-bit LFSR). Here the frame is already drawn on the one screen
+    '= page: the new view (source) is taken from it, the previous view (oldview) is put
+    '= back, and then the new pixels are copied over it the same way.
+    '= x, y: top left of the area on the screen; returns true if aborted
+    '=
+    '===================
+    Function FizzleFade% (oldview() As _Unsigned _Byte, x0 As Integer, y0 As Integer, width As Integer, height As Integer, frames As Integer, abortable As Integer)
+        Dim pixperframe As Long, x As Long, y As Long, p As Long, frame As Long
+        Dim rndval As Long, w As Long, h As Long, ofs As Long
+        Dim source(0 To 319, 0 To 199) As _Unsigned _Byte
+        Dim scr As _MEM
+
+        FizzleFade% = FALSE
+        scr = _MemImage(0)
+
+        ' take the new picture and put the old one back (one pixel more than the area, as the original)
+        For y = 0 To height
+            For x = 0 To width
+                If x0 + x < 320 And y0 + y < 200 Then
+                    ofs = (y0 + y) * 320 + x0 + x
+                    source(x0 + x, y0 + y) = _MemGet(scr, scr.OFFSET + ofs, _Unsigned _Byte)
+                    _MemPut scr, scr.OFFSET + ofs, oldview(x, y)
+                End If
+            Next x
+        Next y
+
+        rndval = 1
+        pixperframe = 64000 \ frames
+
+        IN_StartAck
+        TimeCount = 0
+        frame = 0
+        Do ' while (1)
+            If abortable And IN_CheckAck Then FizzleFade% = TRUE: Exit Do
+
+            For p = 0 To pixperframe - 1
+                '
+                ' seperate random value into x/y pair
+                '
+                y = ((rndval And &HFF) - 1) And &HFF ' low 8 bits - 1 = y xoordinate
+                x = (rndval \ 256) And &H1FF ' next 9 bits = x xoordinate
+
+                '
+                ' advance to next random element
+                '
+                If rndval And 1 Then
+                    rndval = (rndval \ 2) Xor &H12000&
+                Else
+                    rndval = rndval \ 2
+                End If
+
+                If x > width Or y > height Then _Continue
+
+                '
+                ' copy one pixel
+                '
+                If x0 + x < 320 And y0 + y < 200 Then
+                    _MemPut scr, scr.OFFSET + (y0 + y) * 320 + x0 + x, source(x0 + x, y0 + y)
+                End If
+
+                If rndval = 1 Then Exit For ' entire sequence has been completed
+            Next p
+
+            _Display
+            If rndval = 1 Then Exit Do
+
+            frame = frame + 1
+            Do While TimeCount < frame ' don't go too fast
+                _Limit 1000
+            Loop
+        Loop
+
+        _MemFree scr
+    End Function
+
+    '========================
+    '=
+    '= ThreeDRefresh
+    '=
+    '========================
+    Sub ThreeDRefresh ()
+        Dim x As Integer, y As Integer, result As Integer
+        Dim oldview(0 To 320, 0 To 200) As _Unsigned _Byte
+
+        '
+        ' clear out the traced array
+        '
+        For x = 0 To MAPSIZE - 1
+            For y = 0 To MAPSIZE - 1
+                spotvis(x, y) = 0
+            Next y
+        Next x
+
+        drawscreen = _MemImage(0)
+
+        ' bufferofs += screenofs: the view starts at viewscreenx, viewscreeny
+
+        If fizzlein Then
+            ' keep what is on the screen now, FizzleFade fades from it
+            For y = 0 To viewheight
+                For x = 0 To viewwidth
+                    If viewscreenx + x < 320 And viewscreeny + y < 200 Then
+                        oldview(x, y) = _MemGet(drawscreen, drawscreen.OFFSET + (viewscreeny + y) * 320 + viewscreenx + x, _Unsigned _Byte)
+                    End If
+                Next x
+            Next y
+        End If
+
+        '
+        ' follow the walls from there to the right, drawwing as we go
+        '
+        VGAClearScreen
+        WallRefresh
+
+        '
+        ' draw all the scaled images
+        '
+        ' TODO 6e: DrawScaleds - draw scaled stuff
+        ' TODO 6e: DrawPlayerWeapon - draw player's hands
+
+        _MemFree drawscreen
+
+        '
+        ' show screen and time last cycle
+        '
+        If fizzlein Then
+            result = FizzleFade(oldview(), viewscreenx, viewscreeny, viewwidth, viewheight, 20, FALSE)
+            fizzlein = FALSE
+
+            lasttimecount = 0 ' don't make a big tic count
+            TimeCount = 0
+        End If
+
+        ' page flip in the original
+        _Display
+
+        frameon = frameon + 1
+        ' PM_NextFrame - page manager statistics, not needed
+    End Sub
+
+$EndIf

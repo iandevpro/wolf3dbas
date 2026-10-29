@@ -23,6 +23,9 @@ Const TRUE = -1
 '$INCLUDE: 'WL_TEXT.BI'
 '$INCLUDE: 'ID_PM.BI'
 '$INCLUDE: 'WL_ACT1.BI'
+'$INCLUDE: 'WL_DRAW.BI'
+'$INCLUDE: 'WL_SCALE.BI'
+'$INCLUDE: 'WL_STATE.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -77,10 +80,8 @@ Dim Shared EpisodeSelect(5) As Integer
 
 ' Arrays
 Dim Shared dirangle(8) As Integer
-Dim Shared sintable(ANGLES) As Long
-Dim Shared costable(ANGLES) As Long
-Dim Shared finetangent(ANGLES / 4) As Long
-Dim Shared pixelangle(MAXVIEWWIDTH) As Integer
+' (sintable, costable, finetangent: WL_DRAW.BI)
+Dim Shared pixelangle(0 To MAXVIEWWIDTH - 1) As Integer
 
 ' Main Program
 
@@ -156,6 +157,9 @@ System
 '$INCLUDE:'WL_ACT1.BM'
 '$INCLUDE:'WL_ACT2.BM'
 '$INCLUDE:'WL_AGENT.BM'
+'$INCLUDE:'WL_DRAW.BM'
+'$INCLUDE:'WL_SCALE.BM'
+'$INCLUDE:'WL_STATE.BM'
 
 '==========================
 '=
@@ -335,6 +339,7 @@ End Sub
 ' Subroutines
 Sub InitGame
     ' Initialize game systems
+    InitStates ' the statetype initializers of the C files
     Call BuildTables
     Call SetupWalls
     Call NewViewSize(15) ' Default view size
@@ -372,55 +377,60 @@ Sub InitGame
 
 End Sub
 
+'==================
+'=
+'= BuildTables
+'=
+'= Calculates:
+'=
+'= scale                 projection constant
+'= sintable/costable     overlapping fractional tables
+'=
+'= C float math is done in Single, and Fix() truncates like the C conversions to integer
+'=
+'==================
 Sub BuildTables
-    ' Build sine/cosine tables
     Dim i As Integer
-    Dim angle As Single
-    Dim anglestep As Single
+    Dim angle As Single, anglestep As Single
     Dim tang As Double
     Dim value As Long
+    Dim radtoint As Single
 
-    ' Calculate fine tangents
-    For i = 0 To ANGLES / 8 - 1
-        tang = Tan((i + 0.5) / (ANGLES / 2 / PI))
-        finetangent(i) = tang * TILEGLOBAL
-        finetangent(ANGLES / 4 - 1 - i) = (1 / tang) * TILEGLOBAL
+    radtoint = FINEANGLES / 2 / PI ' const float radtoint = (float)FINEANGLES/2/PI
+
+    '
+    ' calculate fine tangents
+    '
+    For i = 0 To FINEANGLES \ 8 - 1
+        tang = Tan((i + 0.5) / radtoint)
+        finetangent(i) = Fix(tang * TILEGLOBAL)
+        finetangent(FINEANGLES \ 4 - 1 - i) = Fix(1 / tang * TILEGLOBAL)
     Next i
 
-    ' Build sine/cosine tables
+    '
+    ' costable overlays sintable with a quarter phase shift
+    ' ANGLES is assumed to be divisable by four
+    '
+    ' The low word of the value is the fraction, the high bit is the sign bit,
+    ' bits 16-30 should be 0
+    '
     angle = 0
-    anglestep = PI / 2 / (ANGLES / 4)
-    For i = 0 To ANGLES / 4 - 1
-        value = Sin(angle) * &H10000
+    anglestep = PI / 2 / ANGLEQUAD
+    For i = 0 To ANGLEQUAD
+        value = Fix(GLOBAL1 * Sin(CDbl(angle)))
         sintable(i) = value
-        sintable(i + ANGLES / 2) = value
-        sintable(ANGLES / 2 - 1 - i) = value
-        sintable(ANGLES - 1 - i) = value Or &H80000000&
-        sintable(ANGLES / 2 + i) = value Or &H80000000&
+        sintable(i + ANGLES) = value
+        sintable(ANGLES \ 2 - i) = value
+        sintable(ANGLES - i) = value Or &H80000000&
+        sintable(ANGLES \ 2 + i) = value Or &H80000000&
         angle = angle + anglestep
     Next i
+
+    ' fixed far *costable = sintable+(ANGLES/4)
+    For i = 0 To ANGLES
+        costable(i) = sintable(i + ANGLEQUAD)
+    Next i
 End Sub
-
-'===================
-'=
-'= FixedByFrac
-'=
-'= Multiplies a 16.16 fixed point value by a fraction in the sintable / costable format:
-'= sign bit (bit 31) + 16 bit fraction (bits 16-30 are 0). The original was assembly
-'= (not in these sources); the result is truncated like its unsigned multiply
-'=
-'===================
-Function FixedByFrac& (a As Long, b As Long)
-    Dim frac As _Integer64, ua As _Integer64, value As _Integer64
-    Dim negative As Integer
-
-    negative = (a < 0) Xor ((b And &H80000000&) <> 0)
-    ua = Abs(CLng(a))
-    frac = b And &HFFFF&
-    value = (ua * frac) \ 65536
-    If negative Then value = -value
-    FixedByFrac& = value
-End Function
 
 Sub SetupWalls
     ' Initialize wall tile mappings
@@ -441,17 +451,22 @@ Function SetViewSize% (width As Integer, height As Integer)
     viewheight = height And Not 1 ' must be even
     centerx = viewwidth \ 2 - 1
     shootdelta = viewwidth \ 10
-    screenofs = ((200 - STATUSLINES - viewheight) \ 2 * 80 + (320 - viewwidth) \ 8) ' SCREENWIDTH = 80
+    screenofs = (((200 - STATUSLINES - viewheight) \ 2) * 80 + (320 - viewwidth) \ 8) ' SCREENWIDTH = 80
 
     '
     ' calculate trace angles and projection constants
     '
     CalcProjection FOCALLENGTH
 
+    ' top left of the view on the screen (the original added screenofs to bufferofs)
+    viewscreenx = (screenofs Mod 80) * 4
+    viewscreeny = screenofs \ 80
+
     '
     ' build all needed compiled scalers
     '
-    ' TODO: SetupScaling (viewwidth * 1.5) with the renderer
+    SetupScaling Fix(viewwidth * 1.5)
+
     SetViewSize% = TRUE
 End Function
 
@@ -517,44 +532,59 @@ Sub NewGame (difficulty As Integer, episode As Integer)
     startgame = TRUE
 End Sub
 
+'====================
+'=
+'= CalcProjection
+'=
+'= Uses focallength
+'=
+'====================
 Sub CalcProjection (focal As Long)
     Dim i As Integer
     Dim intang As Long
     Dim angle As Single
     Dim tang As Double
-    Dim planedist As Double
-    Dim globinhalf As Double
     Dim halfview As Integer
-    Dim halfangle As Double
     Dim facedist As Double
+    Dim radtoint As Single
 
-    ' Store focal length
-    FOCALLENGTH = focal
+    radtoint = FINEANGLES / 2 / PI ' const float radtoint = (float)FINEANGLES/2/PI
+
+    FOCALLENGTH = focal ' focallength
     facedist = focal + MINDIST
-    halfview = viewwidth \ 2 ' Half view in pixels
+    halfview = viewwidth \ 2 ' half view in pixels
 
-    ' Calculate scale value for vertical height calculations
+    '
+    ' calculate scale value for vertical height calculations
     ' and sprite x calculations
-    scale = halfview * facedist \ (VIEWGLOBAL \ 2)
+    '
+    scale = Fix(halfview * facedist / (VIEWGLOBAL \ 2))
 
-    ' Calculate height numerator for posts distance to get posts height
-    ' The pixel height is height >> 2
-    heightnumerator = (TILEGLOBAL * scale) \ 64
+    '
+    ' divide heightnumerator by a posts distance to get the posts height for
+    ' the heightbuffer.  The pixel height is height>>2
+    '
+    heightnumerator = (TILEGLOBAL * scale) \ 64 ' >>6
     minheightdiv = heightnumerator \ &H7FFF + 1
 
-    ' Calculate the angle offset from view angle of each pixel's ray
+    '
+    ' calculate the angle offset from view angle of each pixel's ray
+    '
     For i = 0 To halfview - 1
-        ' Start 1/2 pixel over, so viewangle bisects two middle pixels
-        tang = i * VIEWGLOBAL / viewwidth / facedist
+        ' start 1/2 pixel over, so viewangle bisects two middle pixels
+        tang = ((CLng(i) * VIEWGLOBAL) \ viewwidth) / facedist ' (long)i*VIEWGLOBAL/viewwidth is integer math
         angle = Atn(tang)
-        intang = angle * (ANGLES \ 2) / PI
+        intang = Fix(angle * radtoint)
         pixelangle(halfview - 1 - i) = intang
         pixelangle(halfview + i) = -intang
     Next i
 
-    ' If a point's abs(y/x) is greater than maxslope, the point is outside
+    '
+    ' if a point's abs(y/x) is greater than maxslope, the point is outside
     ' the view area
-    maxslope = finetangent(pixelangle(0)) \ 256
+    '
+    maxslope = finetangent(pixelangle(0))
+    maxslope = maxslope \ 256 ' >>= 8
 End Sub
 
 

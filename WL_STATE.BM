@@ -1,0 +1,33 @@
+' WL_STATE.C - actor movement, sight, damage (step 6g); the state table setup and
+' the routine dispatcher of the port (see WL_STATE.BI)
+
+$If INCLUDE_WL_STATE_BM = UNDEFINED Then
+    $Let INCLUDE_WL_STATE_BM = 1
+
+    '$INCLUDE: 'WL_STATE.BI'
+
+    ' One state: statetype s = {rotate, shapenum, tictime, think, action, next}
+    Sub SetState (s As Integer, rotate As Integer, shapenum As Integer, tictime As Integer, think As Integer, action As Integer, nextstate As Integer)
+        states(s).rotate = rotate
+        states(s).shapenum = shapenum
+        states(s).tictime = tictime
+        states(s).think = think
+        states(s).action = action
+        states(s).nextstate = nextstate
+    End Sub
+
+    ' The statetype initializers of the C files
+    Sub InitStates ()
+        ' WL_AGENT.C
+        SetState s_player, FALSE, 0, 0, RT_T_PLAYER, RT_NONE, 0
+    End Sub
+
+    ' Calls a think / action routine of a state (C function pointer) for object ob
+    Sub CallStateRoutine (routine As Integer, ob As Integer)
+        Select Case routine
+            Case RT_T_PLAYER
+                T_Player ob
+        End Select
+    End Sub
+
+$EndIf

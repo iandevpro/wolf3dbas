@@ -310,9 +310,165 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '//
     '////////////////////////////////////////////////////////////////////
     Function CP_CheckQuick% (scancode As Integer)
-        ' TODO: F7 end game, F8 quick save, F9 quick load, F10 quit - needs the game
+        Dim result As Integer, i As Integer, s As String
+
         CP_CheckQuick% = 0
+        Select Case scancode
+            '
+            ' END GAME
+            '
+            Case sc_F7
+                CA_CacheGrChunk STARTFONT + 1
+
+                WindowH = 160
+                If Confirm(ENDGAMESTR) Then
+                    playstate = ex_died
+                    pickquick = 0
+                    gamestate.lives = 0
+                End If
+
+                DrawAllPlayBorder
+                WindowH = 200
+                fontnumber = 0
+                MainMenu(mi_savegame).active = 0
+                CP_CheckQuick% = 1
+
+                '
+                ' QUICKSAVE
+                '
+            Case sc_F8
+                If SaveGamesAvail(LSItems.curpos) <> 0 And pickquick <> 0 Then
+                    CA_CacheGrChunk STARTFONT + 1
+                    fontnumber = 1
+                    Message STR_SAVING + "..."
+                    result = CP_SaveGame(1)
+                    fontnumber = 0
+                Else
+                    CA_CacheGrChunk STARTFONT + 1
+                    CA_CacheGrChunk C_CURSOR1PIC
+                    CA_CacheGrChunk C_CURSOR2PIC
+                    CA_CacheGrChunk C_DISKLOADING1PIC
+                    CA_CacheGrChunk C_DISKLOADING2PIC
+                    CA_CacheGrChunk C_SAVEGAMEPIC
+                    CA_CacheGrChunk C_MOUSELBACKPIC
+
+                    VW_FadeOut
+
+                    StartCPMusic MENUSONG
+                    pickquick = CP_SaveGame(0)
+
+                    CP_QuickReturn
+
+                    UNCACHEGRCHUNK C_CURSOR1PIC
+                    UNCACHEGRCHUNK C_CURSOR2PIC
+                    UNCACHEGRCHUNK C_DISKLOADING1PIC
+                    UNCACHEGRCHUNK C_DISKLOADING2PIC
+                    UNCACHEGRCHUNK C_SAVEGAMEPIC
+                    UNCACHEGRCHUNK C_MOUSELBACKPIC
+                End If
+                CP_CheckQuick% = 1
+
+                '
+                ' QUICKLOAD
+                '
+            Case sc_F9
+                If SaveGamesAvail(LSItems.curpos) <> 0 And pickquick <> 0 Then
+                    s = STR_LGC + Chr$(10) + Chr$(34) + SaveGameNames(LSItems.curpos) + Chr$(34) + "?"
+                    CA_CacheGrChunk STARTFONT + 1
+                    fontnumber = 1
+
+                    If Confirm(s) Then result = CP_LoadGame(1)
+
+                    DrawAllPlayBorder
+                    fontnumber = 0
+                Else
+                    CA_CacheGrChunk STARTFONT + 1
+                    CA_CacheGrChunk C_CURSOR1PIC
+                    CA_CacheGrChunk C_CURSOR2PIC
+                    CA_CacheGrChunk C_DISKLOADING1PIC
+                    CA_CacheGrChunk C_DISKLOADING2PIC
+                    CA_CacheGrChunk C_LOADGAMEPIC
+                    CA_CacheGrChunk C_MOUSELBACKPIC
+
+                    VW_FadeOut
+
+                    StartCPMusic MENUSONG
+                    pickquick = CP_LoadGame(0)
+
+                    CP_QuickReturn
+
+                    UNCACHEGRCHUNK C_CURSOR1PIC
+                    UNCACHEGRCHUNK C_CURSOR2PIC
+                    UNCACHEGRCHUNK C_DISKLOADING1PIC
+                    UNCACHEGRCHUNK C_DISKLOADING2PIC
+                    UNCACHEGRCHUNK C_LOADGAMEPIC
+                    UNCACHEGRCHUNK C_MOUSELBACKPIC
+                End If
+                CP_CheckQuick% = 1
+
+                '
+                ' QUIT
+                '
+            Case sc_F10
+                CA_CacheGrChunk STARTFONT + 1
+
+                WindowX = 0
+                WindowY = 0
+                WindowW = 320
+                WindowH = 160
+
+                If CP_ConfirmQuit Then
+                    VW_UpdateScreen
+                    SD_MusicOff
+                    SD_StopSound
+                    MenuFadeOut
+
+                    '
+                    ' SHUT-UP THE ADLIB
+                    '
+                    For i = 1 To &HF5
+                        OPL2_Write i, 0
+                    Next i
+                    Quit ""
+                End If
+
+                DrawAllPlayBorder
+                WindowH = 200
+                fontnumber = 0
+                CP_CheckQuick% = 1
+        End Select
     End Function
+
+    ' The quit question of CP_Quit / CP_CheckQuick: a random end string
+    Function CP_ConfirmQuit% ()
+        Dim r1 As Integer, r2 As Integer
+
+        $If SPANISH = DEFINED Then
+            CP_ConfirmQuit% = Confirm(ENDGAMESTR)
+        $Else
+            ' endStrings[US_RndT()&0x7+(US_RndT()&1)] - & binds weaker than +
+            r1 = US_RndT
+            r2 = US_RndT
+            CP_ConfirmQuit% = Confirm(endStrings(r1 And (7 + (r2 And 1))))
+        $End If
+    End Function
+
+    ' The return to the game after the quick save / load menus (repeated in CP_CheckQuick)
+    Sub CP_QuickReturn ()
+        SETFONTCOLOR 0, 15
+        IN_ClearKeysDown
+        DrawPlayScreen
+
+        If Not startgame And Not loadedgame Then
+            VW_FadeIn
+            StartLevelMusic
+        End If
+
+        If loadedgame Then playstate = ex_abort
+
+        lasttimecount = TimeCount
+        ' TODO: clear accumulated mouse movement
+    End Sub
 
     '////////////////////////////////////////////////////////////////////
     '//
@@ -320,8 +476,20 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '//
     '////////////////////////////////////////////////////////////////////
     Function CP_EndGame% ()
-        ' TODO: needs the game (Confirm ENDGAMESTR, playstate = ex_died, ...)
-        CP_EndGame% = 0
+        If Confirm(ENDGAMESTR) = 0 Then
+            CP_EndGame% = 0
+            Exit Function
+        End If
+
+        pickquick = 0
+        gamestate.lives = 0
+        playstate = ex_died
+
+        MainMenu(mi_savegame).active = 0
+        MainMenu(mi_viewscores).routine = RTN_VIEWSCORES
+        MainMenu(mi_viewscores).txt = STR_VS
+
+        CP_EndGame% = 1
     End Function
 
     '////////////////////////////////////////////////////////////////////

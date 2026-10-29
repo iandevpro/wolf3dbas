@@ -249,7 +249,7 @@ Commit `2eb471c`.
   - Screenshots: E1M1 ("Wolf1 Map1") has its familiar layout, with 22 doors and 182 objects; wall page 3 is the gray stone wall (106 wall pages); sprite 50 is the standing guard, matching `SPR_GRD_S_1` = 50 from the generated `WL_SPR.BI`.
 
 ## 2026-10-28: Step 6c, play screen and level setup
-Not committed yet.
+Commit dd1a23e.
 
 - **What works:** New Game → episode → difficulty now enters the game: the play border and status bar (floor, score, lives, BJ's face, health, ammo, weapon), the level music, and "Get Psyched!" with its progress bar. The 3D window stays black until 6d. For now Esc leaves the game and returns to the title loop.
 - **`WL_GAME.BM`:**
@@ -275,3 +275,36 @@ Not committed yet.
   - `Erase` freed `tilemap()` instead of zeroing it, and the next access stopped with "Subscript out of range" (WL_GAME.BM line 245). All `Erase` uses in the new code are clearing loops now.
   - `SpawnPlayer` stored the raw floor tile as the area number; the C code relies on `Thrust(0, 0)` to subtract `AREATILE` before `InitAreas`. Until `Thrust` arrives (6d), `SpawnPlayer` does that part itself.
 - **Tested:** scripted key presses and screenshots: New Game → "Get Psyched!" → play screen with the correct status bar → Esc back to the title. The level music wasn't checked by ear.
+
+## 2026-10-28: Step 6d, raycaster and player movement
+Not committed yet.
+
+- **What works:** the 3D view. Walls with their light and dark sides, doors (drawn closed until 6f), and the level's ceiling color with the gray floor. Walking and turning with the arrow keys, Alt to strafe, Shift to run, and wall collision with the "hit wall" sound. Esc opens the menu and "Back to Game" returns to the level. End Game (menu or F7) works. The MLI and BAT cheat messages work, and so do the pause key and the F1-F10 shortcuts.
+- **`WL_DRAW.BI` / `WL_DRAW.BM` (new):**
+  - `AsmRefresh` is a port of the WL_DR_A.ASM ray caster. It uses labels and GoTo, following the asm's control flow, with the same 16.16 fixed-point steps and intercepts. It calls `HitVertWall`, `HitHorizWall`, `HitVertDoor`, `HitHorizDoor`, `HitVertPWall` and `HitHorizPWall`.
+  - Also here: `CalcHeight`, `ScalePost`, `VGAClearScreen`, `WallRefresh`, `CalcTics`, `ThreeDRefresh`, and `FizzleFade`, which uses a copy of the old view because there is only one screen page.
+  - Exact C integer semantics: `Wrap32`, `Add32` and `Mul32` for the wrapping 32-bit arithmetic, and `SarL` / `HiWord` for arithmetic shifts. `FixedByFrac` moved here from WOLF3D.BAS.
+  - Drawing goes straight into the Screen 13 page via `_MemImage(0)`. The page flip is `_Display`.
+- **`WL_SCALE.BI` / `WL_SCALE.BM` (new):** `SetupScaling` and `BuildCompScale`. The original generated machine code for each wall height. Here each height gets a table of source texel and screen rows (`scalersrc`, `scalertop`, `scalerbottom`), and `ScalePost` loops over that table. The rows, texels and clipping match the generated code.
+- **`WL_STATE.BI` / `WL_STATE.BM` (new):** the state table. `statetype` pointers became indices into `states()`, where 0 = NULL. Think and action routines are IDs dispatched by `CallStateRoutine`. So far only `s_player` / `T_Player` exist.
+- **`WL_PLAY.BM`:**
+  - The real `PlayLoop`, `PollControls`, `PollKeyboardButtons`, `PollMouseButtons`, `PollKeyboardMove`, `CheckKeys` and `DoActor`.
+  - An actor's NULL state is now 0 instead of -1.
+- **`WL_AGENT.BM`:** `ControlMovement`, `Thrust`, `ClipMove`, `TryMove`, `T_Player`, `UpdateFace`, `CheckWeaponChange`, `GiveWeapon`, `GiveAmmo`, and `VictoryTile` (BJ's victory run comes in 6h). `SpawnPlayer` now calls the real `Thrust 0, 0`.
+- **`WL_GAME.BM`:**
+  - New: `DrawPlayBorderSides`, `DrawAllPlayBorder`, `DrawAllPlayBorderSides`.
+  - The temporary `ex_abort` exit in `GameLoop` is gone.
+  - `ex_died` takes a life and restarts the level, or ends the game when no lives are left. The death sequence itself is 6g.
+- **`WL_MENU.BM`:**
+  - The real `CP_EndGame`.
+  - All of `CP_CheckQuick`: F7 end game, F8 / F9 quick save and load through the 5c menus, and F10 quit. The quick paths go through `CP_QuickReturn`, and the random quit question is in `CP_ConfirmQuit`.
+- **`WOLF3D.BAS`:** faithful `BuildTables` and `CalcProjection` (C truncation and the float math as in the original). `SetViewSize` computes where the view sits on the screen and calls `SetupScaling`. `InitGame` calls `InitStates`.
+- **Fixes found while testing:**
+  - QB64 operator precedence: `*` binds tighter than `\`. So `a \ 2 * 80` means `a \ 160`, unlike C, where it means `(a / 2) * 80`. This put the view at row 0 (`screenofs` was 10 instead of 1610) and skipped the floor loop. Fixed both, and searched the code for other `\ x *` and `Mod x *` cases; there are none.
+  - `tileglobal` / `mindist` clashed with the `TILEGLOBAL` / `MINDIST` constants (names are case-insensitive); the constants are used directly.
+  - A `Const` can't contain `Chr$`, so `STR_LGC` gets its newline and quote where it's used.
+- **Tested:** scripted key holds and screenshots. The E1M1 start view faces the door, and walking up to it fills the view. Turned left and right, walked into walls (collision and sliding along walls work), saw the light and dark wall sides at corners. Esc → menu → Back to Game, then F7 → Y → back to the title.
+- **Not done yet:**
+  - Not yet compared side by side with DOSBox-X from the same spots.
+  - Walking speed and frame rate not yet measured.
+  - Still TODO: mouse motion turning, joystick, demo playback and recording (6j), and the debug keys.

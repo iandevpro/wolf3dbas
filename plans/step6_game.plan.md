@@ -60,7 +60,7 @@ Each sub-step below ends with something visible to test against the original in 
 - Replace the temporary block in `DemoLoop` with the real `GameLoop` call.
 - **Test:** New Game shows "Get Psyched!", then the border and status bar with the level music, as in DOSBox-X.
 
-### 6d. Raycaster and player movement
+### 6d. Raycaster and player movement — DONE 2026-10-28 (mouse motion and demo input still TODO)
 - WL_DRAW: `ThreeDRefresh`, `WallRefresh`, the ray caster (`AsmRefresh` from WL_DR_A.ASM, ported to QB64 using the C `Hit*` routines next to it), `ScalePost` wall columns, floor and ceiling colors, `CalcTics`.
 - Scaling: the original generated machine code per wall height (`SetupScaling`). Replace it with plain column loops over precomputed step tables.
 - WL_PLAY / WL_AGENT movement: `PlayLoop`, `PollControls` (keyboard, mouse buttons, mouse motion), `ControlMovement`, `Thrust`, `ClipMove`, `CheckKeys` (Esc opens the menu with "Back to Game").

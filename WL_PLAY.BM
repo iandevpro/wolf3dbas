@@ -1,5 +1,4 @@
 ' WL_PLAY.C - play loop, object list, music
-' The play loop itself is a temporary stand-in until the raycaster (step 6d)
 
 $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
     $Let INCLUDE_WL_PLAY_BM = 1
@@ -59,7 +58,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         objfreelist = objlist(newobj).prevobj
         objlist(newobj) = empty ' memset (new,0,sizeof(*new))
         objlist(newobj).nextobj = -1
-        objlist(newobj).state = -1
+        objlist(newobj).state = 0 ' NULL
 
         If lastobj <> -1 Then objlist(lastobj).nextobj = newobj
         objlist(newobj).prevobj = lastobj ' new->next is allready NULL from memset
@@ -81,7 +80,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
     Sub RemoveObj (gone As Integer)
         If gone = player Then Quit "RemoveObj: Tried to remove the player!"
 
-        objlist(gone).state = -1
+        objlist(gone).state = 0 ' NULL
 
         '
         ' fix the next object's back link
@@ -142,12 +141,334 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         If audiosegs(STARTMUSIC + chunk) <> 0 Then SD_StartMusic audiosegMem(STARTMUSIC + chunk)
     End Sub
 
+    '
+    ' =============================================================================
+    '                          USER CONTROL
+    ' =============================================================================
+    '
+
+    '===================
+    '=
+    '= PollKeyboardButtons
+    '=
+    '===================
+    Sub PollKeyboardButtons ()
+        Dim i As Integer
+
+        For i = 0 To NUMBUTTONS - 1
+            If Keyboard(buttonscan(i)) Then buttonstate(i) = TRUE
+        Next i
+    End Sub
+
+    '===================
+    '=
+    '= PollMouseButtons
+    '=
+    '===================
+    Sub PollMouseButtons ()
+        Dim buttons As Integer
+
+        buttons = IN_MouseButtons
+
+        If buttons And 1 Then If buttonmouse(0) <> bt_nobutton Then buttonstate(buttonmouse(0)) = TRUE
+        If buttons And 2 Then If buttonmouse(1) <> bt_nobutton Then buttonstate(buttonmouse(1)) = TRUE
+        If buttons And 4 Then If buttonmouse(2) <> bt_nobutton Then buttonstate(buttonmouse(2)) = TRUE
+    End Sub
+
+    '===================
+    '=
+    '= PollKeyboardMove
+    '=
+    '===================
+    Sub PollKeyboardMove ()
+        If buttonstate(bt_run) Then
+            If Keyboard(dirscan(di_north)) Then controly = controly - RUNMOVE * tics
+            If Keyboard(dirscan(di_south)) Then controly = controly + RUNMOVE * tics
+            If Keyboard(dirscan(di_west)) Then controlx = controlx - RUNMOVE * tics
+            If Keyboard(dirscan(di_east)) Then controlx = controlx + RUNMOVE * tics
+        Else
+            If Keyboard(dirscan(di_north)) Then controly = controly - BASEMOVE * tics
+            If Keyboard(dirscan(di_south)) Then controly = controly + BASEMOVE * tics
+            If Keyboard(dirscan(di_west)) Then controlx = controlx - BASEMOVE * tics
+            If Keyboard(dirscan(di_east)) Then controlx = controlx + BASEMOVE * tics
+        End If
+    End Sub
+
+    '===================
+    '=
+    '= PollControls
+    '=
+    '= Gets user or demo input, call once each frame
+    '=
+    '= controlx      set between -100 and 100 per tic
+    '= controly
+    '= buttonheld[]  the state of the buttons LAST frame
+    '= buttonstate[] the state of the buttons THIS frame
+    '=
+    '===================
+    Sub PollControls ()
+        Dim maxv As Integer, minv As Integer, i As Integer
+
+        '
+        ' get timing info for last frame
+        '
+        ' TODO 6j: demo playback / recording (DEMOTICS per frame)
+        CalcTics
+
+        controlx = 0
+        controly = 0
+        For i = 0 To NUMBUTTONS - 1
+            buttonheld(i) = buttonstate(i) ' memcpy (buttonheld,buttonstate,sizeof(buttonstate))
+            buttonstate(i) = FALSE ' memset (buttonstate,0,sizeof(buttonstate))
+        Next i
+
+        ' TODO 6j: read commands from demo buffer
+
+        '
+        ' get button states
+        '
+        INL_KeyService
+        PollKeyboardButtons
+
+        If mouseenabled Then PollMouseButtons
+
+        ' TODO: joystick (PollJoystickButtons)
+
+        '
+        ' get movements
+        '
+        PollKeyboardMove
+
+        ' TODO: mouse motion (PollMouseMove, Mouse(MDelta) mickeys), joystick (PollJoystickMove)
+
+        '
+        ' bound movement to a maximum
+        '
+        maxv = 100 * tics
+        minv = -maxv
+        If controlx > maxv Then
+            controlx = maxv
+        ElseIf controlx < minv Then
+            controlx = minv
+        End If
+
+        If controly > maxv Then
+            controly = maxv
+        ElseIf controly < minv Then
+            controly = minv
+        End If
+
+        ' TODO 6j: save info out to demo buffer (demorecord)
+    End Sub
+
+    '=====================
+    '=
+    '= CheckKeys
+    '=
+    '=====================
+    Sub CheckKeys ()
+        Dim scan As Integer
+
+        If screenfaded Or demoplayback Then Exit Sub ' don't do anything with a faded screen
+
+        scan = LastScan
+
+        '
+        ' SECRET CHEAT CODE: 'MLI'
+        '
+        If Keyboard(sc_M) And Keyboard(sc_L) And Keyboard(sc_I) Then
+            gamestate.health = 100
+            gamestate.ammo = 99
+            gamestate.keys = 3
+            gamestate.score = 0
+            gamestate.TimeCount = gamestate.TimeCount + 42000
+            GiveWeapon wp_chaingun
+
+            DrawWeapon
+            DrawHealth
+            DrawKeys
+            DrawAmmo
+            DrawScore
+
+            ClearMemory
+            CA_CacheGrChunk STARTFONT + 1
+            ClearSplitVWB
+            ' VW_ScreenToScreen (displayofs,bufferofs,80,160) - one page here
+
+            Message STR_CHEATER1 + Chr$(10) + STR_CHEATER2 + Chr$(10) + Chr$(10) + STR_CHEATER3 + Chr$(10) + STR_CHEATER4 + Chr$(10) + STR_CHEATER5
+
+            UNCACHEGRCHUNK STARTFONT + 1
+            IN_ClearKeysDown
+            IN_Ack
+
+            DrawAllPlayBorder
+        End If
+
+        '
+        ' OPEN UP DEBUG KEYS
+        '
+        ' TODO: Backspace + LShift + Alt with the "goobers" parameter (DebugOk, WL_DEBUG.C)
+
+        '
+        ' TRYING THE KEEN CHEAT CODE!
+        '
+        If Keyboard(sc_B) And Keyboard(sc_A) And Keyboard(sc_T) Then
+            ClearMemory
+            CA_CacheGrChunk STARTFONT + 1
+            ClearSplitVWB
+
+            Message "Commander Keen is also" + Chr$(10) + "available from Apogee, but" + Chr$(10) + "then, you already know" + Chr$(10) + "that - right, Cheatmeister?!"
+
+            UNCACHEGRCHUNK STARTFONT + 1
+            IN_ClearKeysDown
+            IN_Ack
+
+            DrawAllPlayBorder
+        End If
+
+        '
+        ' pause key weirdness can't be checked as a scan code
+        '
+        If Paused Then
+            LatchDrawPic 20 - 4, 80 - 2 * 8, PAUSEDPIC
+            VW_UpdateScreen
+            SD_MusicOff
+            IN_Ack
+            IN_ClearKeysDown
+            If MusicMode = smm_AdLib Then sqActive = 1 ' SD_MusicOn
+            Paused = FALSE
+            ' TODO: clear accumulated mouse movement
+            Exit Sub
+        End If
+
+        '
+        ' F1-F7/ESC to enter control panel
+        '
+        If scan = sc_F10 Or scan = sc_F9 Or scan = sc_F7 Or scan = sc_F8 Then ' pop up quit dialog
+            ClearMemory
+            ClearSplitVWB
+            US_ControlPanel scan
+
+            DrawAllPlayBorderSides
+
+            If scan = sc_F9 Then StartLevelMusic
+
+            SETFONTCOLOR 0, 15
+            IN_ClearKeysDown
+            Exit Sub
+        End If
+
+        If (scan >= sc_F1 And scan <= sc_F9) Or scan = sc_Escape Then
+            StopMusic
+            ClearMemory
+            VW_FadeOut
+
+            US_ControlPanel scan
+
+            SETFONTCOLOR 0, 15
+            IN_ClearKeysDown
+            DrawPlayScreen
+            If Not startgame And Not loadedgame Then
+                VW_FadeIn
+                StartLevelMusic
+            End If
+            If loadedgame Then playstate = ex_abort
+            lasttimecount = TimeCount
+            ' TODO: clear accumulated mouse movement
+            Exit Sub
+        End If
+
+        '
+        ' TAB-? debug keys
+        '
+        ' TODO: DebugKeys (WL_DEBUG.C)
+    End Sub
+
+    '=========================
+    '=
+    '= DoActor
+    '=
+    '=========================
+    Sub DoActor (ob As Integer)
+        Dim think As Integer
+
+        If objlist(ob).active = ac_no And Not areabyplayer(objlist(ob).areanumber) Then Exit Sub
+
+        If (objlist(ob).flags And (FL_NONMARK Or FL_NEVERMARK)) = 0 Then actorat(objlist(ob).tilex, objlist(ob).tiley) = 0
+
+        '
+        ' non transitional object
+        '
+        If objlist(ob).ticcount = 0 Then
+            think = states(objlist(ob).state).think
+            If think Then
+                CallStateRoutine think, ob
+                If objlist(ob).state = 0 Then
+                    RemoveObj ob
+                    Exit Sub
+                End If
+            End If
+
+            If objlist(ob).flags And FL_NEVERMARK Then Exit Sub
+
+            If (objlist(ob).flags And FL_NONMARK) <> 0 And actorat(objlist(ob).tilex, objlist(ob).tiley) <> 0 Then Exit Sub
+
+            actorat(objlist(ob).tilex, objlist(ob).tiley) = OBJ_BASE + ob
+            Exit Sub
+        End If
+
+        '
+        ' transitional object
+        '
+        objlist(ob).ticcount = objlist(ob).ticcount - tics
+        Do While objlist(ob).ticcount <= 0
+            think = states(objlist(ob).state).action ' end of state action
+            If think Then
+                CallStateRoutine think, ob
+                If objlist(ob).state = 0 Then
+                    RemoveObj ob
+                    Exit Sub
+                End If
+            End If
+
+            objlist(ob).state = states(objlist(ob).state).nextstate
+
+            If objlist(ob).state = 0 Then
+                RemoveObj ob
+                Exit Sub
+            End If
+
+            If states(objlist(ob).state).tictime = 0 Then
+                objlist(ob).ticcount = 0
+                Exit Do ' goto think
+            End If
+
+            objlist(ob).ticcount = objlist(ob).ticcount + states(objlist(ob).state).tictime
+        Loop
+
+        ' think:
+        '
+        ' think
+        '
+        think = states(objlist(ob).state).think
+        If think Then
+            CallStateRoutine think, ob
+            If objlist(ob).state = 0 Then
+                RemoveObj ob
+                Exit Sub
+            End If
+        End If
+
+        If objlist(ob).flags And FL_NEVERMARK Then Exit Sub
+
+        If (objlist(ob).flags And FL_NONMARK) <> 0 And actorat(objlist(ob).tilex, objlist(ob).tiley) <> 0 Then Exit Sub
+
+        actorat(objlist(ob).tilex, objlist(ob).tiley) = OBJ_BASE + ob
+    End Sub
+
     '===================
     '=
     '= PlayLoop
-    '=
-    '= TEMPORARY until step 6d: no controls, actors or 3D view yet. Shows the play
-    '= screen and ends the game with Esc (playstate = ex_abort)
     '=
     '===================
     Sub PlayLoop ()
@@ -164,20 +485,51 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         For i = 0 To NUMBUTTONS - 1 ' memset (buttonstate,0,sizeof(buttonstate))
             buttonstate(i) = FALSE
         Next i
-        ' TODO: ClearPaletteShifts, clear accumulated mouse movement
+        ' TODO 6e: ClearPaletteShifts
+        ' TODO: clear accumulated mouse movement
 
-        ' TODO 6d: PollControls, MoveDoors, MovePWalls, DoActor for all objects,
-        ' UpdatePaletteShifts, ThreeDRefresh, CheckKeys...
-        If screenfaded Then VW_FadeIn
+        If demoplayback Then IN_StartAck
 
-        IN_ClearKeysDown
         Do
-            _Limit TickBase
-            INL_KeyService
-        Loop Until Keyboard(sc_Escape)
-        IN_ClearKeysDown
+            PollControls
 
-        playstate = ex_abort ' Temporary: Esc leaves the game
+            '
+            ' actor thinking
+            '
+            madenoise = FALSE
+
+            ' TODO 6f: MoveDoors, MovePWalls
+
+            obj = player
+            Do While obj <> -1
+                DoActor obj
+                obj = objlist(obj).nextobj
+            Loop
+
+            ' TODO 6e: UpdatePaletteShifts
+
+            ThreeDRefresh
+
+            gamestate.TimeCount = gamestate.TimeCount + tics
+
+            ' SD_Poll - the audio pump runs on its own timer
+            ' TODO 6i: UpdateSoundLoc
+
+            If screenfaded Then VW_FadeIn
+
+            CheckKeys
+
+            ' TODO: debug aids (singlestep, extravbls)
+
+            If demoplayback Then
+                If IN_CheckAck Then
+                    IN_ClearKeysDown
+                    playstate = ex_abort
+                End If
+            End If
+        Loop While playstate = 0 And Not startgame
+
+        ' TODO 6e: If playstate <> ex_died Then FinishPaletteShifts
     End Sub
 
 $EndIf

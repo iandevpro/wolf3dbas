@@ -1,0 +1,97 @@
+' WL_SCALE.C - scalers for walls and sprites
+' Ported so far: SetupScaling / BuildCompScale as tables (step 6d). Sprites: 6e
+
+$If INCLUDE_WL_SCALE_BM = UNDEFINED Then
+    $Let INCLUDE_WL_SCALE_BM = 1
+
+    '$INCLUDE: 'WL_SCALE.BI'
+
+    '==========================
+    '=
+    '= SetupScaling
+    '=
+    '==========================
+    Sub SetupScaling (maxscaleheight As Integer)
+        Dim i As Integer, msh As Integer
+
+        msh = maxscaleheight \ 2 ' one scaler every two pixels
+
+        maxscale = msh - 1
+        maxscaleshl2 = maxscale * 4
+
+        ReDim scalersrc(0 To msh + 2, 0 To viewheight - 1) As Integer
+        ReDim scalertop(0 To msh + 2) As Integer
+        ReDim scalerbottom(0 To msh + 2) As Integer
+
+        '
+        ' build the compiled scalers
+        '
+        stepbytwo = viewheight \ 2 ' save space by double stepping
+
+        i = 1
+        Do While i <= msh
+            BuildCompScale i * 2, i
+            scalerof(i) = i
+            If i >= stepbytwo Then
+                scalerof(i + 1) = i
+                scalerof(i + 2) = i
+                i = i + 2
+            End If
+            i = i + 1
+        Loop
+
+        scalerof(0) = scalerof(1)
+
+        ' check for oversize wall drawing: ScalePost limits the index to maxscale
+        ' (the original pointed the bigger ones at BadScale)
+    End Sub
+
+    '========================
+    '=
+    '= BuildCompScale
+    '=
+    '= Builds a compiled scaler object that will scale a 64 tall object to
+    '= the given height (centered vertically on the screen)
+    '=
+    '= height should be even
+    '=
+    '= (here: fills the scaler table "which" instead of generating code)
+    '=
+    '========================
+    Sub BuildCompScale (height As Integer, which As Integer)
+        Dim src As Long, startpix As Long, endpix As Long, toppix As Long
+        Dim fixv As Long, stepv As Long
+
+        stepv = (height * 65536) \ 64 ' ((long)height<<16) / 64
+        toppix = (viewheight - height) \ 2 ' C int division truncates toward zero like \
+
+        scalertop(which) = viewheight
+        scalerbottom(which) = -1
+
+        fixv = 0
+        For src = 0 To 64
+            startpix = fixv \ 65536
+            fixv = fixv + stepv
+            endpix = fixv \ 65536
+
+            '
+            ' compile some code if the source pixel generates any screen pixels
+            '
+            startpix = startpix + toppix
+            endpix = endpix + toppix
+
+            If startpix = endpix Or endpix < 0 Or startpix >= viewheight Or src = 64 Then _Continue
+
+            Do While startpix < endpix
+                If startpix >= viewheight Then Exit Do ' off the bottom of the view area
+                If startpix >= 0 Then ' not into the view area when < 0
+                    scalersrc(which, startpix) = src
+                    If startpix < scalertop(which) Then scalertop(which) = startpix
+                    If startpix > scalerbottom(which) Then scalerbottom(which) = startpix
+                End If
+                startpix = startpix + 1
+            Loop
+        Next src
+    End Sub
+
+$EndIf

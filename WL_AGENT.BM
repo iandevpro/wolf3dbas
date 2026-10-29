@@ -1,5 +1,5 @@
 ' WL_AGENT.C - the player: status bar, movement, weapons, bonus items
-' Ported so far: the status bar and SpawnPlayer (step 6c)
+' Ported so far: the status bar, SpawnPlayer, movement (6c / 6d). Weapons: 6e, Cmd_Use: 6f
 
 $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
     $Let INCLUDE_WL_AGENT_BM = 1
@@ -142,6 +142,317 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         LatchNumber 27, 16, 2, gamestate.ammo
     End Sub
 
+    '===============
+    '=
+    '= UpdateFace
+    '=
+    '= Calls draw face if time to change
+    '=
+    '===============
+    Sub UpdateFace ()
+        Const FACETICS = 70
+
+        If SD_SoundPlaying = GETGATLINGSND Then Exit Sub
+
+        facecount = facecount + tics
+        If facecount > US_RndT Then
+            gamestate.faceframe = US_RndT \ 64 ' (US_RndT()>>6)
+            If gamestate.faceframe = 3 Then gamestate.faceframe = 1
+
+            facecount = 0
+            DrawFace
+        End If
+    End Sub
+
+    '==================
+    '=
+    '= GiveWeapon
+    '=
+    '==================
+    Sub GiveWeapon (weapon As Integer)
+        GiveAmmo 6
+
+        If gamestate.bestweapon < weapon Then
+            gamestate.bestweapon = weapon
+            gamestate.weapon = weapon
+            gamestate.chosenweapon = weapon
+        End If
+
+        DrawWeapon
+    End Sub
+
+    '===============
+    '=
+    '= GiveAmmo
+    '=
+    '===============
+    Sub GiveAmmo (ammo As Integer)
+        If gamestate.ammo = 0 Then ' knife was out
+            If gamestate.attackframe = 0 Then
+                gamestate.weapon = gamestate.chosenweapon
+                DrawWeapon
+            End If
+        End If
+        gamestate.ammo = gamestate.ammo + ammo
+        If gamestate.ammo > 99 Then gamestate.ammo = 99
+        DrawAmmo
+    End Sub
+
+    '
+    ' =============================================================================
+    '                          CONTROL STUFF
+    ' =============================================================================
+    '
+
+    '======================
+    '=
+    '= CheckWeaponChange
+    '=
+    '= Keys 1-4 change weapons
+    '=
+    '======================
+    Sub CheckWeaponChange ()
+        Dim i As Integer
+
+        If gamestate.ammo = 0 Then Exit Sub ' must use knife with no ammo
+
+        For i = wp_knife To gamestate.bestweapon
+            If buttonstate(bt_readyknife + i - wp_knife) Then
+                gamestate.weapon = i
+                gamestate.chosenweapon = i
+                DrawWeapon
+                Exit Sub
+            End If
+        Next i
+    End Sub
+
+    '=======================
+    '=
+    '= ControlMovement
+    '=
+    '= Takes controlx,controly, and buttonstate[bt_strafe]
+    '=
+    '= Changes the player's angle and position
+    '=
+    '= There is an angle hack because when going 70 fps, the roundoff becomes
+    '= significant
+    '=
+    '=======================
+    Sub ControlMovement (ob As Integer)
+        Dim oldx As Long, oldy As Long
+        Dim angl As Integer, angleunits As Integer
+
+        thrustspeed = 0
+
+        oldx = objlist(player).x
+        oldy = objlist(player).y
+
+        '
+        ' side to side move
+        '
+        If buttonstate(bt_strafe) Then
+            '
+            ' strafing
+            '
+            If controlx > 0 Then
+                angl = objlist(ob).angle - ANGLES \ 4
+                If angl < 0 Then angl = angl + ANGLES
+                Thrust angl, controlx * MOVESCALE ' move to left
+            ElseIf controlx < 0 Then
+                angl = objlist(ob).angle + ANGLES \ 4
+                If angl >= ANGLES Then angl = angl - ANGLES
+                Thrust angl, -controlx * MOVESCALE ' move to right
+            End If
+        Else
+            '
+            ' not strafing
+            '
+            anglefrac = anglefrac + controlx
+            angleunits = anglefrac \ ANGLESCALE ' C division truncates toward zero like \
+            anglefrac = anglefrac - angleunits * ANGLESCALE
+            objlist(ob).angle = objlist(ob).angle - angleunits
+
+            If objlist(ob).angle >= ANGLES Then objlist(ob).angle = objlist(ob).angle - ANGLES
+            If objlist(ob).angle < 0 Then objlist(ob).angle = objlist(ob).angle + ANGLES
+        End If
+
+        '
+        ' forward/backwards move
+        '
+        If controly < 0 Then
+            Thrust objlist(ob).angle, -controly * MOVESCALE ' move forwards
+        ElseIf controly > 0 Then
+            angl = objlist(ob).angle + ANGLES \ 2
+            If angl >= ANGLES Then angl = angl - ANGLES
+            Thrust angl, controly * BACKMOVESCALE ' move backwards
+        End If
+
+        If gamestate.victoryflag Then Exit Sub ' watching the BJ actor
+
+        '
+        ' calculate total move
+        '
+        playerxmove = objlist(player).x - oldx
+        playerymove = objlist(player).y - oldy
+    End Sub
+
+    '===================
+    '=
+    '= TryMove
+    '=
+    '= returns true if move ok
+    '= debug: use pointers to optimize
+    '===================
+    Function TryMove% (ob As Integer)
+        Dim xl As Integer, yl As Integer, xh As Integer, yh As Integer, x As Integer, y As Integer
+        Dim check As Integer, deltax As Long, deltay As Long
+
+        xl = SarL(objlist(ob).x - PLAYERSIZE, TILESHIFT)
+        yl = SarL(objlist(ob).y - PLAYERSIZE, TILESHIFT)
+
+        xh = SarL(objlist(ob).x + PLAYERSIZE, TILESHIFT)
+        yh = SarL(objlist(ob).y + PLAYERSIZE, TILESHIFT)
+
+        '
+        ' check for solid walls
+        '
+        For y = yl To yh
+            For x = xl To xh
+                check = actorat(x, y)
+                If check <> 0 And check < OBJ_BASE Then ' check && check<objlist
+                    TryMove% = FALSE
+                    Exit Function
+                End If
+            Next x
+        Next y
+
+        '
+        ' check for actors
+        '
+        If yl > 0 Then yl = yl - 1
+        If yh < MAPSIZE - 1 Then yh = yh + 1
+        If xl > 0 Then xl = xl - 1
+        If xh < MAPSIZE - 1 Then xh = xh + 1
+
+        For y = yl To yh
+            For x = xl To xh
+                check = actorat(x, y)
+                If check > OBJ_BASE Then ' check > objlist: an object, but not objlist[0] (the player)
+                    If objlist(check - OBJ_BASE).flags And FL_SHOOTABLE Then
+                        deltax = objlist(ob).x - objlist(check - OBJ_BASE).x
+                        If deltax >= -MINACTORDIST And deltax <= MINACTORDIST Then
+                            deltay = objlist(ob).y - objlist(check - OBJ_BASE).y
+                            If deltay >= -MINACTORDIST And deltay <= MINACTORDIST Then
+                                TryMove% = FALSE
+                                Exit Function
+                            End If
+                        End If
+                    End If
+                End If
+            Next x
+        Next y
+
+        TryMove% = TRUE
+    End Function
+
+    '===================
+    '=
+    '= ClipMove
+    '=
+    '===================
+    Sub ClipMove (ob As Integer, xmove As Long, ymove As Long)
+        Dim basex As Long, basey As Long, played As Integer
+
+        basex = objlist(ob).x
+        basey = objlist(ob).y
+
+        objlist(ob).x = basex + xmove
+        objlist(ob).y = basey + ymove
+        If TryMove(ob) Then Exit Sub
+
+        If noclip And objlist(ob).x > 2 * TILEGLOBAL And objlist(ob).y > 2 * TILEGLOBAL And objlist(ob).x < (mapwidth - 1) * TILEGLOBAL And objlist(ob).y < (mapheight - 1) * TILEGLOBAL Then Exit Sub ' walk through walls
+
+        If SD_SoundPlaying = 0 Then played = SD_PlaySound(HITWALLSND)
+
+        objlist(ob).x = basex + xmove
+        objlist(ob).y = basey
+        If TryMove(ob) Then Exit Sub
+
+        objlist(ob).x = basex
+        objlist(ob).y = basey + ymove
+        If TryMove(ob) Then Exit Sub
+
+        objlist(ob).x = basex
+        objlist(ob).y = basey
+    End Sub
+
+    '===================
+    '=
+    '= VictoryTile
+    '=
+    '===================
+    Sub VictoryTile ()
+        ' TODO 6h: SpawnBJVictory
+        gamestate.victoryflag = TRUE
+    End Sub
+
+    '===================
+    '=
+    '= Thrust
+    '=
+    '===================
+    Sub Thrust (angl As Integer, speed As Long)
+        Dim xmove As Long, ymove As Long, spd As Long
+        Dim offset As Long
+
+        spd = speed
+        thrustspeed = thrustspeed + spd
+
+        '
+        ' moving bounds speed
+        '
+        If spd >= MINDIST * 2 Then spd = MINDIST * 2 - 1
+
+        xmove = FixedByFrac(spd, costable(angl))
+        ymove = -FixedByFrac(spd, sintable(angl))
+
+        ClipMove player, xmove, ymove
+
+        objlist(player).tilex = SarL(objlist(player).x, TILESHIFT) ' scale to tile values
+        objlist(player).tiley = SarL(objlist(player).y, TILESHIFT)
+
+        offset = objlist(player).tiley * 64 + objlist(player).tilex ' farmapylookup[player->tiley]+player->tilex
+        objlist(player).areanumber = mapsegs(0, offset) - AREATILE
+
+        If mapsegs(1, offset) = EXITTILE Then VictoryTile
+    End Sub
+
+    '===============
+    '=
+    '= T_Player
+    '=
+    '===============
+    Sub T_Player (ob As Integer)
+        If gamestate.victoryflag Then ' watching the BJ actor
+            ' TODO 6h: VictorySpin
+            Exit Sub
+        End If
+
+        UpdateFace
+        CheckWeaponChange
+
+        ' TODO 6f: If buttonstate(bt_use) Then Cmd_Use
+        ' TODO 6e: If buttonstate(bt_attack) And Not buttonheld(bt_attack) Then Cmd_Fire
+
+        ControlMovement ob
+        If gamestate.victoryflag Then Exit Sub ' watching the BJ actor
+
+        plux = SarL(objlist(player).x, UNSIGNEDSHIFT) ' scale to fit in unsigned
+        pluy = SarL(objlist(player).y, UNSIGNEDSHIFT)
+        objlist(player).tilex = SarL(objlist(player).x, TILESHIFT) ' scale to tile values
+        objlist(player).tiley = SarL(objlist(player).y, TILESHIFT)
+    End Sub
+
     '
     ' =============================================================================
     '                               PLAYER
@@ -161,14 +472,11 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         objlist(player).areanumber = mapsegs(0, tiley * 64 + tilex)
         objlist(player).x = tilex * TILEGLOBAL + TILEGLOBAL \ 2 ' ((long)tilex<<TILESHIFT)+TILEGLOBAL/2
         objlist(player).y = tiley * TILEGLOBAL + TILEGLOBAL \ 2
-        objlist(player).state = -1 ' TODO 6d: &s_player
+        objlist(player).state = s_player
         objlist(player).angle = (1 - dir) * 90
         If objlist(player).angle < 0 Then objlist(player).angle = objlist(player).angle + ANGLES
         objlist(player).flags = FL_NEVERMARK
-        ' TODO 6d: Thrust (0,0) - set some variables. Until then only what Thrust (0,0) does
-        ' here: the tile stays the same and the area number gets the floor tile minus AREATILE
-        ' (InitAreas indexes areabyplayer() with it)
-        objlist(player).areanumber = mapsegs(0, tiley * 64 + tilex) - AREATILE
+        Thrust 0, 0 ' set some variables
         InitAreas
     End Sub
 

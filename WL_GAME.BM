@@ -4,6 +4,41 @@
 
 '===================
 '=
+'= DrawPlayBorderSides
+'=
+'= To fix window overwrites
+'=
+'===================
+Sub DrawPlayBorderSides ()
+    Dim xl As Integer, yl As Integer
+
+    xl = 160 - viewwidth \ 2
+    yl = (200 - STATUSLINES - viewheight) \ 2
+
+    VWB_Bar 0, 0, xl - 1, 200 - STATUSLINES, 127
+    VWB_Bar xl + viewwidth + 1, 0, xl - 2, 200 - STATUSLINES, 127
+
+    VWB_Vlin yl - 1, yl + viewheight, xl - 1, 0
+    VWB_Vlin yl - 1, yl + viewheight, xl + viewwidth, 125
+End Sub
+
+'===================
+'=
+'= DrawAllPlayBorderSides / DrawAllPlayBorder
+'=
+'= The original drew into all three screen pages
+'=
+'===================
+Sub DrawAllPlayBorderSides ()
+    DrawPlayBorderSides
+End Sub
+
+Sub DrawAllPlayBorder ()
+    DrawPlayBorder
+End Sub
+
+'===================
+'=
 '= DrawPlayBorder
 '=
 '===================
@@ -390,18 +425,21 @@ Sub GameLoop ()
                     gamestate.mapon = gamestate.mapon + 1
 
                 Case ex_died
-                    ' TODO 6g: Died, CheckHighScore
-                    GameLoopEnd
-                    Exit Sub
+                    ' TODO 6g: Died (death cam, fade, lives--) - only the life is taken here
+                    gamestate.lives = gamestate.lives - 1
+                    died = TRUE ' don't "get psyched!"
+
+                    If gamestate.lives <= -1 Then
+                        ' TODO 6g: VW_FadeOut, ClearMemory, CheckHighScore
+                        VW_FadeOut
+                        ClearMemory
+                        GameLoopEnd
+                        Exit Sub
+                    End If
+                    ' more lives left
 
                 Case ex_victorious
                     ' TODO 6h: Victory, CheckHighScore
-                    GameLoopEnd
-                    Exit Sub
-
-                Case ex_abort
-                    ' Temporary: the play loop stand-in ends with Esc (the original only
-                    ' got ex_abort from demos); leave the game
                     GameLoopEnd
                     Exit Sub
 
