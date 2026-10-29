@@ -1,5 +1,5 @@
 ' WL_AGENT.C - the player: status bar, movement, weapons, bonus items
-' Ported so far: the status bar, SpawnPlayer, movement, bonus items (6c - 6e). Cmd_Use: 6f, attacks: 6g
+' Ported so far: the status bar, SpawnPlayer, movement, bonus items, Cmd_Use (6c - 6f). Attacks: 6g
 
 $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
     $Let INCLUDE_WL_AGENT_BM = 1
@@ -612,7 +612,7 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         UpdateFace
         CheckWeaponChange
 
-        ' TODO 6f: If buttonstate(bt_use) Then Cmd_Use
+        If buttonstate(bt_use) Then Cmd_Use
         ' TODO 6g: If buttonstate(bt_attack) And Not buttonheld(bt_attack) Then Cmd_Fire
 
         ControlMovement ob
@@ -622,6 +622,70 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         pluy = SarL(objlist(player).y, UNSIGNEDSHIFT)
         objlist(player).tilex = SarL(objlist(player).x, TILESHIFT) ' scale to tile values
         objlist(player).tiley = SarL(objlist(player).y, TILESHIFT)
+    End Sub
+
+    '===============
+    '=
+    '= Cmd_Use
+    '=
+    '===============
+    Sub Cmd_Use ()
+        Dim checkx As Integer, checky As Integer, doornumv As Integer, dir As Integer
+        Dim elevatorok As Integer, played As Integer
+
+        '
+        ' find which cardinal direction the player is facing
+        '
+        If objlist(player).angle < ANGLES \ 8 Or objlist(player).angle > 7 * ANGLES \ 8 Then
+            checkx = objlist(player).tilex + 1
+            checky = objlist(player).tiley
+            dir = di_east
+            elevatorok = TRUE
+        ElseIf objlist(player).angle < 3 * ANGLES \ 8 Then
+            checkx = objlist(player).tilex
+            checky = objlist(player).tiley - 1
+            dir = di_north
+            elevatorok = FALSE
+        ElseIf objlist(player).angle < 5 * ANGLES \ 8 Then
+            checkx = objlist(player).tilex - 1
+            checky = objlist(player).tiley
+            dir = di_west
+            elevatorok = TRUE
+        Else
+            checkx = objlist(player).tilex
+            checky = objlist(player).tiley + 1
+            dir = di_south
+            elevatorok = FALSE
+        End If
+
+        doornumv = tilemap(checkx, checky) ' (C: doornum)
+        If mapsegs(1, checky * 64 + checkx) = PUSHABLETILE Then
+            '
+            ' pushable wall
+            '
+            PushWall checkx, checky, dir
+            Exit Sub
+        End If
+        If Not buttonheld(bt_use) And doornumv = ELEVATORTILE And elevatorok Then
+            '
+            ' use elevator
+            '
+            buttonheld(bt_use) = TRUE
+
+            tilemap(checkx, checky) = tilemap(checkx, checky) + 1 ' flip switch
+            If mapsegs(0, objlist(player).tiley * 64 + objlist(player).tilex) = ALTELEVATORTILE Then
+                playstate = ex_secretlevel
+            Else
+                playstate = ex_completed
+            End If
+            played = SD_PlaySound(LEVELDONESND)
+            SD_WaitSoundDone
+        ElseIf Not buttonheld(bt_use) And (doornumv And &H80) <> 0 Then
+            buttonheld(bt_use) = TRUE
+            OperateDoor doornumv And (Not &H80)
+        Else
+            played = SD_PlaySound(DONOTHINGSND)
+        End If
     End Sub
 
     '

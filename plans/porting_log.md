@@ -310,7 +310,7 @@ Commit 0d0fba1.
   - Still TODO: mouse motion turning, joystick, demo playback and recording (6j), and the debug keys.
 
 ## 2026-10-28: Step 6e, sprites, items and the weapon on screen
-Not committed yet.
+Commit 1bcecec.
 
 - **What works:**
   - The static objects of the levels show up: ceiling lights, tables, lamps, skeletons, food, ammo and treasure. They are sorted back to front, and hidden behind walls column by column.
@@ -344,3 +344,34 @@ Not committed yet.
   - Enemies are still stubs, so `DrawScaleds`' actor part and `CalcRotate` haven't run yet (6g).
   - Firing and weapon frames (`Cmd_Fire`, `T_Attack`) are 6g.
   - The death cam picture is 6h.
+
+## 2026-10-28: Step 6f, doors, push walls and the level exit
+Not committed yet.
+
+- **What works:**
+  - **Use (Space):** opens and closes doors. Doors slide open, connect their areas, close by themselves after about 4 seconds (300 tics), and reopen if something is in the way. Locked doors need their key and play the "no way" sound otherwise.
+  - **Push walls:** they slide two tiles and count as a found secret.
+  - **Elevator:** the switch flips, the "level done" sound plays, and the intermission follows: "floor completed", time, par, the time bonus, and the kill / secret / treasure ratios with their sounds and 100% bonuses. BJ breathes while the counts run.
+  - **Next level:** a key press goes on to the next floor. The secret elevator and the return from the secret level are implemented too, but untested.
+- **`WL_ACT1.BM`:** `OpenDoor`, `CloseDoor`, `OperateDoor`, `DoorOpen`, `DoorOpening`, `DoorClosing`, `MoveDoors`, `PushWall`, `MovePWalls`.
+  - `CloseDoor` checks the actors next to the door through `actorat()`. C read `check->x` from any non-zero value, even a wall or static number, which pointed at random memory. Here only real objects can keep a door open.
+- **`WL_AGENT.BM`:** `Cmd_Use`, which `T_Player` now calls.
+- **`WL_PLAY.BM`:** `PlayLoop` calls `MoveDoors` and `MovePWalls`.
+- **`WL_INTER.BI` / `WL_INTER.BM`:**
+  - `LevelCompleted` with `parTimes[]` (WL6 and Spear tables), `LevelRatios()`, and `BJ_Breathe`.
+  - `WritePic` is the C `Write`, renamed because WRITE is a QB64 keyword.
+  - The repeated ratio code is in `RatioCount` and `RatioEnd`. The C `goto done` is an exit from a one-pass loop.
+- **`WL_GAME.BM`:**
+  - `GameLoop` runs the intermission, then picks the next map in `NextLevelMap` (`ElevatorBackTo()` for WL6, the secret level numbers for Spear).
+  - `PlaySoundLocTile` / `PlaySoundLocGlobal` only play the sound for now; the left / right volume of digitized sounds comes in 6i.
+- **`ID_VL.BM`:** `VL_WaitVBL` waits the given number of 70Hz retraces; it ignored the count before. The fades wait one retrace per step at 70 instead of 60 per second, as on the VGA.
+- **Tested:**
+  - Without noclip: opened E1M1's first door, walked through, and saw it close behind me. Esc → Back to Game still works.
+  - With temporary noclip and the player's tile shown in the window title (both removed), strafed to the push wall at (30,22). It slid two tiles, and the secret count went to 1.
+  - Then went on to the elevator at (25,47) and pressed Use facing the switch. The intermission showed "floor 1 completed", time 00:20, par 01:30, bonus 35000 (70 s left × 500), and a secret ratio of 20% (1 of 5 push walls). A key press started floor 2 at E1M2's start with score 35000.
+  - An earlier run finished in 5 s: bonus 42500, and the extra life at 40000 raised lives to 4.
+- **Not done yet:**
+  - Kill ratios stay 0% until there are enemies (6g).
+  - The secret elevator isn't tested.
+  - Door sounds aren't positioned (6i).
+  - `PicturePause` (a debug key) isn't ported.

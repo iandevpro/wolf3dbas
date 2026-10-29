@@ -4,11 +4,13 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
     $Let INCLUDE_ID_VL_BM = 1
 
     Sub VL_WaitVBL (num_vbls As Integer)
+        Dim i As Integer
         Rem Simulate waiting for VBlank in QB64 Basic
-        ' This is a placeholder. Implement actual VBlank wait if needed.
-        ' ignore num_vbls
+        ' Mode 13h refreshes at 70Hz: wait num_vbls frames of that
 
-        _Limit 60
+        For i = 1 To num_vbls
+            _Limit 70
+        Next i
 
         ' or use the following
         ' https://github-wiki-see.page/m/QB64Official/qb64/wiki/WAIT

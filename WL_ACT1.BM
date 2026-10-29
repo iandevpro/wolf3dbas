@@ -1,5 +1,5 @@
 ' WL_ACT1.C - static objects, doors, push walls
-' Ported so far: statics, the lists and door spawning (6c / 6e). Door movement: 6f
+' Statics, doors and push walls (steps 6c / 6e / 6f)
 
 $If INCLUDE_WL_ACT1_BM = UNDEFINED Then
     $Let INCLUDE_WL_ACT1_BM = 1
@@ -203,6 +203,369 @@ $If INCLUDE_WL_ACT1_BM = UNDEFINED Then
 
         doornum = doornum + 1
         lastdoorobj = lastdoorobj + 1
+    End Sub
+
+    '=====================
+    '=
+    '= OpenDoor
+    '=
+    '=====================
+    Sub OpenDoor (door As Integer)
+        If doorobjlist(door).action = dr_open Then
+            doorobjlist(door).ticcount = 0 ' reset open time
+        Else
+            doorobjlist(door).action = dr_opening ' start it opening
+        End If
+    End Sub
+
+    ' The x / y of the actor in an actorat() value, for CloseDoor's check->x / check->y.
+    ' TRUE when it is an object. (C also dereferenced wall and static values as pointers,
+    ' reading whatever was there; here they never block the door.)
+    Function ActorAtObject% (check As Integer)
+        ActorAtObject% = (check >= OBJ_BASE)
+    End Function
+
+    '=====================
+    '=
+    '= CloseDoor
+    '=
+    '=====================
+    Sub CloseDoor (door As Integer)
+        Dim tilex As Integer, tiley As Integer, area As Integer, check As Integer
+
+        '
+        ' don't close on anything solid
+        '
+        tilex = doorobjlist(door).tilex
+        tiley = doorobjlist(door).tiley
+
+        If actorat(tilex, tiley) Then Exit Sub
+
+        If objlist(player).tilex = tilex And objlist(player).tiley = tiley Then Exit Sub
+
+        If doorobjlist(door).vertical Then
+            If objlist(player).tiley = tiley Then
+                If SarL(objlist(player).x + MINDIST, TILESHIFT) = tilex Then Exit Sub
+                If SarL(objlist(player).x - MINDIST, TILESHIFT) = tilex Then Exit Sub
+            End If
+            check = actorat(tilex - 1, tiley)
+            If ActorAtObject(check) Then
+                If SarL(objlist(check - OBJ_BASE).x + MINDIST, TILESHIFT) = tilex Then Exit Sub
+            End If
+            check = actorat(tilex + 1, tiley)
+            If ActorAtObject(check) Then
+                If SarL(objlist(check - OBJ_BASE).x - MINDIST, TILESHIFT) = tilex Then Exit Sub
+            End If
+        Else
+            If objlist(player).tilex = tilex Then
+                If SarL(objlist(player).y + MINDIST, TILESHIFT) = tiley Then Exit Sub
+                If SarL(objlist(player).y - MINDIST, TILESHIFT) = tiley Then Exit Sub
+            End If
+            check = actorat(tilex, tiley - 1)
+            If ActorAtObject(check) Then
+                If SarL(objlist(check - OBJ_BASE).y + MINDIST, TILESHIFT) = tiley Then Exit Sub
+            End If
+            check = actorat(tilex, tiley + 1)
+            If ActorAtObject(check) Then
+                If SarL(objlist(check - OBJ_BASE).y - MINDIST, TILESHIFT) = tiley Then Exit Sub
+            End If
+        End If
+
+        '
+        ' play door sound if in a connected area
+        '
+        area = mapsegs(0, doorobjlist(door).tiley * 64 + doorobjlist(door).tilex) - AREATILE
+        If areabyplayer(area) Then
+            PlaySoundLocTile CLOSEDOORSND, doorobjlist(door).tilex, doorobjlist(door).tiley ' JAB
+        End If
+
+        doorobjlist(door).action = dr_closing
+        '
+        ' make the door space solid
+        '
+        actorat(tilex, tiley) = door Or &H80
+    End Sub
+
+    '=====================
+    '=
+    '= OperateDoor
+    '=
+    '= The player wants to change the door's direction
+    '=
+    '=====================
+    Sub OperateDoor (door As Integer)
+        Dim doorlock As Integer, played As Integer
+
+        doorlock = doorobjlist(door).doorlock
+        If doorlock >= dr_lock1 And doorlock <= dr_lock4 Then
+            If (gamestate.keys And (2 ^ (doorlock - dr_lock1))) = 0 Then
+                played = SD_PlaySound(NOWAYSND) ' locked
+                Exit Sub
+            End If
+        End If
+
+        Select Case doorobjlist(door).action
+            Case dr_closed, dr_closing
+                OpenDoor door
+            Case dr_open, dr_opening
+                CloseDoor door
+        End Select
+    End Sub
+
+    '===============
+    '=
+    '= DoorOpen
+    '=
+    '= Close the door after three seconds
+    '=
+    '===============
+    Sub DoorOpen (door As Integer)
+        doorobjlist(door).ticcount = doorobjlist(door).ticcount + tics
+        If doorobjlist(door).ticcount >= OPENTICS Then CloseDoor door
+    End Sub
+
+    ' The two areas a door connects: the map tiles at both sides of it
+    Sub DoorAreas (door As Integer, area1 As Integer, area2 As Integer)
+        Dim map As Long
+
+        map = doorobjlist(door).tiley * 64 + doorobjlist(door).tilex ' mapsegs[0]+farmapylookup[tiley]+tilex
+
+        If doorobjlist(door).vertical Then
+            area1 = mapsegs(0, map + 1)
+            area2 = mapsegs(0, map - 1)
+        Else
+            area1 = mapsegs(0, map - mapwidth)
+            area2 = mapsegs(0, map + mapwidth)
+        End If
+        area1 = area1 - AREATILE
+        area2 = area2 - AREATILE
+    End Sub
+
+    '===============
+    '=
+    '= DoorOpening
+    '=
+    '===============
+    Sub DoorOpening (door As Integer)
+        Dim area1 As Integer, area2 As Integer
+        Dim position As Long
+
+        position = doorposition(door)
+        If position = 0 Then
+            '
+            ' door is just starting to open, so connect the areas
+            '
+            DoorAreas door, area1, area2
+            areaconnect(area1, area2) = areaconnect(area1, area2) + 1
+            areaconnect(area2, area1) = areaconnect(area2, area1) + 1
+            ConnectAreas
+            If areabyplayer(area1) Then
+                PlaySoundLocTile OPENDOORSND, doorobjlist(door).tilex, doorobjlist(door).tiley ' JAB
+            End If
+        End If
+
+        '
+        ' slide the door by an adaptive amount
+        '
+        position = position + tics * 1024 ' tics<<10
+        If position >= &HFFFF& Then
+            '
+            ' door is all the way open
+            '
+            position = &HFFFF&
+            doorobjlist(door).ticcount = 0
+            doorobjlist(door).action = dr_open
+            actorat(doorobjlist(door).tilex, doorobjlist(door).tiley) = 0
+        End If
+
+        doorposition(door) = position
+    End Sub
+
+    '===============
+    '=
+    '= DoorClosing
+    '=
+    '===============
+    Sub DoorClosing (door As Integer)
+        Dim area1 As Integer, area2 As Integer
+        Dim position As Long
+        Dim tilex As Integer, tiley As Integer
+
+        tilex = doorobjlist(door).tilex
+        tiley = doorobjlist(door).tiley
+
+        If actorat(tilex, tiley) <> (door Or &H80) Or (objlist(player).tilex = tilex And objlist(player).tiley = tiley) Then
+            ' something got inside the door
+            OpenDoor door
+            Exit Sub
+        End If
+
+        position = doorposition(door)
+
+        '
+        ' slide the door by an adaptive amount
+        '
+        position = position - tics * 1024 ' tics<<10
+        If position <= 0 Then
+            '
+            ' door is closed all the way, so disconnect the areas
+            '
+            position = 0
+
+            doorobjlist(door).action = dr_closed
+
+            DoorAreas door, area1, area2
+            areaconnect(area1, area2) = areaconnect(area1, area2) - 1
+            areaconnect(area2, area1) = areaconnect(area2, area1) - 1
+
+            ConnectAreas
+        End If
+
+        doorposition(door) = position
+    End Sub
+
+    '=====================
+    '=
+    '= MoveDoors
+    '=
+    '= Called from PlayLoop
+    '=
+    '=====================
+    Sub MoveDoors ()
+        Dim door As Integer
+
+        If gamestate.victoryflag Then Exit Sub ' don't move door during victory sequence
+
+        For door = 0 To doornum - 1
+            Select Case doorobjlist(door).action
+                Case dr_open
+                    DoorOpen door
+
+                Case dr_opening
+                    DoorOpening door
+
+                Case dr_closing
+                    DoorClosing door
+            End Select
+        Next door
+    End Sub
+
+    '
+    ' =============================================================================
+    '                          PUSHABLE WALLS
+    ' =============================================================================
+    '
+
+    ' One step of a push wall: TRUE when the tile (x, y) is free, then the wall moves into it
+    Function PushWallInto% (x As Integer, y As Integer, tile As Integer)
+        If actorat(x, y) Then
+            PushWallInto% = FALSE
+            Exit Function
+        End If
+        tilemap(x, y) = tile
+        actorat(x, y) = tile
+        PushWallInto% = TRUE
+    End Function
+
+    '===============
+    '=
+    '= PushWall
+    '=
+    '===============
+    Sub PushWall (checkx As Integer, checky As Integer, dir As Integer)
+        Dim oldtile As Integer, moved As Integer, played As Integer
+
+        If pwallstate Then Exit Sub
+
+        oldtile = tilemap(checkx, checky)
+        If oldtile = 0 Then Exit Sub
+
+        Select Case dir
+            Case di_north
+                moved = PushWallInto(checkx, checky - 1, oldtile)
+            Case di_east
+                moved = PushWallInto(checkx + 1, checky, oldtile)
+            Case di_south
+                moved = PushWallInto(checkx, checky + 1, oldtile)
+            Case di_west
+                moved = PushWallInto(checkx - 1, checky, oldtile)
+        End Select
+        If Not moved Then
+            played = SD_PlaySound(NOWAYSND)
+            Exit Sub
+        End If
+
+        gamestate.secretcount = gamestate.secretcount + 1
+        pwallx = checkx
+        pwally = checky
+        pwalldir = dir
+        pwallstate = 1
+        pwallpos = 0
+        tilemap(pwallx, pwally) = tilemap(pwallx, pwally) Or &HC0
+        mapsegs(1, pwally * 64 + pwallx) = 0 ' remove P tile info
+
+        played = SD_PlaySound(PUSHWALLSND)
+    End Sub
+
+    '=================
+    '=
+    '= MovePWalls
+    '=
+    '=================
+    Sub MovePWalls ()
+        Dim oldblock As Long, oldtile As Integer, moved As Integer
+
+        If pwallstate = 0 Then Exit Sub
+
+        oldblock = pwallstate \ 128
+
+        pwallstate = pwallstate + tics
+
+        If pwallstate \ 128 <> oldblock Then
+            ' block crossed into a new block
+            oldtile = tilemap(pwallx, pwally) And 63
+
+            '
+            ' the tile can now be walked into
+            '
+            tilemap(pwallx, pwally) = 0
+            actorat(pwallx, pwally) = 0
+            mapsegs(0, pwally * 64 + pwallx) = objlist(player).areanumber + AREATILE
+
+            '
+            ' see if it should be pushed farther
+            '
+            If pwallstate > 256 Then
+                '
+                ' the block has been pushed two tiles
+                '
+                pwallstate = 0
+                Exit Sub
+            Else
+                Select Case pwalldir
+                    Case di_north
+                        pwally = pwally - 1
+                        moved = PushWallInto(pwallx, pwally - 1, oldtile)
+                    Case di_east
+                        pwallx = pwallx + 1
+                        moved = PushWallInto(pwallx + 1, pwally, oldtile)
+                    Case di_south
+                        pwally = pwally + 1
+                        moved = PushWallInto(pwallx, pwally + 1, oldtile)
+                    Case di_west
+                        pwallx = pwallx - 1
+                        moved = PushWallInto(pwallx - 1, pwally, oldtile)
+                End Select
+                If Not moved Then
+                    pwallstate = 0
+                    Exit Sub
+                End If
+
+                tilemap(pwallx, pwally) = oldtile Or &HC0
+            End If
+        End If
+
+        pwallpos = (pwallstate \ 2) And 63
     End Sub
 
 $EndIf

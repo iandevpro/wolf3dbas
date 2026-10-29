@@ -77,6 +77,9 @@ PageFileName = "VSWAP." ' ID_PM.C
 audioname = "AUDIO." ' ID_CA.C
 demoname = "DEMO?." ' WL_GAME.C, ? = demo number
 Dim Shared EpisodeSelect(5) As Integer
+Dim Shared ElevatorBackTo(5) As Integer ' WL_GAME.C: the map after each episode's secret level
+ElevatorBackTo(0) = 1: ElevatorBackTo(1) = 1: ElevatorBackTo(2) = 7
+ElevatorBackTo(3) = 3: ElevatorBackTo(4) = 5: ElevatorBackTo(5) = 3
 
 ' Arrays
 Dim Shared dirangle(8) As Integer ' WL_STATE.C: {0,ANGLES/8,2*ANGLES/8,...,8*ANGLES/8}

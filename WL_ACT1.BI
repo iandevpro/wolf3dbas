@@ -6,6 +6,8 @@ $If INCLUDE_WL_ACT1_BI = UNDEFINED Then
     Dim Shared doorposition(0 To MAXDOORS - 1) As Long ' unsigned, leading edge of door 0=closed
     Dim Shared doornum As Integer
 
+    Const OPENTICS = 300
+
     Dim Shared pwallstate As Long ' unsigned
     Dim Shared pwallpos As Long ' unsigned, amount a pushable wall has been moved (0-63)
     Dim Shared pwallx As Integer, pwally As Integer

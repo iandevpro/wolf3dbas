@@ -13,6 +13,365 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         WindowW = 320
         WindowH = 160
     End Sub
+    '==========================================================================
+
+    ' C: Write (WRITE is a QB64 keyword)
+    Sub WritePic (x As Integer, y As Integer, s As String)
+        Dim i As Integer, ox As Integer, nx As Integer, ny As Integer
+        Dim ch As Integer, c As Integer
+
+        ox = x * 8
+        nx = ox
+        ny = y * 8
+        For i = 1 To Len(s)
+            c = Asc(s, i)
+            If c = 10 Then ' '\n'
+                nx = ox
+                ny = ny + 16
+            Else
+                ch = c
+                If ch >= Asc("a") Then ch = ch - (Asc("a") - Asc("A"))
+                ch = ch - Asc("0")
+
+                Select Case c
+                    Case 33 ' '!'
+                        VWB_DrawPic nx, ny, L_EXPOINTPIC
+                        nx = nx + 8
+                        _Continue
+
+                    Case 39 ' '\''
+                        VWB_DrawPic nx, ny, L_APOSTROPHEPIC
+                        nx = nx + 8
+                        _Continue
+
+                    Case 32 ' ' '
+
+                    Case &H3A ' ':'
+                        VWB_DrawPic nx, ny, L_COLONPIC
+                        nx = nx + 8
+                        _Continue
+
+                    Case 37 ' '%'
+                        VWB_DrawPic nx, ny, L_PERCENTPIC
+
+                    Case Else
+                        ' (C read alpha[] out of range for other characters; none are used)
+                        If ch >= 0 And ch <= 42 Then VWB_DrawPic nx, ny, writealpha(ch)
+                End Select
+                nx = nx + 16
+            End If
+        Next i
+    End Sub
+
+    '
+    ' Breathe Mr. BJ!!!
+    '
+    Sub BJ_Breathe ()
+        Static which As Integer, max As Integer, started As Integer
+
+        If Not started Then max = 10: started = TRUE ' static int which=0,max=10
+
+        If TimeCount > max Then
+            which = which Xor 1
+            If which Then
+                VWB_DrawPic 0, 16, L_GUY2PIC
+            Else
+                VWB_DrawPic 0, 16, L_GUYPIC
+            End If
+            VW_UpdateScreen
+            TimeCount = 0
+            max = 35
+        End If
+        _Limit 1000 ' the callers spin on it (port: don't use a whole CPU core)
+    End Sub
+
+    ' while(SD_SoundPlaying()) BJ_Breathe();
+    Sub BJ_BreatheWhileSound ()
+        Do While SD_SoundPlaying
+            BJ_Breathe
+        Loop
+    End Sub
+
+    ' The number as itoa / ltoa writes it
+    Function ItoA$ (n As Long)
+        ItoA$ = LTrim$(Str$(n))
+    End Function
+
+    ' The end of a ratio count: the 100% bonus, the "no bonus" sound or the end sound
+    Sub RatioEnd (ratio As Integer, bonus As Long)
+        Dim played As Integer, x As Integer, tempstr As String
+
+        If ratio = 100 Then
+            VL_WaitVBL VBLWAIT ' VW_WaitVBL
+            SD_StopSound
+            bonus = bonus + PERCENT100AMT
+            tempstr = ItoA$(bonus)
+            x = (RATIOXX - 1) - Len(tempstr) * 2
+            WritePic x, 7, tempstr
+            VW_UpdateScreen
+            played = SD_PlaySound(PERCENT100SND)
+        ElseIf ratio = 0 Then
+            VL_WaitVBL VBLWAIT ' VW_WaitVBL
+            SD_StopSound
+            played = SD_PlaySound(NOBONUSSND)
+        Else
+            played = SD_PlaySound(ENDBONUS2SND)
+        End If
+
+        VW_UpdateScreen
+        BJ_BreatheWhileSound
+    End Sub
+
+    ' One ratio counting up from 0 at row y: TRUE when a key cut it short (C: goto done)
+    Function RatioCount% (ratio As Integer, y As Integer, extrabreathe As Integer)
+        Dim i As Integer, x As Integer, played As Integer, tempstr As String
+
+        RatioCount% = FALSE
+        For i = 0 To ratio
+            tempstr = ItoA$(i)
+            x = RATIOXX - Len(tempstr) * 2
+            WritePic x, y, tempstr
+            If i Mod 10 = 0 Then played = SD_PlaySound(ENDBONUS1SND)
+            VW_UpdateScreen
+            BJ_BreatheWhileSound
+            If extrabreathe Then BJ_Breathe
+
+            If IN_CheckAck Then
+                RatioCount% = TRUE
+                Exit Function
+            End If
+        Next i
+    End Function
+
+    '==================
+    '=
+    '= LevelCompleted
+    '=
+    '= Entered with the screen faded out
+    '= Still in split screen mode with the status bar
+    '=
+    '= Exit with the screen faded out
+    '=
+    '==================
+    Sub LevelCompleted ()
+        Dim x As Integer, i As Integer, min As Integer, sec As Long, kr As Integer, sr As Integer, tr As Integer
+        Dim tempstr As String, played As Integer
+        Dim bonus As Long, timeleft As Long, par As Integer
+
+        timeleft = 0
+
+        CacheLump LEVELEND_LUMP_START, LEVELEND_LUMP_END
+        ClearSplitVWB ' set up for double buffering in split screen
+        VWB_Bar 0, 0, 320, 200 - STATUSLINES, 127
+        StartCPMusic ENDLEVEL_MUS
+
+        '
+        ' do the intermission
+        '
+        IN_ClearKeysDown
+        IN_StartAck
+
+        VWB_DrawPic 0, 16, L_GUYPIC
+
+        If LevelCompletedNormal Then
+            $If SPANISH = DEFINED Then
+                WritePic 14, 2, "piso" + Chr$(10) + "completado"
+            $Else
+                WritePic 14, 2, "floor" + Chr$(10) + "completed"
+            $End If
+
+            WritePic 14, 7, STR_BONUS + "     0"
+            WritePic 16, 10, STR_TIME
+            WritePic 16, 12, STR_PAR
+
+            $If SPANISH = DEFINED Then
+                WritePic 11, 14, STR_RAT2KILL
+                WritePic 11, 16, STR_RAT2SECRET
+                WritePic 11, 18, STR_RAT2TREASURE
+            $Else
+                WritePic 9, 14, STR_RAT2KILL
+                WritePic 5, 16, STR_RAT2SECRET
+                WritePic 1, 18, STR_RAT2TREASURE
+            $End If
+
+            WritePic 26, 2, ItoA$(gamestate.mapon + 1)
+
+            par = gamestate.episode * 10 + mapon
+            $If SPANISH = DEFINED Then
+                WritePic 30, 12, partimestr(par)
+            $Else
+                WritePic 26, 12, partimestr(par)
+            $End If
+
+            '
+            ' PRINT TIME
+            '
+            sec = gamestate.TimeCount \ 70
+
+            If sec > 99 * 60 Then sec = 99 * 60 ' 99 minutes max
+
+            ' float math: the par times are multiples of 1/4 minute, so exact
+            If gamestate.TimeCount < partime(par) * 4200 Then timeleft = Fix((partime(par) * 4200) / 70 - sec)
+
+            min = sec \ 60
+            sec = sec Mod 60
+
+            $If SPANISH = DEFINED Then
+                i = 30 * 8
+            $Else
+                i = 26 * 8
+            $End If
+            VWB_DrawPic i, 10 * 8, L_NUM0PIC + (min \ 10)
+            i = i + 2 * 8
+            VWB_DrawPic i, 10 * 8, L_NUM0PIC + (min Mod 10)
+            i = i + 2 * 8
+            WritePic i \ 8, 10, ":"
+            i = i + 1 * 8
+            VWB_DrawPic i, 10 * 8, L_NUM0PIC + (sec \ 10)
+            i = i + 2 * 8
+            VWB_DrawPic i, 10 * 8, L_NUM0PIC + (sec Mod 10)
+
+            VW_UpdateScreen
+            VW_FadeIn
+
+            '
+            ' FIGURE RATIOS OUT BEFOREHAND
+            '
+            kr = 0: sr = 0: tr = 0
+            If gamestate.killtotal Then kr = (gamestate.killcount * 100) \ gamestate.killtotal
+            If gamestate.secrettotal Then sr = (gamestate.secretcount * 100) \ gamestate.secrettotal
+            If gamestate.treasuretotal Then tr = (gamestate.treasurecount * 100) \ gamestate.treasuretotal
+
+            Do ' (one pass; Exit Do = goto done)
+                '
+                ' PRINT TIME BONUS
+                '
+                bonus = timeleft * PAR_AMOUNT
+                If bonus Then
+                    For i = 0 To timeleft
+                        tempstr = ItoA$(CLng(i) * PAR_AMOUNT)
+                        x = 36 - Len(tempstr) * 2
+                        WritePic x, 7, tempstr
+                        If i Mod (PAR_AMOUNT \ 10) = 0 Then played = SD_PlaySound(ENDBONUS1SND)
+                        VW_UpdateScreen
+                        BJ_BreatheWhileSound
+                        If IN_CheckAck Then Exit Do
+                    Next i
+
+                    VW_UpdateScreen
+                    played = SD_PlaySound(ENDBONUS2SND)
+                    BJ_BreatheWhileSound
+                End If
+
+                '
+                ' KILL RATIO
+                '
+                If RatioCount(kr, 14, FALSE) Then Exit Do
+                RatioEnd kr, bonus
+
+                '
+                ' SECRET RATIO
+                '
+                If RatioCount(sr, 16, TRUE) Then Exit Do
+                RatioEnd sr, bonus
+
+                '
+                ' TREASURE RATIO
+                '
+                If RatioCount(tr, 18, FALSE) Then Exit Do
+                RatioEnd tr, bonus
+            Loop While FALSE
+
+            '
+            ' JUMP STRAIGHT HERE IF KEY PRESSED
+            '
+            ' done:
+
+            tempstr = ItoA$(kr)
+            x = RATIOXX - Len(tempstr) * 2
+            WritePic x, 14, tempstr
+
+            tempstr = ItoA$(sr)
+            x = RATIOXX - Len(tempstr) * 2
+            WritePic x, 16, tempstr
+
+            tempstr = ItoA$(tr)
+            x = RATIOXX - Len(tempstr) * 2
+            WritePic x, 18, tempstr
+
+            bonus = timeleft * PAR_AMOUNT - PERCENT100AMT * (kr = 100) - PERCENT100AMT * (sr = 100) - PERCENT100AMT * (tr = 100) ' (true is -1 here)
+
+            GivePoints bonus
+            tempstr = ItoA$(bonus)
+            x = 36 - Len(tempstr) * 2
+            WritePic x, 7, tempstr
+
+            '
+            ' SAVE RATIO INFORMATION FOR ENDGAME
+            '
+            LevelRatios(mapon).kill = kr
+            LevelRatios(mapon).secret = sr
+            LevelRatios(mapon).treasure = tr
+            LevelRatios(mapon).time = min * 60 + sec
+        Else
+            LevelCompletedSecret
+
+            WritePic 10, 16, "15000 bonus!"
+
+            VW_UpdateScreen
+            VW_FadeIn
+
+            GivePoints 15000
+        End If
+
+        DrawScore
+        VW_UpdateScreen
+
+        TimeCount = 0
+        IN_StartAck
+        Do While Not IN_CheckAck
+            BJ_Breathe
+        Loop
+
+        '
+        ' done
+        '
+        ' TODO 6j: SPEARDEMO / JAPDEMO end of demo message
+        ' TODO: PicturePause (Keyboard[sc_P] with the "goobers" parameter)
+
+        VW_FadeOut
+        DrawPlayBorder ' (the original drew it into all three screen pages)
+
+        UnCacheLump LEVELEND_LUMP_START, LEVELEND_LUMP_END
+    End Sub
+
+    ' The floor completed screen (not a boss or secret level)
+    Function LevelCompletedNormal% ()
+        $If SPEAR = UNDEFINED Then
+            LevelCompletedNormal% = (mapon < 8)
+        $Else
+            LevelCompletedNormal% = (mapon <> 4 And mapon <> 9 And mapon <> 15 And mapon < 17)
+        $End If
+    End Function
+
+    ' The boss / secret level title of LevelCompleted
+    Sub LevelCompletedSecret ()
+        $If SPEAR = DEFINED Then
+            $If SPEARDEMO = UNDEFINED Then
+                Select Case mapon
+                    Case 4: WritePic 14, 4, " trans" + Chr$(10) + " grosse" + Chr$(10) + STR_DEFEATED
+                    Case 9: WritePic 14, 4, "barnacle" + Chr$(10) + "wilhelm" + Chr$(10) + STR_DEFEATED
+                    Case 15: WritePic 14, 4, "ubermutant" + Chr$(10) + STR_DEFEATED
+                    Case 17: WritePic 14, 4, " death" + Chr$(10) + " knight" + Chr$(10) + STR_DEFEATED
+                    Case 18: WritePic 13, 4, "secret tunnel" + Chr$(10) + "    area" + Chr$(10) + "  completed!"
+                    Case 19: WritePic 13, 4, "secret castle" + Chr$(10) + "    area" + Chr$(10) + "  completed!"
+                End Select
+            $End If
+        $Else
+            WritePic 14, 4, "secret floor" + Chr$(10) + " completed!"
+        $End If
+    End Sub
+
 
     '=================
     '=

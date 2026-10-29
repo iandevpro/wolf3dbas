@@ -71,7 +71,7 @@ Each sub-step below ends with something visible to test against the original in 
 - WL_ACT1 statics (`SpawnStatic`, `PlaceItemType`); WL_AGENT `GetBonus` and the status bar updates; `StartBonusFlash` / palette shifts.
 - **Test:** see lamps, tables and items in E1M1; picking up food, ammo and treasure updates the status bar and flashes.
 
-### 6f. Doors, push walls and level exit
+### 6f. Doors, push walls and level exit — DONE 2026-10-28
 - WL_ACT1 doors (`OpenDoor`, `CloseDoor`, `MoveDoors`, area connection) and push walls; WL_AGENT `Cmd_Use`.
 - The elevator switch; WL_INTER `LevelCompleted` (intermission with ratios and bonus), the next level, the secret level.
 - **Test:** open doors, find a secret wall, finish E1M1 and see the intermission, start E1M2.

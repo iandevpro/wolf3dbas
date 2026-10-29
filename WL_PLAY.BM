@@ -639,7 +639,8 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             '
             madenoise = FALSE
 
-            ' TODO 6f: MoveDoors, MovePWalls
+            MoveDoors
+            MovePWalls
 
             obj = player
             Do While obj <> -1

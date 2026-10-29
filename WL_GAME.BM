@@ -416,13 +416,18 @@ Sub GameLoop ()
 
             Select Case playstate
                 Case ex_completed, ex_secretlevel
-                    ' TODO 6f: keys, LevelCompleted, next / secret level
                     gamestate.keys = 0
                     DrawKeys
                     VW_FadeOut
+
                     ClearMemory
+
+                    LevelCompleted ' do the intermission
+                    ' TODO 6j: SPEARDEMO / JAPDEMO end after the demo levels
+
                     gamestate.oldscore = gamestate.score
-                    gamestate.mapon = gamestate.mapon + 1
+
+                    NextLevelMap
 
                 Case ex_died
                     ' TODO 6g: Died (death cam, fade, lives--) - only the life is taken here
@@ -448,6 +453,71 @@ Sub GameLoop ()
             End Select
         Loop
     Loop
+End Sub
+
+' GameLoop: the map after a completed level - next, secret, or back from the secret level
+Sub NextLevelMap ()
+    $If SPEAR = UNDEFINED Then
+        '
+        ' COMING BACK FROM SECRET LEVEL
+        '
+        If gamestate.mapon = 9 Then
+            gamestate.mapon = ElevatorBackTo(gamestate.episode) ' back from secret
+        ElseIf playstate = ex_secretlevel Then
+            '
+            ' GOING TO SECRET LEVEL
+            '
+            gamestate.mapon = 9
+        Else
+            '
+            ' GOING TO NEXT LEVEL
+            '
+            gamestate.mapon = gamestate.mapon + 1
+        End If
+    $Else
+        Const FROMSECRET1 = 3
+        Const FROMSECRET2 = 11
+
+        '
+        ' GOING TO SECRET LEVEL
+        '
+        If playstate = ex_secretlevel Then
+            Select Case gamestate.mapon
+                Case FROMSECRET1: gamestate.mapon = 18
+                Case FROMSECRET2: gamestate.mapon = 19
+            End Select
+        ElseIf gamestate.mapon = 18 Or gamestate.mapon = 19 Then
+            '
+            ' COMING BACK FROM SECRET LEVEL
+            '
+            Select Case gamestate.mapon
+                Case 18: gamestate.mapon = FROMSECRET1 + 1
+                Case 19: gamestate.mapon = FROMSECRET2 + 1
+            End Select
+        Else
+            '
+            ' GOING TO NEXT LEVEL
+            '
+            gamestate.mapon = gamestate.mapon + 1
+        End If
+    $End If
+End Sub
+
+'==========================
+'=
+'= PlaySoundLocTile / PlaySoundLocGlobal
+'=
+'= TODO 6i: the left / right volumes (SetSoundLoc, SD_PositionSound) for digitized sounds
+'=
+'==========================
+Sub PlaySoundLocTile (s As Integer, tx As Integer, ty As Integer)
+    PlaySoundLocGlobal s, tx * TILEGLOBAL + TILEGLOBAL \ 2, ty * TILEGLOBAL + TILEGLOBAL \ 2
+End Sub
+
+Sub PlaySoundLocGlobal (s As Integer, gx As Long, gy As Long)
+    Dim played As Integer
+
+    played = SD_PlaySound(s)
 End Sub
 
 ' The end of a game in GameLoop: restore "View Scores" in the main menu
