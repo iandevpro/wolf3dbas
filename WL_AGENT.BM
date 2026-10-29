@@ -1,0 +1,175 @@
+' WL_AGENT.C - the player: status bar, movement, weapons, bonus items
+' Ported so far: the status bar and SpawnPlayer (step 6c)
+
+$If INCLUDE_WL_AGENT_BM = UNDEFINED Then
+    $Let INCLUDE_WL_AGENT_BM = 1
+
+    '
+    ' =============================================================================
+    '                           STATUS WINDOW STUFF
+    ' =============================================================================
+    '
+
+    '==================
+    '=
+    '= StatusDrawPic
+    '=
+    '==================
+    Sub StatusDrawPic (x As Integer, y As Integer, picnum As Integer)
+        ' The original drew into all three screen pages at the status bar offset
+        LatchDrawPic x, (200 - STATUSLINES) + y, picnum
+    End Sub
+
+    '==================
+    '=
+    '= DrawFace
+    '=
+    '==================
+    Sub DrawFace ()
+        If gamestate.health Then
+            StatusDrawPic 17, 4, FACE1APIC + 3 * ((100 - gamestate.health) \ 16) + gamestate.faceframe
+        Else
+            If LastAttacker <> -1 Then
+                If objlist(LastAttacker).obclass = needleobj Then
+                    StatusDrawPic 17, 4, MUTANTBJPIC
+                    Exit Sub
+                End If
+            End If
+            StatusDrawPic 17, 4, FACE8APIC
+        End If
+    End Sub
+
+    '===============
+    '=
+    '= LatchNumber
+    '=
+    '= right justifies and pads with blanks
+    '=
+    '===============
+    Sub LatchNumber (x As Integer, y As Integer, width As Integer, number As Long)
+        Dim length As Integer, c As Integer, px2 As Integer, w As Integer
+        Dim s As String
+
+        s = LTrim$(Str$(number)) ' ltoa
+        length = Len(s)
+        px2 = x
+        w = width
+        Do While length < w
+            StatusDrawPic px2, y, N_BLANKPIC
+            px2 = px2 + 1
+            w = w - 1
+        Loop
+
+        If length <= w Then c = 0 Else c = length - w
+
+        Do While c < length
+            StatusDrawPic px2, y, Asc(s, c + 1) - Asc("0") + N_0PIC
+            px2 = px2 + 1
+            c = c + 1
+        Loop
+    End Sub
+
+    '===============
+    '=
+    '= DrawHealth
+    '=
+    '===============
+    Sub DrawHealth ()
+        LatchNumber 21, 16, 3, gamestate.health
+    End Sub
+
+    '===============
+    '=
+    '= DrawLevel
+    '=
+    '===============
+    Sub DrawLevel ()
+        LatchNumber 2, 16, 2, gamestate.mapon + 1
+    End Sub
+
+    '===============
+    '=
+    '= DrawLives
+    '=
+    '===============
+    Sub DrawLives ()
+        LatchNumber 14, 16, 1, gamestate.lives
+    End Sub
+
+    '===============
+    '=
+    '= DrawScore
+    '=
+    '===============
+    Sub DrawScore ()
+        LatchNumber 6, 16, 6, gamestate.score
+    End Sub
+
+    '==================
+    '=
+    '= DrawWeapon
+    '=
+    '==================
+    Sub DrawWeapon ()
+        StatusDrawPic 32, 8, KNIFEPIC + gamestate.weapon
+    End Sub
+
+    '==================
+    '=
+    '= DrawKeys
+    '=
+    '==================
+    Sub DrawKeys ()
+        If gamestate.keys And 1 Then
+            StatusDrawPic 30, 4, GOLDKEYPIC
+        Else
+            StatusDrawPic 30, 4, NOKEYPIC
+        End If
+
+        If gamestate.keys And 2 Then
+            StatusDrawPic 30, 20, SILVERKEYPIC
+        Else
+            StatusDrawPic 30, 20, NOKEYPIC
+        End If
+    End Sub
+
+    '===============
+    '=
+    '= DrawAmmo
+    '=
+    '===============
+    Sub DrawAmmo ()
+        LatchNumber 27, 16, 2, gamestate.ammo
+    End Sub
+
+    '
+    ' =============================================================================
+    '                               PLAYER
+    ' =============================================================================
+    '
+
+    '===================
+    '=
+    '= SpawnPlayer
+    '=
+    '===================
+    Sub SpawnPlayer (tilex As Integer, tiley As Integer, dir As Integer)
+        objlist(player).obclass = playerobj
+        objlist(player).active = ac_yes ' true
+        objlist(player).tilex = tilex
+        objlist(player).tiley = tiley
+        objlist(player).areanumber = mapsegs(0, tiley * 64 + tilex)
+        objlist(player).x = tilex * TILEGLOBAL + TILEGLOBAL \ 2 ' ((long)tilex<<TILESHIFT)+TILEGLOBAL/2
+        objlist(player).y = tiley * TILEGLOBAL + TILEGLOBAL \ 2
+        objlist(player).state = -1 ' TODO 6d: &s_player
+        objlist(player).angle = (1 - dir) * 90
+        If objlist(player).angle < 0 Then objlist(player).angle = objlist(player).angle + ANGLES
+        objlist(player).flags = FL_NEVERMARK
+        ' TODO 6d: Thrust (0,0) - set some variables. Until then only what Thrust (0,0) does
+        ' here: the tile stays the same and the area number gets the floor tile minus AREATILE
+        ' (InitAreas indexes areabyplayer() with it)
+        objlist(player).areanumber = mapsegs(0, tiley * 64 + tilex) - AREATILE
+        InitAreas
+    End Sub
+
+$EndIf

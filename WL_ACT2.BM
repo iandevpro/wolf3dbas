@@ -1,0 +1,42 @@
+' WL_ACT2.C - enemies, bosses, projectiles
+' Only the spawn entry points exist so far; the enemies come in step 6g / 6h
+
+$If INCLUDE_WL_ACT2_BM = UNDEFINED Then
+    $Let INCLUDE_WL_ACT2_BM = 1
+
+    ' TODO 6g: SpawnStand, SpawnPatrol, SpawnDeadGuard (states, killtotal)
+    Sub SpawnStand (which As Integer, tilex As Integer, tiley As Integer, dir As Integer)
+    End Sub
+
+    Sub SpawnPatrol (which As Integer, tilex As Integer, tiley As Integer, dir As Integer)
+    End Sub
+
+    Sub SpawnDeadGuard (tilex As Integer, tiley As Integer)
+    End Sub
+
+    ' TODO 6h: bosses and ghosts
+    Sub SpawnBoss (tilex As Integer, tiley As Integer)
+    End Sub
+
+    Sub SpawnGretel (tilex As Integer, tiley As Integer)
+    End Sub
+
+    Sub SpawnGift (tilex As Integer, tiley As Integer)
+    End Sub
+
+    Sub SpawnFat (tilex As Integer, tiley As Integer)
+    End Sub
+
+    Sub SpawnSchabbs (tilex As Integer, tiley As Integer)
+    End Sub
+
+    Sub SpawnFakeHitler (tilex As Integer, tiley As Integer)
+    End Sub
+
+    Sub SpawnHitler (tilex As Integer, tiley As Integer)
+    End Sub
+
+    Sub SpawnGhosts (which As Integer, tilex As Integer, tiley As Integer)
+    End Sub
+
+$EndIf

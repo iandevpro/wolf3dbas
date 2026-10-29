@@ -22,3 +22,399 @@ Sub DrawPlayBorder ()
     VWB_Vlin yl - 1, yl + viewheight, xl + viewwidth, 125
     VWB_Plot xl - 1, yl + viewheight, 124
 End Sub
+
+'==========================
+'=
+'= ClearMemory
+'=
+'==========================
+Sub ClearMemory ()
+    ' PM_UnlockMainMem, MM_SortMem - memory management, not needed in QB64
+    ' TODO 6i: SD_StopDigitized
+End Sub
+
+'==========================
+'=
+'= ScanSpawnTile
+'=
+'= The C switch in ScanInfoPlane lets the hard and medium tiles of an enemy fall
+'= through to the easy ones (tile -= step). Returns the easy tile for "tile", or -1 when
+'= the tile is not in this group or the difficulty skips it
+'=
+'==========================
+Function ScanSpawnTile% (tile As Long, basetile As Integer, stepsize As Integer)
+    Dim t As Long
+
+    t = tile
+    ScanSpawnTile% = -1
+    If t >= basetile + 2 * stepsize And t <= basetile + 2 * stepsize + 3 Then
+        If gamestate.difficulty < gd_hard Then Exit Function
+        t = t - stepsize
+    End If
+    If t >= basetile + stepsize And t <= basetile + stepsize + 3 Then
+        If gamestate.difficulty < gd_medium Then Exit Function
+        t = t - stepsize
+    End If
+    If t >= basetile And t <= basetile + 3 Then ScanSpawnTile% = t
+End Function
+
+'==========================
+'=
+'= ScanSpawnEnemy
+'=
+'= The enemy cases of the ScanInfoPlane switch (the same in WL6 and SPEAR):
+'= guard, officer, ss, dogs (hard / medium tiles +72 / +36), mutants (+36 / +18)
+'=
+'==========================
+Sub ScanSpawnEnemy (tile As Long, x As Integer, y As Integer)
+    Dim t As Integer
+
+    t = ScanSpawnTile(tile, 108, 36)
+    If t >= 0 Then SpawnStand en_guard, x, y, t - 108: Exit Sub
+    t = ScanSpawnTile(tile, 112, 36)
+    If t >= 0 Then SpawnPatrol en_guard, x, y, t - 112: Exit Sub
+    If tile = 124 Then SpawnDeadGuard x, y: Exit Sub
+
+    t = ScanSpawnTile(tile, 116, 36)
+    If t >= 0 Then SpawnStand en_officer, x, y, t - 116: Exit Sub
+    t = ScanSpawnTile(tile, 120, 36)
+    If t >= 0 Then SpawnPatrol en_officer, x, y, t - 120: Exit Sub
+
+    t = ScanSpawnTile(tile, 126, 36)
+    If t >= 0 Then SpawnStand en_ss, x, y, t - 126: Exit Sub
+    t = ScanSpawnTile(tile, 130, 36)
+    If t >= 0 Then SpawnPatrol en_ss, x, y, t - 130: Exit Sub
+
+    t = ScanSpawnTile(tile, 134, 36)
+    If t >= 0 Then SpawnStand en_dog, x, y, t - 134: Exit Sub
+    t = ScanSpawnTile(tile, 138, 36)
+    If t >= 0 Then SpawnPatrol en_dog, x, y, t - 138: Exit Sub
+
+    t = ScanSpawnTile(tile, 216, 18)
+    If t >= 0 Then SpawnStand en_mutant, x, y, t - 216: Exit Sub
+    t = ScanSpawnTile(tile, 220, 18)
+    If t >= 0 Then SpawnPatrol en_mutant, x, y, t - 220: Exit Sub
+End Sub
+
+'==========================
+'=
+'= ScanInfoPlane
+'=
+'= Spawn all actors and mark down special places
+'=
+'==========================
+Sub ScanInfoPlane ()
+    Dim x As Integer, y As Integer
+    Dim tile As Long
+
+    For y = 0 To mapheight - 1
+        For x = 0 To mapwidth - 1
+            tile = mapsegs(1, y * 64 + x)
+            If tile = 0 Then _Continue
+
+            $If SPEAR = UNDEFINED Then
+                Select Case tile
+                    Case 19 To 22
+                        SpawnPlayer x, y, NORTH + tile - 19
+
+                    Case 23 To 74 ' 73, 74: TRUCK AND SPEAR!
+                        SpawnStatic x, y, tile - 23
+
+                        '
+                        ' P wall
+                        '
+                    Case 98
+                        If Not loadedgame Then gamestate.secrettotal = gamestate.secrettotal + 1
+
+                        '
+                        ' boss
+                        '
+                    Case 214
+                        SpawnBoss x, y
+                    Case 197
+                        SpawnGretel x, y
+                    Case 215
+                        SpawnGift x, y
+                    Case 179
+                        SpawnFat x, y
+                    Case 196
+                        SpawnSchabbs x, y
+                    Case 160
+                        SpawnFakeHitler x, y
+                    Case 178
+                        SpawnHitler x, y
+
+                        '
+                        ' ghosts
+                        '
+                    Case 224
+                        SpawnGhosts en_blinky, x, y
+                    Case 225
+                        SpawnGhosts en_clyde, x, y
+                    Case 226
+                        SpawnGhosts en_pinky, x, y
+                    Case 227
+                        SpawnGhosts en_inky, x, y
+
+                    Case Else
+                        ScanSpawnEnemy tile, x, y
+                End Select
+            $Else
+                Select Case tile
+                    Case 19 To 22
+                        SpawnPlayer x, y, NORTH + tile - 19
+
+                    Case 23 To 74 ' 73, 74: TRUCK AND SPEAR!
+                        SpawnStatic x, y, tile - 23
+
+                        '
+                        ' P wall
+                        '
+                    Case 98
+                        If Not loadedgame Then gamestate.secrettotal = gamestate.secrettotal + 1
+
+                        '
+                        ' boss
+                        '
+                    Case 106
+                        SpawnSpectre x, y
+                    Case 107
+                        SpawnAngel x, y
+                    Case 125
+                        SpawnTrans x, y
+                    Case 142
+                        SpawnUber x, y
+                    Case 143
+                        SpawnWill x, y
+                    Case 161
+                        SpawnDeath x, y
+
+                    Case Else
+                        ScanSpawnEnemy tile, x, y
+                End Select
+            $End If
+        Next x
+    Next y
+End Sub
+
+'==================
+'=
+'= SetupGameLevel
+'=
+'==================
+Sub SetupGameLevel ()
+    Dim x As Integer, y As Integer, idx As Long, tile As Long
+
+    If Not loadedgame Then
+        gamestate.TimeCount = 0
+        gamestate.secrettotal = 0
+        gamestate.killtotal = 0
+        gamestate.treasuretotal = 0
+        gamestate.secretcount = 0
+        gamestate.killcount = 0
+        gamestate.treasurecount = 0
+    End If
+
+    If demoplayback Or demorecord Then
+        US_InitRndT FALSE
+    Else
+        US_InitRndT TRUE
+    End If
+
+    '
+    ' load the level
+    '
+    CA_CacheMap gamestate.mapon + 10 * gamestate.episode
+    mapon = mapon - gamestate.episode * 10
+
+    mapwidth = mapwidth(mapon) ' mapheaderseg[mapon]->width
+    mapheight = mapheight(mapon)
+
+    If mapwidth <> 64 Or mapheight <> 64 Then Quit "Map not 64*64!"
+
+    '
+    ' copy the wall data to a data segment array
+    '
+    ' memset (tilemap / actorat, 0) happens in the loop: every spot gets a value
+    ' (Erase would free these arrays in QB64)
+    For y = 0 To mapheight - 1
+        For x = 0 To mapwidth - 1
+            tile = mapsegs(0, y * 64 + x)
+            If tile < AREATILE Then
+                ' solid wall
+                tilemap(x, y) = tile
+                actorat(x, y) = tile
+            Else
+                ' area floor
+                tilemap(x, y) = 0
+                actorat(x, y) = 0
+            End If
+        Next x
+    Next y
+
+    '
+    ' spawn doors
+    '
+    InitActorList ' start spawning things with a clean slate
+    InitDoorList
+    InitStaticList
+
+    For y = 0 To mapheight - 1
+        For x = 0 To mapwidth - 1
+            tile = mapsegs(0, y * 64 + x)
+            If tile >= 90 And tile <= 101 Then
+                ' door
+                Select Case tile
+                    Case 90, 92, 94, 96, 98, 100
+                        SpawnDoor x, y, 1, (tile - 90) \ 2
+                    Case 91, 93, 95, 97, 99, 101
+                        SpawnDoor x, y, 0, (tile - 91) \ 2
+                End Select
+            End If
+        Next x
+    Next y
+
+    '
+    ' spawn actors
+    '
+    ScanInfoPlane
+
+    '
+    ' take out the ambush markers
+    '
+    For y = 0 To mapheight - 1
+        For x = 0 To mapwidth - 1
+            idx = y * 64 + x
+            tile = mapsegs(0, idx)
+            If tile = AMBUSHTILE Then
+                tilemap(x, y) = 0
+                If actorat(x, y) = AMBUSHTILE Then actorat(x, y) = 0
+
+                ' the C code read the right, upper, lower and left neighbours (map points one past the tile)
+                If idx + 1 <= 4095 Then If mapsegs(0, idx + 1) >= AREATILE Then tile = mapsegs(0, idx + 1)
+                If idx - mapwidth >= 0 Then If mapsegs(0, idx - mapwidth) >= AREATILE Then tile = mapsegs(0, idx - mapwidth)
+                If idx + mapwidth <= 4095 Then If mapsegs(0, idx + mapwidth) >= AREATILE Then tile = mapsegs(0, idx + mapwidth)
+                If idx - 1 >= 0 Then If mapsegs(0, idx - 1) >= AREATILE Then tile = mapsegs(0, idx - 1)
+
+                mapsegs(0, idx) = tile
+            End If
+        Next x
+    Next y
+
+    '
+    ' have the caching manager load and purge stuff to make sure all marks
+    ' are in memory
+    '
+    CA_LoadAllSounds
+End Sub
+
+'===================
+'=
+'= DrawPlayScreen
+'=
+'===================
+Sub DrawPlayScreen ()
+    VW_FadeOut
+
+    ' The original drew the border and status bar into all three screen pages
+    CA_CacheGrChunk STATUSBARPIC
+    DrawPlayBorder
+    VWB_DrawPic 0, 200 - STATUSLINES, STATUSBARPIC
+    UNCACHEGRCHUNK STATUSBARPIC
+
+    DrawFace
+    DrawHealth
+    DrawLives
+    DrawLevel
+    DrawAmmo
+    DrawKeys
+    DrawWeapon
+    DrawScore
+End Sub
+
+'===================
+'=
+'= GameLoop
+'=
+'===================
+Sub GameLoop ()
+    Dim died As Integer
+
+    Do ' restartgame:
+        ClearMemory
+        SETFONTCOLOR 0, 15
+        DrawPlayScreen
+        died = FALSE
+
+        Do ' restart:
+            If Not loadedgame Then gamestate.score = gamestate.oldscore
+            DrawScore
+
+            startgame = FALSE
+            If loadedgame Then
+                loadedgame = FALSE
+            Else
+                SetupGameLevel
+            End If
+
+            ingame = TRUE
+            StartLevelMusic
+            ' PM_CheckMainMem - memory management, not needed in QB64
+            If Not died Then
+                PreloadGraphics
+            Else
+                died = FALSE
+            End If
+
+            fizzlein = TRUE
+            DrawLevel
+
+            ' startplayloop:
+            PlayLoop
+
+            StopMusic
+            ingame = FALSE
+
+            ' TODO 6j: If demorecord And playstate <> ex_warped Then FinishDemoRecord
+
+            If startgame Or loadedgame Then Exit Do ' goto restartgame
+
+            Select Case playstate
+                Case ex_completed, ex_secretlevel
+                    ' TODO 6f: keys, LevelCompleted, next / secret level
+                    gamestate.keys = 0
+                    DrawKeys
+                    VW_FadeOut
+                    ClearMemory
+                    gamestate.oldscore = gamestate.score
+                    gamestate.mapon = gamestate.mapon + 1
+
+                Case ex_died
+                    ' TODO 6g: Died, CheckHighScore
+                    GameLoopEnd
+                    Exit Sub
+
+                Case ex_victorious
+                    ' TODO 6h: Victory, CheckHighScore
+                    GameLoopEnd
+                    Exit Sub
+
+                Case ex_abort
+                    ' Temporary: the play loop stand-in ends with Esc (the original only
+                    ' got ex_abort from demos); leave the game
+                    GameLoopEnd
+                    Exit Sub
+
+                Case Else
+                    ClearMemory
+            End Select
+        Loop
+    Loop
+End Sub
+
+' The end of a game in GameLoop: restore "View Scores" in the main menu
+' TODO 6g: VW_FadeOut, ClearMemory, CheckHighScore before
+Sub GameLoopEnd ()
+    MainMenu(mi_viewscores).txt = STR_VS
+    MainMenu(mi_viewscores).routine = RTN_VIEWSCORES
+End Sub

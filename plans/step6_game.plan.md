@@ -52,7 +52,7 @@ Each sub-step below ends with something visible to test against the original in 
 - `PM_Startup` / `PM_GetPage` (ID_PM.C): load VSWAP.WL6 (1.5 MB) into one `_MEM` block. That gives the page offset table, the wall pages (64x64, stored in columns), the sprite pages (`t_compshape`) and the digitized sound pages, with no paging needed.
 - **Test:** a temporary debug view that draws E1M1's wall plane from above, and shows wall and sprite pages on screen. Compare map names ("Wolf1 Map1"...) and tile counts with what the files contain.
 
-### 6c. Play screen and level setup
+### 6c. Play screen and level setup — DONE 2026-10-28
 - `GameLoop` skeleton.
 - `DrawPlayScreen` with the status bar: `LatchDrawPic` (latches were pictures preloaded into video memory, here they are cached pictures), `DrawFace`, `DrawHealth`, `DrawLives`, `DrawLevel`, `DrawAmmo`, `DrawKeys`, `DrawWeapon`, `DrawScore`.
 - `SetupGameLevel`: `tilemap`, `actorat`, doors, `ScanInfoPlane` (player start and static objects first; enemies are spawned but stay inactive).

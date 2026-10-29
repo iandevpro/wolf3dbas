@@ -229,7 +229,7 @@ Commit `d02513f`. Plan: `step6_game.plan.md`; the four decisions listed there ar
   - QB64 2.1 console note found along the way: `Print a, b` (comma zones) in `$Console:Only` printed endless spaces, so use `;`.
 
 ## 2026-10-28: Step 6b, map and VSWAP data
-Not committed yet.
+Commit `2eb471c`.
 
 - **Maps (`ID_CA`):**
   - `CA_CacheMap` with `CAL_CarmackExpand` and `CA_RLEWexpand`; GAMEMAPS.WL6 is carmack + RLEW compressed (`CARMACIZED`).
@@ -247,3 +247,31 @@ Not committed yet.
 - **Tested:**
   - The checksums of both planes of all 60 maps match an independent Python decoder of GAMEMAPS.WL6 (0 mismatches). The RLEW tag is &HABCD, and every map has exactly one player start.
   - Screenshots: E1M1 ("Wolf1 Map1") has its familiar layout, with 22 doors and 182 objects; wall page 3 is the gray stone wall (106 wall pages); sprite 50 is the standing guard, matching `SPR_GRD_S_1` = 50 from the generated `WL_SPR.BI`.
+
+## 2026-10-28: Step 6c, play screen and level setup
+Not committed yet.
+
+- **What works:** New Game → episode → difficulty now enters the game: the play border and status bar (floor, score, lives, BJ's face, health, ammo, weapon), the level music, and "Get Psyched!" with its progress bar. The 3D window stays black until 6d. For now Esc leaves the game and returns to the title loop.
+- **`WL_GAME.BM`:**
+  - `GameLoop` (with the level-completed, died and victory cases kept as TODOs for 6f-6h), `SetupGameLevel`, `ScanInfoPlane`, `DrawPlayScreen`, `ClearMemory`.
+  - `ScanInfoPlane` has a `$If SPEAR` / `$Else` pair, each with its own complete `Select Case` (WL6 bosses and ghosts in one, Spear bosses in the other). This was the user's request; a `$If` between `Case` lines confuses QB64.
+  - The enemy groups, the same in both versions, are in `ScanSpawnEnemy`. `ScanSpawnTile` replaces the C case fall-through from the hard / medium enemy tiles down to the easy ones.
+- **`WL_PLAY.BM` (new):** `InitActorList`, `GetNewActor`, `RemoveObj` on the index-linked object list; `StopMusic`; `StartLevelMusic`; a temporary `PlayLoop` (fade in, wait for Esc, `playstate = ex_abort`).
+  - `GameLoop` ends the game on `ex_abort` until the real play loop exists.
+- **`WL_PLAY.BI`:** the play loop globals, and `songs()` (the music of each map), generated from WL_PLAY.C.
+- **`WL_ACT1.BI` / `WL_ACT1.BM` (new):** `InitStaticList`, `InitDoorList`, `SpawnDoor` (doors are `doornum Or &H80` in `actorat()` and `tilemap()`, below `OBJ_BASE`), `InitAreas`, `ConnectAreas`, `RecursiveConnect`, door and area globals. `SpawnStatic` is a stub (6e).
+- **`WL_AGENT.BM` (new):** the status bar (`StatusDrawPic`, `DrawFace`, `LatchNumber`, `DrawHealth`, `DrawLevel`, `DrawLives`, `DrawScore`, `DrawWeapon`, `DrawKeys`, `DrawAmmo`) and `SpawnPlayer`.
+- **`WL_ACT2.BM` (new):** the enemy spawn entry points as stubs (6g / 6h).
+- **`WL_INTER.BM`:** `PreloadGraphics` ("Get Psyched!"), `PreloadUpdate`, `ClearSplitVWB`.
+- **`ID_VH.BM`:**
+  - `LatchDrawPic`: latches were pictures copied into video memory; here they are cached pictures, and x is in 8-pixel units.
+  - `LoadLatchMem` caches them; `InitGame` calls it.
+- **`ID_PM.BM`:** `PM_Preload` only shows the progress, since the pages are already in memory. It updates every 16 pages.
+- **`DemoLoop`** calls the real `GameLoop`; the temporary block from 5b is gone.
+- **Renames:**
+  - `StartMusic` became `StartLevelMusic` (it clashed with the `STARTMUSIC` chunk constant).
+  - `ScanSpawnTile`'s parameter `base` became `basetile` (BASE is a keyword).
+- **Fixes found while testing:**
+  - `Erase` freed `tilemap()` instead of zeroing it, and the next access stopped with "Subscript out of range" (WL_GAME.BM line 245). All `Erase` uses in the new code are clearing loops now.
+  - `SpawnPlayer` stored the raw floor tile as the area number; the C code relies on `Thrust(0, 0)` to subtract `AREATILE` before `InitAreas`. Until `Thrust` arrives (6d), `SpawnPlayer` does that part itself.
+- **Tested:** scripted key presses and screenshots: New Game → "Get Psyched!" → play screen with the correct status bar → Esc back to the title. The level music wasn't checked by ear.

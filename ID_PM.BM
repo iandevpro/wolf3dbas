@@ -98,6 +98,30 @@ $If INCLUDE_ID_PM_BM = UNDEFINED Then
         PM_GetPage& = PMPageOffset(pagenum)
     End Function
 
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  PM_Preload() - Loads as many pages as possible into all types of memory.
+    '//      Calls the update function after each load, indicating the current
+    '//      page, and the total pages that need to be loaded (for display purposes)
+    '//
+    '//  The pages are already in memory, so only the progress is shown; the update
+    '//  function (a pointer in the original) is PreloadUpdate. It is called every 16 pages,
+    '//  since showing every page (~660 screen updates) would only slow it down
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub PM_Preload ()
+        Dim i As Long, current As Long, total As Long, result As Integer
+
+        For i = 0 To ChunksInFile - 1
+            If PMPageOffset(i) <> 0 Then total = total + 1 ' sparse pages are skipped
+        Next i
+        If total = 0 Then Exit Sub
+
+        For current = 1 To total
+            If (current And 15) = 0 Or current = total Then result = PreloadUpdate(current, total)
+        Next current
+    End Sub
+
     ' #define PM_GetSpritePage(v) PM_GetPage(PMSpriteStart + (v))
     Function PM_GetSpritePage& (v As Integer)
         PM_GetSpritePage& = PM_GetPage(PMSpriteStart + v)

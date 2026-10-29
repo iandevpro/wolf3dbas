@@ -22,6 +22,7 @@ Const TRUE = -1
 '$INCLUDE: 'WL_PLAY.BI'
 '$INCLUDE: 'WL_TEXT.BI'
 '$INCLUDE: 'ID_PM.BI'
+'$INCLUDE: 'WL_ACT1.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -151,6 +152,10 @@ System
 '$INCLUDE:'WL_TEXT.BM'
 '$INCLUDE:'ID_PM.BM'
 '$INCLUDE:'PORTDEBUG.BM'
+'$INCLUDE:'WL_PLAY.BM'
+'$INCLUDE:'WL_ACT1.BM'
+'$INCLUDE:'WL_ACT2.BM'
+'$INCLUDE:'WL_AGENT.BM'
 
 '==========================
 '=
@@ -362,6 +367,8 @@ Sub InitGame
     ' load in and lock down some basic chunks
     '
     CA_CacheGrChunk STARTFONT
+
+    LoadLatchMem
 
 End Sub
 
@@ -637,12 +644,7 @@ Sub DemoLoop
         US_ControlPanel 0
 
         If startgame Or loadedgame Then
-            ' TODO: GameLoop
-            ' Temporary: without GameLoop no game runs, undo what starting it changed
-            startgame = FALSE
-            loadedgame = FALSE
-            MainMenu(mi_viewscores).routine = RTN_VIEWSCORES
-            MainMenu(mi_viewscores).txt = STR_VS
+            GameLoop
             VW_FadeOut
             StartCPMusic INTROSONG
         End If

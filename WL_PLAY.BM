@@ -1,0 +1,183 @@
+' WL_PLAY.C - play loop, object list, music
+' The play loop itself is a temporary stand-in until the raycaster (step 6d)
+
+$If INCLUDE_WL_PLAY_BM = UNDEFINED Then
+    $Let INCLUDE_WL_PLAY_BM = 1
+
+    '$INCLUDE: 'WL_PLAY.BI'
+
+    '=========================
+    '=
+    '= InitActorList
+    '=
+    '= Call to clear out the actor object lists returning them all to the free
+    '= list.  Allocates a special spot for the player.
+    '=
+    '=========================
+    Sub InitActorList ()
+        Dim i As Integer
+
+        '
+        ' init the actor lists
+        '
+        For i = 0 To MAXACTORS - 1
+            objlist(i).prevobj = i + 1
+            objlist(i).nextobj = -1
+        Next i
+
+        objlist(MAXACTORS - 1).prevobj = -1
+
+        objfreelist = 0
+        lastobj = -1
+
+        objcount = 0
+
+        '
+        ' give the player the first free spots
+        '
+        GetNewActor
+        player = newobj
+    End Sub
+
+    '=========================
+    '=
+    '= GetNewActor
+    '=
+    '= Sets the global variable new to point to a free spot in objlist.
+    '= The free spot is inserted at the end of the liked list
+    '=
+    '= When the object list is full, the caller can either have it bomb out ot
+    '= return a dummy object pointer that will never get used
+    '=
+    '=========================
+    Sub GetNewActor ()
+        Dim empty As objtype
+
+        If objfreelist = -1 Then Quit "GetNewActor: No free spots in objlist!"
+
+        newobj = objfreelist
+        objfreelist = objlist(newobj).prevobj
+        objlist(newobj) = empty ' memset (new,0,sizeof(*new))
+        objlist(newobj).nextobj = -1
+        objlist(newobj).state = -1
+
+        If lastobj <> -1 Then objlist(lastobj).nextobj = newobj
+        objlist(newobj).prevobj = lastobj ' new->next is allready NULL from memset
+
+        objlist(newobj).active = ac_no
+        lastobj = newobj
+
+        objcount = objcount + 1
+    End Sub
+
+    '=========================
+    '=
+    '= RemoveObj
+    '=
+    '= Add the given object back into the free list, and unlink it from it's
+    '= neighbors
+    '=
+    '=========================
+    Sub RemoveObj (gone As Integer)
+        If gone = player Then Quit "RemoveObj: Tried to remove the player!"
+
+        objlist(gone).state = -1
+
+        '
+        ' fix the next object's back link
+        '
+        If gone = lastobj Then
+            lastobj = objlist(gone).prevobj
+        Else
+            objlist(objlist(gone).nextobj).prevobj = objlist(gone).prevobj
+        End If
+
+        '
+        ' fix the previous object's forward link
+        '
+        objlist(objlist(gone).prevobj).nextobj = objlist(gone).nextobj
+
+        '
+        ' add it back in to the free list
+        '
+        objlist(gone).prevobj = objfreelist
+        objfreelist = gone
+
+        objcount = objcount - 1
+    End Sub
+
+    '
+    ' =============================================================================
+    '                        MUSIC STUFF
+    ' =============================================================================
+    '
+
+    '=================
+    '=
+    '= StopMusic
+    '=
+    '=================
+    Sub StopMusic ()
+        SD_MusicOff
+        ' the music chunks stay cached (the original made them purgable)
+    End Sub
+
+    '=================
+    '=
+    '= StartMusic
+    '=
+    '=================
+    ' StartMusic in WL_PLAY.C, renamed: QB64 names are case insensitive and the STARTMUSIC
+    ' audio chunk constant exists
+    Sub StartLevelMusic ()
+        Dim chunk As Integer
+
+        SD_MusicOff
+        chunk = songs(gamestate.mapon + gamestate.episode * 10)
+
+        ' if ((chunk == -1) || (MusicMode != smm_AdLib))
+        ' DEBUG control panel return;
+
+        CA_CacheAudioChunk STARTMUSIC + chunk
+        If audiosegs(STARTMUSIC + chunk) <> 0 Then SD_StartMusic audiosegMem(STARTMUSIC + chunk)
+    End Sub
+
+    '===================
+    '=
+    '= PlayLoop
+    '=
+    '= TEMPORARY until step 6d: no controls, actors or 3D view yet. Shows the play
+    '= screen and ends the game with Esc (playstate = ex_abort)
+    '=
+    '===================
+    Sub PlayLoop ()
+        Dim i As Integer
+
+        playstate = 0
+        TimeCount = 0
+        lasttimecount = 0
+        frameon = 0
+        running = FALSE
+        anglefrac = 0
+        facecount = 0
+        funnyticount = 0
+        For i = 0 To NUMBUTTONS - 1 ' memset (buttonstate,0,sizeof(buttonstate))
+            buttonstate(i) = FALSE
+        Next i
+        ' TODO: ClearPaletteShifts, clear accumulated mouse movement
+
+        ' TODO 6d: PollControls, MoveDoors, MovePWalls, DoActor for all objects,
+        ' UpdatePaletteShifts, ThreeDRefresh, CheckKeys...
+        If screenfaded Then VW_FadeIn
+
+        IN_ClearKeysDown
+        Do
+            _Limit TickBase
+            INL_KeyService
+        Loop Until Keyboard(sc_Escape)
+        IN_ClearKeysDown
+
+        playstate = ex_abort ' Temporary: Esc leaves the game
+    End Sub
+
+$EndIf

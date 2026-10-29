@@ -107,6 +107,48 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
         Next i
     End Sub
 
+    '
+    ' =============================================================================
+    '                         WOLFENSTEIN STUFF
+    ' =============================================================================
+    '
+
+    '=====================
+    '=
+    '= LatchDrawPic
+    '=
+    '= Latches were pictures copied into free video memory by LoadLatchMem, so they could
+    '= be drawn quickly. Here they are the cached pictures; x is in 8 pixel units
+    '=
+    '=====================
+    Sub LatchDrawPic (x As Integer, y As Integer, picnum As Integer)
+        If grsegs(picnum) = 0 Then CA_CacheGrChunk picnum
+        VWB_DrawPic x * 8, y, picnum
+    End Sub
+
+    '===================
+    '=
+    '= LoadLatchMem
+    '=
+    '= Caches the 8x8 tiles and the latch pictures and keeps them in memory
+    '=
+    '===================
+    Sub LoadLatchMem ()
+        Dim i As Integer
+
+        '
+        ' tile 8s
+        '
+        CA_CacheGrChunk STARTTILE8
+
+        '
+        ' pics
+        '
+        For i = LATCHPICS_LUMP_START To LATCHPICS_LUMP_END
+            CA_CacheGrChunk i
+        Next i
+    End Sub
+
     ' Function to fill a rectangle with specified dimensions and color
     Sub VWB_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
         ' Mark the update block (simplified; assume it returns TRUE for this example)

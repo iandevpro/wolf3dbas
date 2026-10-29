@@ -1,6 +1,65 @@
 $If INCLUDE_WL_INTER_BM = UNDEFINED Then
     $Let INCLUDE_WL_INTER_BM = 1
 
+    '=================
+    '=
+    '= ClearSplitVWB
+    '=
+    '=================
+    Sub ClearSplitVWB ()
+        ' memset (update,0,sizeof(update)) - no update blocks here
+        WindowX = 0
+        WindowY = 0
+        WindowW = 320
+        WindowH = 160
+    End Sub
+
+    '=================
+    '=
+    '= PreloadGraphics
+    '=
+    '= Fill the cache up
+    '=
+    '=================
+    Function PreloadUpdate% (current As Long, total As Long)
+        Dim w As Long
+
+        w = WindowW - 10
+        VWB_Bar WindowX + 5, WindowY + WindowH - 3, w, 2, 0 ' BLACK
+        w = (w * current) \ total
+        If w Then
+            VWB_Bar WindowX + 5, WindowY + WindowH - 3, w, 2, &H37 ' SECONDCOLOR
+            VWB_Bar WindowX + 5, WindowY + WindowH - 3, w - 1, 1, &H32
+        End If
+        VW_UpdateScreen
+        PreloadUpdate% = FALSE
+    End Function
+
+    Sub PreloadGraphics ()
+        Dim result As Integer
+
+        DrawLevel
+        ClearSplitVWB ' set up for double buffering in split screen
+
+        VWB_Bar 0, 0, 320, 200 - STATUSLINES, 127
+
+        LatchDrawPic 20 - 14, 80 - 3 * 8, GETPSYCHEDPIC
+
+        WindowX = 160 - 14 * 8
+        WindowY = 80 - 3 * 8
+        WindowW = 28 * 8
+        WindowH = 48
+        VW_UpdateScreen
+        VW_FadeIn
+
+        PM_Preload
+        result = IN_UserInput(70)
+        VW_FadeOut
+
+        DrawPlayBorder
+        VW_UpdateScreen
+    End Sub
+
     Sub NonShareware
         VW_FadeOut
 

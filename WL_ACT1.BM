@@ -1,0 +1,128 @@
+' WL_ACT1.C - static objects, doors, push walls
+' Ported so far: the lists and door spawning (step 6c). Statics: 6e, door movement: 6f
+
+$If INCLUDE_WL_ACT1_BM = UNDEFINED Then
+    $Let INCLUDE_WL_ACT1_BM = 1
+
+    '$INCLUDE: 'WL_ACT1.BI'
+
+    '===============
+    '=
+    '= InitStaticList
+    '=
+    '===============
+    Sub InitStaticList ()
+        laststatobj = 0 ' &statobjlist[0]
+    End Sub
+
+    '===============
+    '=
+    '= SpawnStatic
+    '=
+    '===============
+    Sub SpawnStatic (tilex As Integer, tiley As Integer, ttype As Integer)
+        ' TODO 6e: statinfo[] table, lamps, bonus items, treasure count
+    End Sub
+
+    '
+    ' =============================================================================
+    '                              DOORS
+    ' =============================================================================
+    '
+
+    '==============
+    '=
+    '= ConnectAreas
+    '=
+    '= Scans outward from playerarea, marking all connected areas
+    '=
+    '==============
+    Sub RecursiveConnect (areanumber As Integer)
+        Dim i As Integer
+
+        For i = 0 To NUMAREAS - 1
+            If areaconnect(areanumber, i) <> 0 And areabyplayer(i) = 0 Then
+                areabyplayer(i) = TRUE
+                RecursiveConnect i
+            End If
+        Next i
+    End Sub
+
+    ' memset (areabyplayer,0,sizeof(areabyplayer)) - Erase would free these arrays in QB64
+    Sub ClearAreaByPlayer ()
+        Dim i As Integer
+        For i = 0 To NUMAREAS - 1
+            areabyplayer(i) = FALSE
+        Next i
+    End Sub
+
+    Sub ConnectAreas ()
+        ClearAreaByPlayer
+        areabyplayer(objlist(player).areanumber) = TRUE
+        RecursiveConnect objlist(player).areanumber
+    End Sub
+
+    Sub InitAreas ()
+        ClearAreaByPlayer
+        areabyplayer(objlist(player).areanumber) = TRUE
+    End Sub
+
+    '===============
+    '=
+    '= InitDoorList
+    '=
+    '===============
+    Sub InitDoorList ()
+        Dim i As Integer, j As Integer
+
+        ClearAreaByPlayer ' memset (areabyplayer,0,sizeof(areabyplayer))
+        For i = 0 To NUMAREAS - 1 ' _fmemset (areaconnect,0,sizeof(areaconnect))
+            For j = 0 To NUMAREAS - 1
+                areaconnect(i, j) = 0
+            Next j
+        Next i
+
+        lastdoorobj = 0 ' &doorobjlist[0]
+        doornum = 0
+    End Sub
+
+    '===============
+    '=
+    '= SpawnDoor
+    '=
+    '===============
+    Sub SpawnDoor (tilex As Integer, tiley As Integer, vertical As Integer, doorlock As Integer)
+        Dim mapidx As Long
+
+        If doornum = 64 Then Quit "64+ doors on level!"
+
+        doorposition(doornum) = 0 ' doors start out fully closed
+        doorobjlist(lastdoorobj).tilex = tilex
+        doorobjlist(lastdoorobj).tiley = tiley
+        doorobjlist(lastdoorobj).vertical = vertical
+        doorobjlist(lastdoorobj).doorlock = doorlock
+        doorobjlist(lastdoorobj).action = dr_closed
+
+        actorat(tilex, tiley) = doornum Or &H80 ' consider it a solid wall
+
+        '
+        ' make the door tile a special tile, and mark the adjacent tiles
+        ' for door sides
+        '
+        tilemap(tilex, tiley) = doornum Or &H80
+        mapidx = tiley * 64 + tilex ' mapsegs[0] + farmapylookup[tiley] + tilex
+        If vertical Then
+            mapsegs(0, mapidx) = mapsegs(0, mapidx - 1) ' set area number
+            tilemap(tilex, tiley - 1) = tilemap(tilex, tiley - 1) Or &H40
+            tilemap(tilex, tiley + 1) = tilemap(tilex, tiley + 1) Or &H40
+        Else
+            mapsegs(0, mapidx) = mapsegs(0, mapidx - mapwidth) ' set area number
+            tilemap(tilex - 1, tiley) = tilemap(tilex - 1, tiley) Or &H40
+            tilemap(tilex + 1, tiley) = tilemap(tilex + 1, tiley) Or &H40
+        End If
+
+        doornum = doornum + 1
+        lastdoorobj = lastdoorobj + 1
+    End Sub
+
+$EndIf
