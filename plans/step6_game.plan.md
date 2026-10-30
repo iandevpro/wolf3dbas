@@ -82,7 +82,7 @@ Each sub-step below ends with something visible to test against the original in 
 - WL_AGENT weapons (`KnifeAttack`, `GunAttack`, weapon frames); player damage (`TakeDamage`, `StartDamageFlash`), `Died`, game over and `CheckHighScore` (name entry with `US_LineInput`).
 - **Test:** fight through E1M1 against DOSBox-X: enemy reactions, sounds, damage, death and game over.
 
-### 6h. Bosses and the rest of WL_ACT2
+### 6h. Bosses and the rest of WL_ACT2 — DONE 2026-10-29 (WL6; the Spear actors are not ported)
 - Bosses and their projectiles (Hans, Schabbs and syringes, Hitler and the mech, Otto, Gretel, General Fettgesicht), ghosts, fake Hitler.
 - `Victory` and `EndText` (end articles, already ported in 5c) after the episode boss.
 - **Test:** boss levels of each episode (using save games or a debug warp).

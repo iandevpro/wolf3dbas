@@ -982,8 +982,7 @@ $If INCLUDE_WL_DRAW_BM = UNDEFINED Then
 
         $If SPEAR = UNDEFINED Then
             If gamestate.victoryflag Then
-                ' TODO 6h: If player->state == &s_deathcam && (TimeCount&32) Then
-                '   SimpleScaleShape viewwidth/2, SPR_DEATHCAM, viewheight+1
+                If objlist(player).state = s_deathcam And (TimeCount And 32) <> 0 Then SimpleScaleShape viewwidth \ 2, SPR_DEATHCAM, viewheight + 1
                 Exit Sub
             End If
         $End If

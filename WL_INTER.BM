@@ -15,6 +15,170 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
     End Sub
     '==========================================================================
 
+    '==================
+    '=
+    '= Victory
+    '=
+    '==================
+    Sub Victory ()
+        $If SPEARDEMO = UNDEFINED Then
+            Const RATIOX = 6
+            Const RATIOY = 14
+            Const TIMEX = 14
+            Const TIMEY = 8
+            Dim sec As Long
+            Dim i As Integer, min As Integer, kr As Integer, sr As Integer, tr As Integer, x As Integer
+            Dim tempstr As String, c0 As Integer, c1 As Integer
+
+            $If SPEAR = DEFINED Then
+                StartCPMusic XTHEEND_MUS
+
+                CA_CacheGrChunk BJCOLLAPSE1PIC
+                CA_CacheGrChunk BJCOLLAPSE2PIC
+                CA_CacheGrChunk BJCOLLAPSE3PIC
+                CA_CacheGrChunk BJCOLLAPSE4PIC
+
+                VWB_Bar 0, 0, 320, 200, VIEWCOLOR
+                VWB_DrawPic 124, 44, BJCOLLAPSE1PIC
+                VW_UpdateScreen
+                VW_FadeIn
+                VL_WaitVBL 2 * 70
+                VWB_DrawPic 124, 44, BJCOLLAPSE2PIC
+                VW_UpdateScreen
+                VL_WaitVBL 105
+                VWB_DrawPic 124, 44, BJCOLLAPSE3PIC
+                VW_UpdateScreen
+                VL_WaitVBL 105
+                VWB_DrawPic 124, 44, BJCOLLAPSE4PIC
+                VW_UpdateScreen
+                VL_WaitVBL 3 * 70
+
+                UNCACHEGRCHUNK BJCOLLAPSE1PIC
+                UNCACHEGRCHUNK BJCOLLAPSE2PIC
+                UNCACHEGRCHUNK BJCOLLAPSE3PIC
+                UNCACHEGRCHUNK BJCOLLAPSE4PIC
+                VL_FadeOut 0, 255, 0, 17, 17, 5
+            $End If
+
+            StartCPMusic URAHERO_MUS
+            ClearSplitVWB
+            CacheLump LEVELEND_LUMP_START, LEVELEND_LUMP_END
+            CA_CacheGrChunk STARTFONT
+
+            $If SPEAR = UNDEFINED Then
+                CA_CacheGrChunk C_TIMECODEPIC
+            $End If
+
+            VWB_Bar 0, 0, 320, 200 - STATUSLINES, 127
+            WritePic 18, 2, STR_YOUWIN
+
+            WritePic TIMEX, TIMEY - 2, STR_TOTALTIME
+
+            WritePic 12, RATIOY - 2, "averages"
+
+            WritePic RATIOX + 8, RATIOY, STR_RATKILL
+            WritePic RATIOX + 4, RATIOY + 2, STR_RATSECRET
+            WritePic RATIOX, RATIOY + 4, STR_RATTREASURE
+
+            VWB_DrawPic 8, 4, L_BJWINSPIC
+
+            kr = 0: sr = 0: tr = 0: sec = 0
+            For i = 0 To UBound(LevelRatios) ' 8 levels (Spear: 20)
+                sec = sec + LevelRatios(i).time
+                kr = kr + LevelRatios(i).kill
+                sr = sr + LevelRatios(i).secret
+                tr = tr + LevelRatios(i).treasure
+            Next i
+
+            $If SPEAR = UNDEFINED Then
+                kr = kr \ 8
+                sr = sr \ 8
+                tr = tr \ 8
+            $Else
+                kr = kr \ 14
+                sr = sr \ 14
+                tr = tr \ 14
+            $End If
+
+            min = sec \ 60
+            sec = sec Mod 60
+
+            If min > 99 Then
+                min = 99
+                sec = 99
+            End If
+
+            i = TIMEX * 8 + 1
+            VWB_DrawPic i, TIMEY * 8, L_NUM0PIC + (min \ 10)
+            i = i + 2 * 8
+            VWB_DrawPic i, TIMEY * 8, L_NUM0PIC + (min Mod 10)
+            i = i + 2 * 8
+            WritePic i \ 8, TIMEY, ":"
+            i = i + 1 * 8
+            VWB_DrawPic i, TIMEY * 8, L_NUM0PIC + (sec \ 10)
+            i = i + 2 * 8
+            VWB_DrawPic i, TIMEY * 8, L_NUM0PIC + (sec Mod 10)
+            VW_UpdateScreen
+
+            tempstr = ItoA$(kr)
+            x = RATIOX + 24 - Len(tempstr) * 2
+            WritePic x, RATIOY, tempstr
+
+            tempstr = ItoA$(sr)
+            x = RATIOX + 24 - Len(tempstr) * 2
+            WritePic x, RATIOY + 2, tempstr
+
+            tempstr = ItoA$(tr)
+            x = RATIOX + 24 - Len(tempstr) * 2
+            WritePic x, RATIOY + 4, tempstr
+
+            $If SPANISH = UNDEFINED Then
+                $If UPLOAD = UNDEFINED Then
+                    $If SPEAR = UNDEFINED Then
+                        '
+                        ' TOTAL TIME VERIFICATION CODE
+                        '
+                        If gamestate.difficulty >= gd_medium Then
+                            VWB_DrawPic 30 * 8, TIMEY * 8, C_TIMECODEPIC
+                            fontnumber = 0
+                            fontcolor = READHCOLOR
+                            PrintX = 30 * 8 - 3
+                            PrintY = TIMEY * 8 + 8
+                            PrintX = PrintX + 4
+                            c0 = (((min \ 10) Xor (min Mod 10)) Xor &HA) + Asc("A")
+                            c1 = (((sec \ 10) Xor (sec Mod 10)) Xor &HA) + Asc("A")
+                            US_Print Chr$(c0) + Chr$(c1) + Chr$(((c0 Xor c1) + Asc("A")) And 255)
+                        End If
+                    $End If
+                $End If
+            $End If
+
+            fontnumber = 1
+
+            VW_UpdateScreen
+            VW_FadeIn
+
+            IN_Ack
+
+            ' TODO: PicturePause (Keyboard[sc_P] with the "goobers" parameter)
+
+            VW_FadeOut
+
+            $If SPEAR = UNDEFINED Then
+                UNCACHEGRCHUNK C_TIMECODEPIC
+            $End If
+            UnCacheLump LEVELEND_LUMP_START, LEVELEND_LUMP_END
+
+            $If SPEAR = UNDEFINED Then
+                EndText
+            $Else
+                ' TODO: EndSpear (the Spear end screens)
+            $End If
+        $End If
+    End Sub
+
+    '==========================================================================
+
     ' C: Write (WRITE is a QB64 keyword)
     Sub WritePic (x As Integer, y As Integer, s As String)
         Dim i As Integer, ox As Integer, nx As Integer, ny As Integer

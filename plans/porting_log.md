@@ -377,7 +377,7 @@ Commit 7d5bc38.
   - `PicturePause` (a debug key) isn't ported.
 
 ## 2026-10-29: Step 6g, enemies and combat
-Not committed yet.
+Commit ddbca98.
 
 - **What works:**
   - **Enemies:** guards, officers, SS, dogs and mutants are spawned with their difficulty's hit points. They stand or patrol, notice the player (by sight, by noise, or when ambushing), shout, chase, open doors, dodge, and shoot or bite. They show pain frames and die with their death animation and scream. Enemies drop clips (an SS drops the machine gun if you don't have it yet), and the kill counts toward the score and the kill ratio.
@@ -413,3 +413,43 @@ Not committed yet.
   - Not compared side by side with DOSBox-X: enemy reaction times, hit rates and damage are only ported, not measured.
   - Officers, SS, dogs and mutants are untested in play; E1M1 only has guards.
   - The death cam and the bosses are 6h.
+
+## 2026-10-29: Step 6h, bosses, the death cam and the episode end
+Not committed yet.
+
+- **What works:**
+  - **The WL6 bosses:**
+    - Hans and Gretel.
+    - Schabbs, who runs away and throws syringes.
+    - Otto Giftmacher and General Fettgesicht, who fire rockets with smoke and explosions.
+    - Mecha Hitler, who turns into the real Hitler.
+    - The fake Hitlers, with flames.
+    - The ghosts.
+  - **The death cam:** after Schabbs, Otto, Fettgesicht and Hitler, the play area fizzles, "Let's see that again!" appears, and the death replays from a fresh camera position with the flashing DeathCam sign. Then the episode ends.
+  - **The episode end:** the exit tile starts BJ's victory run (spin, run, jump, "yeah"), followed by `Victory` ("you win!", total time, the time verification code, average ratios), then `EndText`, then the high scores.
+- **`WL_ACT2.BM`:**
+  - The bosses: `SpawnBoss`, `SpawnGretel`, `SpawnSchabbs`, `SpawnGift`, `SpawnFat`, `SpawnFakeHitler`, `SpawnHitler`, `A_HitlerMorph`.
+  - Their routines: `T_Schabb`, `T_Gift` and `T_Fat` (one shared chase, `T_ThrowerChase`), `T_SchabbThrow`, `T_GiftThrow`, `T_FakeFire`, `T_Fake`, `A_MechaSound`, `A_Slurpie`.
+  - `SpawnGhosts`.
+  - BJ's victory run: `SpawnBJVictory`, `T_BJRun`, `T_BJJump`, `T_BJYell`, `T_BJDone`.
+  - The death cam: `CheckPosition`, `A_StartDeathCam`.
+  - The death pause before the death cam is 140 tics with digitized sound, 5 without (`BossDeathTime`). As in C, `SpawnFakeHitler` changes the real Hitler's state.
+  - All of this is WL6-only code inside `$If SPEAR = UNDEFINED`. The `$Else` side has empty routines, and the Spear actors (trans, uber, will, death knight, angel, spectre) are not ported.
+- **`tools/gen_states.py`:** the newly ported routines are in `PORTED`. 8 routines (all Spear) still dispatch to nothing.
+- **`WL_AGENT.BM`:** `VictoryTile` calls `SpawnBJVictory`.
+- **`WL_DRAW.BM`:** `DrawPlayerWeapon` shows the DeathCam picture (`TimeCount And 32`).
+- **`WL_GAME.BM`:**
+  - `ex_victorious` now runs `Victory`, then `CheckHighScore`.
+  - `FadeViewToRed` became `FizzleToBar`, which can fill any area with any color (used by `Died` and `A_StartDeathCam`).
+- **`WL_INTER.BM`:** `Victory`, including the Spear BJ collapse. `EndSpear` is still TODO.
+- **Tested:** with temporary test code (all removed): a `WOLFMAP` environment variable picked the start map, god mode and the chain gun were on, a `WOLFBOSS` variable put another boss in Hans's place on E1M9, and the window title showed the angle to the nearest enemy so the test script could aim.
+  - **Hans** attacks, dies and drops the gold key. The locked exit door opens, the exit tile starts BJ's run and jump, and the "you win!" screen shows total time 00:00 with code KKA (correct for 00:00).
+  - **Schabbs** runs away and throws syringes that hit. Killing him gives the death cam with "Let's see that again!" and the replay.
+  - **Mecha Hitler** breaks open, and the real Hitler comes out (2 kills, score 10000). Then the death cam with the DeathCam sign, and the victory screen.
+  - **Fettgesicht's rockets** hit, then his death cam plays.
+  - **The fake Hitler** dies (score 2000) without a death cam, as in the original.
+  - **Testing notes** (both found by the user): I fired while a door had closed again, and earlier fired without aiming while Mecha Hitler stepped aside. Test scripts now fire from inside the doorway and aim first.
+- **Not done yet:**
+  - Gretel, Otto and the ghosts are untested in play (same code paths as the tested bosses).
+  - The Spear actors and `EndSpear` are not ported.
+  - `US_RndT` still uses QB64's `Rnd`; the original's random table comes in 6j.

@@ -821,7 +821,9 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
     '=
     '===================
     Sub VictoryTile ()
-        ' TODO 6h: SpawnBJVictory
+        $If SPEAR = UNDEFINED Then
+            SpawnBJVictory
+        $End If
         gamestate.victoryflag = TRUE
     End Sub
 

@@ -15,7 +15,10 @@ O = W + 'origsrc/'
 
 # routines that are ported (the others dispatch to nothing yet)
 PORTED = ['T_Player', 'T_Attack', 'T_Stand', 'T_Path', 'T_Chase', 'T_DogChase', 'T_Shoot', 'T_Bite',
-          'A_DeathScream', 'T_Ghosts', 'T_Projectile', 'A_Smoke']
+          'A_DeathScream', 'T_Ghosts', 'T_Projectile', 'A_Smoke',
+          'T_Schabb', 'T_SchabbThrow', 'T_Gift', 'T_GiftThrow', 'T_Fat', 'T_Fake', 'T_FakeFire',
+          'A_MechaSound', 'A_HitlerMorph', 'A_Slurpie', 'A_StartDeathCam',
+          'T_BJRun', 'T_BJJump', 'T_BJYell', 'T_BJDone']
 
 STATE_RE = re.compile(r'^\s*statetype\s+(s_\w+)\s*=\s*\{([^}]*)\}\s*;')
 
@@ -155,7 +158,7 @@ for r in routines:
         init.append("                %s ob" % r)
 todo = [r for r in routines if r not in PORTED]
 init.append("            Case Else")
-init.append("                ' TODO 6h: " + ", ".join(todo))
+init.append("                ' not ported (Spear of Destiny actors): " + ", ".join(todo))
 init.append("        End Select")
 init.append("    End Sub")
 

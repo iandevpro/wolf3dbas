@@ -1,5 +1,6 @@
 ' WL_ACT2.C - enemies, bosses, projectiles
-' Ported so far: guards, officers, SS, dogs, mutants, projectiles (step 6g). Bosses and ghosts: 6h
+' Guards, officers, SS, dogs, mutants (step 6g), WL6 bosses, ghosts, BJ victory, death cam (6h).
+' Not ported: the Spear of Destiny actors
 
 $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
     $Let INCLUDE_WL_ACT2_BM = 1
@@ -325,30 +326,597 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
         $End If
     End Sub
 
-    ' TODO 6h: Spear actors, ghosts, bosses (SpawnBoss... T_Schabb...) and BJ victory
-    Sub SpawnBoss (tilex As Integer, tiley As Integer)
-    End Sub
+    $If SPEAR = UNDEFINED Then
+        '===============
+        '=
+        '= SpawnBoss
+        '=
+        '===============
+        Sub SpawnBoss (tilex As Integer, tiley As Integer)
+            SpawnNewObj tilex, tiley, s_bossstand
+            objlist(newobj).speed = SPDPATROL
 
-    Sub SpawnGretel (tilex As Integer, tiley As Integer)
-    End Sub
+            objlist(newobj).obclass = bossobj
+            objlist(newobj).hitpoints = starthitpoints(gamestate.difficulty, en_boss)
+            objlist(newobj).dir = dt_south
+            objlist(newobj).flags = objlist(newobj).flags Or FL_SHOOTABLE Or FL_AMBUSH
+            If Not loadedgame Then gamestate.killtotal = gamestate.killtotal + 1
+        End Sub
 
-    Sub SpawnGift (tilex As Integer, tiley As Integer)
-    End Sub
+        '===============
+        '=
+        '= SpawnGretel
+        '=
+        '===============
+        Sub SpawnGretel (tilex As Integer, tiley As Integer)
+            SpawnNewObj tilex, tiley, s_gretelstand
+            objlist(newobj).speed = SPDPATROL
 
-    Sub SpawnFat (tilex As Integer, tiley As Integer)
-    End Sub
+            objlist(newobj).obclass = gretelobj
+            objlist(newobj).hitpoints = starthitpoints(gamestate.difficulty, en_gretel)
+            objlist(newobj).dir = dt_north
+            objlist(newobj).flags = objlist(newobj).flags Or FL_SHOOTABLE Or FL_AMBUSH
+            If Not loadedgame Then gamestate.killtotal = gamestate.killtotal + 1
+        End Sub
 
-    Sub SpawnSchabbs (tilex As Integer, tiley As Integer)
-    End Sub
+        '
+        ' =============================================================================
+        '                          SCHABBS / GIFT / FAT
+        ' =============================================================================
+        '
 
-    Sub SpawnFakeHitler (tilex As Integer, tiley As Integer)
-    End Sub
+        '===============
+        '=
+        '= SpawnGhosts
+        '=
+        '===============
+        Sub SpawnGhosts (which As Integer, tilex As Integer, tiley As Integer)
+            Select Case which
+                Case en_blinky
+                    SpawnNewObj tilex, tiley, s_blinkychase1
+                Case en_clyde
+                    SpawnNewObj tilex, tiley, s_clydechase1
+                Case en_pinky
+                    SpawnNewObj tilex, tiley, s_pinkychase1
+                Case en_inky
+                    SpawnNewObj tilex, tiley, s_inkychase1
+            End Select
 
-    Sub SpawnHitler (tilex As Integer, tiley As Integer)
-    End Sub
+            objlist(newobj).obclass = ghostobj
+            objlist(newobj).speed = SPDDOG
 
-    Sub SpawnGhosts (which As Integer, tilex As Integer, tiley As Integer)
-    End Sub
+            objlist(newobj).dir = dt_east
+            objlist(newobj).flags = objlist(newobj).flags Or FL_AMBUSH
+            If Not loadedgame Then gamestate.killtotal = gamestate.killtotal + 1
+        End Sub
+
+        ' The time a boss stands dead before the death cam: long enough for the digitized
+        ' scream when there is one (SpawnSchabbs / SpawnGift / SpawnFat / SpawnHitler...)
+        Sub BossDeathTime (state As Integer)
+            If DigiMode <> sds_Off Then
+                states(state).tictime = 140
+            Else
+                states(state).tictime = 5
+            End If
+        End Sub
+
+        ' The common part of the boss spawn functions below
+        Sub SpawnBossCommon (tilex As Integer, tiley As Integer, state As Integer, obclass As Integer, which As Integer, dir As Integer)
+            SpawnNewObj tilex, tiley, state
+            objlist(newobj).speed = SPDPATROL
+
+            objlist(newobj).obclass = obclass
+            objlist(newobj).hitpoints = starthitpoints(gamestate.difficulty, which)
+            objlist(newobj).dir = dir
+            objlist(newobj).flags = objlist(newobj).flags Or FL_SHOOTABLE Or FL_AMBUSH
+            If Not loadedgame Then gamestate.killtotal = gamestate.killtotal + 1
+        End Sub
+
+        '===============
+        '=
+        '= SpawnSchabbs
+        '=
+        '===============
+        Sub SpawnSchabbs (tilex As Integer, tiley As Integer)
+            BossDeathTime s_schabbdie2
+            SpawnBossCommon tilex, tiley, s_schabbstand, schabbobj, en_schabbs, dt_south
+        End Sub
+
+        '===============
+        '=
+        '= SpawnGift
+        '=
+        '===============
+        Sub SpawnGift (tilex As Integer, tiley As Integer)
+            BossDeathTime s_giftdie2
+            SpawnBossCommon tilex, tiley, s_giftstand, giftobj, en_gift, dt_north
+        End Sub
+
+        '===============
+        '=
+        '= SpawnFat
+        '=
+        '===============
+        Sub SpawnFat (tilex As Integer, tiley As Integer)
+            BossDeathTime s_fatdie2
+            SpawnBossCommon tilex, tiley, s_fatstand, fatobj, en_fat, dt_south
+        End Sub
+
+        ' The angle from ob to the player (T_SchabbThrow / T_GiftThrow / T_FakeFire), C float math
+        Function AngleToPlayer% (ob As Integer)
+            Dim deltax As Long, deltay As Long
+            Dim angl As Single
+
+            deltax = objlist(player).x - objlist(ob).x
+            deltay = objlist(ob).y - objlist(player).y
+            angl = _Atan2(deltay, deltax)
+            If angl < 0 Then angl = _Pi * 2 + angl
+            AngleToPlayer% = Fix(angl / (_Pi * 2) * ANGLES)
+        End Function
+
+        ' A new projectile at ob's position, flying toward the player
+        Sub SpawnProjectile (ob As Integer, state As Integer, obclass As Integer, speed As Long, flags As Integer)
+            Dim iangle As Integer
+
+            iangle = AngleToPlayer(ob)
+
+            GetNewActor
+            objlist(newobj).state = state
+            objlist(newobj).ticcount = 1
+
+            objlist(newobj).tilex = objlist(ob).tilex
+            objlist(newobj).tiley = objlist(ob).tiley
+            objlist(newobj).x = objlist(ob).x
+            objlist(newobj).y = objlist(ob).y
+            objlist(newobj).obclass = obclass
+            objlist(newobj).dir = dt_nodir
+            objlist(newobj).angle = iangle
+            objlist(newobj).speed = speed
+
+            objlist(newobj).flags = flags
+            objlist(newobj).active = ac_yes
+        End Sub
+
+        '=================
+        '=
+        '= T_SchabbThrow
+        '=
+        '=================
+        Sub T_SchabbThrow (ob As Integer)
+            SpawnProjectile ob, s_needle1, needleobj, &H2000, FL_NONMARK
+
+            PlaySoundLocActor SCHABBSTHROWSND, newobj
+        End Sub
+
+        '=================
+        '=
+        '= T_GiftThrow
+        '=
+        '=================
+        Sub T_GiftThrow (ob As Integer)
+            SpawnProjectile ob, s_rocket, rocketobj, &H2000, FL_NONMARK
+
+            PlaySoundLocActor MISSILEFIRESND, newobj
+        End Sub
+
+        ' T_Schabb / T_Gift / T_Fat: the same chase, with a throw (US_RndT() < (tics<<3)) and
+        ' running away when the player is closer than 4 tiles
+        Sub T_ThrowerChase (ob As Integer, shootstate As Integer)
+            Dim move As Long
+            Dim dx As Integer, dy As Integer, dist As Integer
+            Dim dodge As Integer
+
+            dodge = FALSE
+            dx = Abs(objlist(ob).tilex - objlist(player).tilex)
+            dy = Abs(objlist(ob).tiley - objlist(player).tiley)
+            If dx > dy Then dist = dx Else dist = dy
+
+            If CheckLine(ob) Then ' got a shot at player?
+                If US_RndT < tics * 8 Then
+                    '
+                    ' go into attack frame
+                    '
+                    NewState ob, shootstate
+                    Exit Sub
+                End If
+                dodge = TRUE
+            End If
+
+            If objlist(ob).dir = dt_nodir Then
+                If dodge Then
+                    SelectDodgeDir ob
+                Else
+                    SelectChaseDir ob
+                End If
+                If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+            End If
+
+            move = objlist(ob).speed * tics
+
+            Do While move
+                If Not DoorOpenForActor(ob) Then Exit Sub
+
+                If Not ReachedGoal(ob, move) Then Exit Do
+
+                If dist < 4 Then
+                    SelectRunDir ob
+                ElseIf dodge Then
+                    SelectDodgeDir ob
+                Else
+                    SelectChaseDir ob
+                End If
+
+                If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+            Loop
+        End Sub
+
+        '=================
+        '=
+        '= T_Schabb
+        '=
+        '=================
+        Sub T_Schabb (ob As Integer)
+            T_ThrowerChase ob, s_schabbshoot1
+        End Sub
+
+        '=================
+        '=
+        '= T_Gift
+        '=
+        '=================
+        Sub T_Gift (ob As Integer)
+            T_ThrowerChase ob, s_giftshoot1
+        End Sub
+
+        '=================
+        '=
+        '= T_Fat
+        '=
+        '=================
+        Sub T_Fat (ob As Integer)
+            T_ThrowerChase ob, s_fatshoot1
+        End Sub
+
+        '
+        ' =============================================================================
+        '                              HITLERS
+        ' =============================================================================
+        '
+
+        '===============
+        '=
+        '= SpawnFakeHitler
+        '=
+        '===============
+        Sub SpawnFakeHitler (tilex As Integer, tiley As Integer)
+            BossDeathTime s_hitlerdie2 ' (sic: the real Hitler's state)
+            SpawnBossCommon tilex, tiley, s_fakestand, fakeobj, en_fake, dt_north
+        End Sub
+
+        '===============
+        '=
+        '= SpawnHitler
+        '=
+        '===============
+        Sub SpawnHitler (tilex As Integer, tiley As Integer)
+            BossDeathTime s_hitlerdie2
+            SpawnBossCommon tilex, tiley, s_mechastand, mechahitlerobj, en_hitler, dt_south
+        End Sub
+
+        '===============
+        '=
+        '= A_HitlerMorph
+        '=
+        '===============
+        Sub A_HitlerMorph (ob As Integer)
+            Dim hitpoints As Integer
+
+            Select Case gamestate.difficulty ' hitpoints[4]={500,700,800,900}
+                Case 0: hitpoints = 500
+                Case 1: hitpoints = 700
+                Case 2: hitpoints = 800
+                Case Else: hitpoints = 900
+            End Select
+
+            SpawnNewObj objlist(ob).tilex, objlist(ob).tiley, s_hitlerchase1
+            objlist(newobj).speed = SPDPATROL * 5
+
+            objlist(newobj).x = objlist(ob).x
+            objlist(newobj).y = objlist(ob).y
+
+            objlist(newobj).distance = objlist(ob).distance
+            objlist(newobj).dir = objlist(ob).dir
+            objlist(newobj).flags = objlist(ob).flags Or FL_SHOOTABLE
+
+            objlist(newobj).obclass = realhitlerobj
+            objlist(newobj).hitpoints = hitpoints
+        End Sub
+
+        '
+        ' A_MechaSound
+        ' A_Slurpie
+        '
+        Sub A_MechaSound (ob As Integer)
+            If areabyplayer(objlist(ob).areanumber) Then PlaySoundLocActor MECHSTEPSND, ob
+        End Sub
+
+        Sub A_Slurpie (ob As Integer)
+            Dim played As Integer
+
+            played = SD_PlaySound(SLURPIESND)
+        End Sub
+
+        '=================
+        '=
+        '= T_FakeFire
+        '=
+        '=================
+        Sub T_FakeFire (ob As Integer)
+            SpawnProjectile ob, s_fire1, fireobj, &H1200, FL_NEVERMARK
+
+            PlaySoundLocActor FLAMETHROWERSND, newobj
+        End Sub
+
+        '=================
+        '=
+        '= T_Fake
+        '=
+        '=================
+        Sub T_Fake (ob As Integer)
+            Dim move As Long
+
+            If CheckLine(ob) Then ' got a shot at player?
+                If US_RndT < tics * 2 Then
+                    '
+                    ' go into attack frame
+                    '
+                    NewState ob, s_fakeshoot1
+                    Exit Sub
+                End If
+            End If
+
+            If objlist(ob).dir = dt_nodir Then
+                SelectDodgeDir ob
+                If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+            End If
+
+            move = objlist(ob).speed * tics
+
+            Do While move
+                If Not ReachedGoal(ob, move) Then Exit Do
+
+                SelectDodgeDir ob
+
+                If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+            Loop
+        End Sub
+
+        '
+        ' ============================================================================
+        '                              BJ VICTORY
+        ' ============================================================================
+        '
+
+        '===============
+        '=
+        '= SpawnBJVictory
+        '=
+        '===============
+        Sub SpawnBJVictory ()
+            SpawnNewObj objlist(player).tilex, objlist(player).tiley + 1, s_bjrun1
+            objlist(newobj).x = objlist(player).x
+            objlist(newobj).y = objlist(player).y
+            objlist(newobj).obclass = bjobj
+            objlist(newobj).dir = dt_north
+            objlist(newobj).temp1 = 6 ' tiles to run forward
+        End Sub
+
+        '===============
+        '=
+        '= T_BJRun
+        '=
+        '===============
+        Sub T_BJRun (ob As Integer)
+            Dim move As Long
+
+            move = BJRUNSPEED * tics
+
+            Do While move
+                If move < objlist(ob).distance Then
+                    MoveObj ob, move
+                    Exit Do
+                End If
+
+                objlist(ob).x = objlist(ob).tilex * TILEGLOBAL + TILEGLOBAL \ 2
+                objlist(ob).y = objlist(ob).tiley * TILEGLOBAL + TILEGLOBAL \ 2
+                move = move - objlist(ob).distance
+
+                SelectPathDir ob
+
+                objlist(ob).temp1 = objlist(ob).temp1 - 1
+                If objlist(ob).temp1 = 0 Then
+                    NewState ob, s_bjjump1
+                    Exit Sub
+                End If
+            Loop
+        End Sub
+
+        '===============
+        '=
+        '= T_BJJump
+        '=
+        '===============
+        Sub T_BJJump (ob As Integer)
+            Dim move As Long
+
+            move = BJJUMPSPEED * tics
+            MoveObj ob, move
+        End Sub
+
+        '===============
+        '=
+        '= T_BJYell
+        '=
+        '===============
+        Sub T_BJYell (ob As Integer)
+            PlaySoundLocActor YEAHSND, ob ' JAB
+        End Sub
+
+        '===============
+        '=
+        '= T_BJDone
+        '=
+        '===============
+        Sub T_BJDone (ob As Integer)
+            playstate = ex_victorious ' exit castle tile
+        End Sub
+
+        '===============
+        '=
+        '= CheckPosition
+        '=
+        '===============
+        Function CheckPosition% (ob As Integer)
+            Dim x As Integer, y As Integer, xl As Integer, yl As Integer, xh As Integer, yh As Integer
+            Dim check As Integer
+
+            xl = SarL(objlist(ob).x - PLAYERSIZE, TILESHIFT)
+            yl = SarL(objlist(ob).y - PLAYERSIZE, TILESHIFT)
+
+            xh = SarL(objlist(ob).x + PLAYERSIZE, TILESHIFT)
+            yh = SarL(objlist(ob).y + PLAYERSIZE, TILESHIFT)
+
+            '
+            ' check for solid walls
+            '
+            For y = yl To yh
+                For x = xl To xh
+                    check = actorat(x, y)
+                    If check <> 0 And check < OBJ_BASE Then ' check && check<objlist
+                        CheckPosition% = FALSE
+                        Exit Function
+                    End If
+                Next x
+            Next y
+
+            CheckPosition% = TRUE
+        End Function
+
+        '===============
+        '=
+        '= A_StartDeathCam
+        '=
+        '===============
+        Sub A_StartDeathCam (ob As Integer)
+            Dim dx As Long, dy As Long
+            Dim fangle As Single
+            Dim xmove As Long, ymove As Long
+            Dim dist As Long
+            Dim result As Integer
+
+            FinishPaletteShifts
+
+            VL_WaitVBL 100 ' VW_WaitVBL
+
+            If gamestate.victoryflag Then
+                playstate = ex_victorious ' exit castle tile
+                Exit Sub
+            End If
+
+            gamestate.victoryflag = TRUE
+            FizzleToBar 0, 0, 320, 200 - STATUSLINES, 127, 70
+
+            CacheLump LEVELEND_LUMP_START, LEVELEND_LUMP_END
+            WritePic 0, 7, STR_SEEAGAIN ' (Japan: CA_CacheScreen (C_LETSSEEPIC))
+
+            VW_UpdateScreen
+
+            result = IN_UserInput(300)
+
+            '
+            ' line angle up exactly
+            '
+            NewState player, s_deathcam
+
+            objlist(player).x = gamestate.killx
+            objlist(player).y = gamestate.killy
+
+            dx = objlist(ob).x - objlist(player).x
+            dy = objlist(player).y - objlist(ob).y
+
+            fangle = _Atan2(dy, dx) ' returns -pi to pi
+            If fangle < 0 Then fangle = _Pi * 2 + fangle
+
+            objlist(player).angle = Fix(fangle / (_Pi * 2) * ANGLES)
+
+            '
+            ' try to position as close as possible without being in a wall
+            '
+            dist = &H14000
+            Do
+                xmove = FixedByFrac(dist, costable(objlist(player).angle))
+                ymove = -FixedByFrac(dist, sintable(objlist(player).angle))
+
+                objlist(player).x = objlist(ob).x - xmove
+                objlist(player).y = objlist(ob).y - ymove
+                dist = dist + &H1000
+            Loop While Not CheckPosition(player)
+            plux = SarL(objlist(player).x, UNSIGNEDSHIFT) ' scale to fit in unsigned
+            pluy = SarL(objlist(player).y, UNSIGNEDSHIFT)
+            objlist(player).tilex = SarL(objlist(player).x, TILESHIFT) ' scale to tile values
+            objlist(player).tiley = SarL(objlist(player).y, TILESHIFT)
+
+            '
+            ' go back to the game
+            '
+            DrawPlayBorder ' (the original drew it into all three screen pages)
+
+            fizzlein = TRUE
+            Select Case objlist(ob).obclass
+                Case schabbobj
+                    NewState ob, s_schabbdeathcam
+                Case realhitlerobj
+                    NewState ob, s_hitlerdeathcam
+                Case giftobj
+                    NewState ob, s_giftdeathcam
+                Case fatobj
+                    NewState ob, s_fatdeathcam
+            End Select
+        End Sub
+    $Else
+        ' TODO: the Spear of Destiny actors (trans, uber, will, death knight, angel, spectre);
+        ' the WL6 routines of the state dispatcher do nothing in Spear
+        Sub T_Schabb (ob As Integer)
+        End Sub
+        Sub T_SchabbThrow (ob As Integer)
+        End Sub
+        Sub T_Gift (ob As Integer)
+        End Sub
+        Sub T_GiftThrow (ob As Integer)
+        End Sub
+        Sub T_Fat (ob As Integer)
+        End Sub
+        Sub T_Fake (ob As Integer)
+        End Sub
+        Sub T_FakeFire (ob As Integer)
+        End Sub
+        Sub A_MechaSound (ob As Integer)
+        End Sub
+        Sub A_HitlerMorph (ob As Integer)
+        End Sub
+        Sub A_Slurpie (ob As Integer)
+        End Sub
+        Sub A_StartDeathCam (ob As Integer)
+        End Sub
+        Sub T_BJRun (ob As Integer)
+        End Sub
+        Sub T_BJJump (ob As Integer)
+        End Sub
+        Sub T_BJYell (ob As Integer)
+        End Sub
+        Sub T_BJDone (ob As Integer)
+        End Sub
+    $End If
 
     '
     ' ============================================================================

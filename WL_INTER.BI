@@ -30,6 +30,12 @@ $If INCLUDE_WL_INTER_BI = UNDEFINED Then
     Const STR_RAT2SECRET = "secret ratio    %"
     Const STR_RAT2TREASURE = "treasure ratio    %"
     Const STR_DEFEATED = "defeated!"
+    Const STR_SEEAGAIN = "Let's see that again!"
+    Const STR_YOUWIN = "you win!"
+    Const STR_TOTALTIME = "total time"
+    Const STR_RATKILL = "kill    %"
+    Const STR_RATSECRET = "secret    %"
+    Const STR_RATTREASURE = "treasure    %"
 
     '
     ' Write: the picture of each character from '0' (alpha[] in Write)

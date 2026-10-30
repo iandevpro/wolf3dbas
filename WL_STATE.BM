@@ -1644,8 +1644,38 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
                 T_Bite ob
             Case RT_T_DOGCHASE
                 T_DogChase ob
+            Case RT_A_SLURPIE
+                A_Slurpie ob
+            Case RT_T_SCHABB
+                T_Schabb ob
+            Case RT_A_STARTDEATHCAM
+                A_StartDeathCam ob
+            Case RT_T_SCHABBTHROW
+                T_SchabbThrow ob
+            Case RT_T_GIFT
+                T_Gift ob
+            Case RT_T_GIFTTHROW
+                T_GiftThrow ob
+            Case RT_T_FAT
+                T_Fat ob
+            Case RT_T_FAKE
+                T_Fake ob
+            Case RT_T_FAKEFIRE
+                T_FakeFire ob
+            Case RT_A_MECHASOUND
+                A_MechaSound ob
+            Case RT_A_HITLERMORPH
+                A_HitlerMorph ob
+            Case RT_T_BJRUN
+                T_BJRun ob
+            Case RT_T_BJJUMP
+                T_BJJump ob
+            Case RT_T_BJYELL
+                T_BJYell ob
+            Case RT_T_BJDONE
+                T_BJDone ob
             Case Else
-                ' TODO 6h: T_UShoot, T_Will, T_Launch, A_Slurpie, A_Victory, A_StartAttack, A_Relaunch, A_Breathing, A_Dormant, T_Schabb, A_StartDeathCam, T_SchabbThrow, T_Gift, T_GiftThrow, T_Fat, T_Fake, T_FakeFire, A_MechaSound, A_HitlerMorph, T_BJRun, T_BJJump, T_BJYell, T_BJDone
+                ' not ported (Spear of Destiny actors): T_UShoot, T_Will, T_Launch, A_Victory, A_StartAttack, A_Relaunch, A_Breathing, A_Dormant
         End Select
     End Sub
 

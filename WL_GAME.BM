@@ -446,7 +446,19 @@ Sub GameLoop ()
                     ' more lives left
 
                 Case ex_victorious
-                    ' TODO 6h: Victory, CheckHighScore
+                    $If SPEAR = UNDEFINED Then
+                        VW_FadeOut
+                    $Else
+                        VL_FadeOut 0, 255, 0, 17, 17, 300
+                    $End If
+                    ClearMemory
+
+                    Victory
+
+                    ClearMemory
+
+                    CheckHighScore gamestate.score, gamestate.mapon + 1
+
                     GameLoopEnd
                     Exit Sub
 
@@ -579,7 +591,7 @@ Sub Died ()
     '
     FinishPaletteShifts
 
-    FadeViewToRed
+    FizzleToBar viewscreenx, viewscreeny, viewwidth, viewheight, 4, 70
     result = IN_UserInput(100)
     SD_WaitSoundDone
 
@@ -605,25 +617,26 @@ Sub Died ()
     End If
 End Sub
 
-' Died: VW_Bar (0,0,viewwidth,viewheight,4) into the hidden page, then FizzleFade to it
-' (one screen page here: the view is saved, filled red, and FizzleFade goes from the old view)
-Sub FadeViewToRed ()
+' VW_Bar of a color into the hidden page, then FizzleFade to it (Died: the view to red,
+' A_StartDeathCam: the play area). One screen page here: the area is saved, filled, and
+' FizzleFade goes from the saved picture
+Sub FizzleToBar (x0 As Integer, y0 As Integer, w As Integer, h As Integer, clr As Integer, frames As Integer)
     Dim oldview(0 To 320, 0 To 200) As _Unsigned _Byte
     Dim x As Integer, y As Integer, result As Integer
 
     drawscreen = _MemImage(0)
-    For y = 0 To viewheight
-        For x = 0 To viewwidth
-            If viewscreenx + x < 320 And viewscreeny + y < 200 Then
-                oldview(x, y) = _MemGet(drawscreen, drawscreen.OFFSET + (viewscreeny + y) * 320 + viewscreenx + x, _Unsigned _Byte)
+    For y = 0 To h
+        For x = 0 To w
+            If x0 + x < 320 And y0 + y < 200 Then
+                oldview(x, y) = _MemGet(drawscreen, drawscreen.OFFSET + (y0 + y) * 320 + x0 + x, _Unsigned _Byte)
             End If
         Next x
     Next y
     _MemFree drawscreen
 
-    VWB_Bar viewscreenx, viewscreeny, viewwidth, viewheight, 4
+    VWB_Bar x0, y0, w, h, clr
     IN_ClearKeysDown
-    result = FizzleFade(oldview(), viewscreenx, viewscreeny, viewwidth, viewheight, 70, FALSE)
+    result = FizzleFade(oldview(), x0, y0, w, h, frames, FALSE)
 End Sub
 
 '==========================
