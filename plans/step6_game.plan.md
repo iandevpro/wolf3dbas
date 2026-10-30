@@ -76,7 +76,7 @@ Each sub-step below ends with something visible to test against the original in 
 - The elevator switch; WL_INTER `LevelCompleted` (intermission with ratios and bonus), the next level, the secret level.
 - **Test:** open doors, find a secret wall, finish E1M1 and see the intermission, start E1M2.
 
-### 6g. Enemies and combat
+### 6g. Enemies and combat — DONE 2026-10-29
 - WL_STATE: `SpawnNewObj`, `NewState`, `TryWalk`, `SelectChaseDir`, `MoveObj`, `CheckLine`, `SightPlayer`, `DamageActor`, `KillActor`.
 - WL_ACT2 states and routines for guards, officers, SS, dogs and mutants.
 - WL_AGENT weapons (`KnifeAttack`, `GunAttack`, weapon frames); player damage (`TakeDamage`, `StartDamageFlash`), `Died`, game over and `CheckHighScore` (name entry with `US_LineInput`).

@@ -597,6 +597,69 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         $End If
     End Sub
 
+    '=======================
+    '=
+    '= CheckHighScore
+    '=
+    '=======================
+    Sub CheckHighScore (score As Long, other As Integer)
+        Dim i As Integer, j As Integer, n As Integer, result As Integer
+        Dim myscore As HighScore, nm As String
+
+        myscore.name = Chr$(0) ' strcpy(myscore.name,"")
+        myscore.score = score
+        myscore.episode = gamestate.episode
+        myscore.completed = other
+
+        n = -1
+        For i = 0 To MaxScores - 1
+            If myscore.score > Scores(i).score Or (myscore.score = Scores(i).score And myscore.completed > Scores(i).completed) Then
+                For j = MaxScores - 1 To i + 1 Step -1
+                    Scores(j) = Scores(j - 1)
+                Next j
+                Scores(i) = myscore
+                n = i
+                Exit For
+            End If
+        Next i
+
+        $If SPEAR = DEFINED Then
+            StartCPMusic XAWARD_MUS
+        $Else
+            StartCPMusic ROSTER_MUS
+        $End If
+        DrawHighScores
+
+        VW_FadeIn
+
+        If n <> -1 Then
+            '
+            ' got a high score
+            '
+            PrintY = 76 + (16 * n)
+            nm = ""
+            $If SPEAR = UNDEFINED Then
+                PrintX = 4 * 8
+                backcolor = BORDCOLOR
+                fontcolor = 15
+                result = US_LineInput(PrintX, PrintY, nm, "", TRUE, MaxHighName, 100)
+            $Else
+                PrintX = 16
+                fontnumber = 1
+                VWB_Bar PrintX - 2, PrintY - 2, 145, 15, &H9C
+                VW_UpdateScreen
+                backcolor = &H9C
+                fontcolor = 15
+                result = US_LineInput(PrintX, PrintY, nm, "", TRUE, MaxHighName, 130)
+            $End If
+            ' (US_LineInput only stores the name on Enter: after Esc it stays empty, as in C)
+            Scores(n).name = nm + Chr$(0)
+        Else
+            IN_ClearKeysDown
+            result = IN_UserInput(500)
+        End If
+    End Sub
+
 '$INCLUDE: 'ID_VH.BM'
 '$INCLUDE: 'WL_MENU.BM'
 $End If

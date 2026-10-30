@@ -1,5 +1,5 @@
 ' WL_AGENT.C - the player: status bar, movement, weapons, bonus items
-' Ported so far: the status bar, SpawnPlayer, movement, bonus items, Cmd_Use (6c - 6f). Attacks: 6g
+' The player: status bar, movement, bonus items, doors, weapons and damage (steps 6c - 6g)
 
 $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
     $Let INCLUDE_WL_AGENT_BM = 1
@@ -196,6 +196,264 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         gamestate.ammo = gamestate.ammo + ammo
         If gamestate.ammo > 99 Then gamestate.ammo = 99
         DrawAmmo
+    End Sub
+
+    '===============
+    '=
+    '= TakeDamage
+    '=
+    '===============
+    Sub TakeDamage (points As Integer, attacker As Integer)
+        Dim pts As Integer
+
+        LastAttacker = attacker
+
+        If gamestate.victoryflag Then Exit Sub
+        pts = points
+        If gamestate.difficulty = gd_baby Then pts = SarL(pts, 2)
+
+        If Not godmode Then gamestate.health = gamestate.health - pts
+
+        If gamestate.health <= 0 Then
+            gamestate.health = 0
+            playstate = ex_died
+            killerobj = attacker
+        End If
+
+        StartDamageFlash pts
+
+        gotgatgun = 0
+
+        DrawHealth
+        DrawFace
+
+        '
+        ' MAKE BJ'S EYES BUG IF MAJOR DAMAGE!
+        '
+        $If SPEAR = DEFINED Then
+            If pts > 30 And gamestate.health <> 0 And Not godmode Then
+                StatusDrawPic 17, 4, BJOUCHPIC
+                facecount = 0
+            End If
+        $End If
+    End Sub
+
+    '===============
+    '=
+    '= Cmd_Fire
+    '=
+    '===============
+    Sub Cmd_Fire ()
+        buttonheld(bt_attack) = TRUE
+
+        gamestate.weaponframe = 0
+
+        objlist(player).state = s_attack
+
+        gamestate.attackframe = 0
+        gamestate.attackcount = attackinfo(gamestate.weapon, gamestate.attackframe).tics
+        gamestate.weaponframe = attackinfo(gamestate.weapon, gamestate.attackframe).frame
+    End Sub
+
+    '===============
+    '=
+    '= T_KnifeAttack
+    '=
+    '= Update player hands, and try to do damage when the proper frame is reached
+    '=
+    '===============
+    Sub KnifeAttack (ob As Integer)
+        Dim check As Integer, closest As Integer, played As Integer
+        Dim dist As Long
+
+        played = SD_PlaySound(ATKKNIFESND)
+        ' actually fire
+        dist = &H7FFFFFFF
+        closest = -1 ' NULL
+        check = objlist(ob).nextobj
+        Do While check <> -1
+            If (objlist(check).flags And FL_SHOOTABLE) <> 0 And (objlist(check).flags And FL_VISABLE) <> 0 And Abs(objlist(check).viewx - centerx) < shootdelta Then
+                If objlist(check).transx < dist Then
+                    dist = objlist(check).transx
+                    closest = check
+                End If
+            End If
+            check = objlist(check).nextobj
+        Loop
+
+        If closest = -1 Or dist > &H18000 Then
+            ' missed
+            Exit Sub
+        End If
+
+        ' hit something
+        DamageActor closest, US_RndT \ 16
+    End Sub
+
+    Sub GunAttack (ob As Integer)
+        Dim check As Integer, closest As Integer, oldclosest As Integer, played As Integer
+        Dim damage As Integer
+        Dim dx As Integer, dy As Integer, dist As Integer
+        Dim viewdist As Long
+
+        Select Case gamestate.weapon
+            Case wp_pistol
+                played = SD_PlaySound(ATKPISTOLSND)
+            Case wp_machinegun
+                played = SD_PlaySound(ATKMACHINEGUNSND)
+            Case wp_chaingun
+                played = SD_PlaySound(ATKGATLINGSND)
+        End Select
+
+        madenoise = TRUE
+
+        '
+        ' find potential targets
+        '
+        viewdist = &H7FFFFFFF
+        closest = -1 ' NULL
+
+        Do
+            oldclosest = closest
+
+            check = objlist(ob).nextobj
+            Do While check <> -1
+                If (objlist(check).flags And FL_SHOOTABLE) <> 0 And (objlist(check).flags And FL_VISABLE) <> 0 And Abs(objlist(check).viewx - centerx) < shootdelta Then
+                    If objlist(check).transx < viewdist Then
+                        viewdist = objlist(check).transx
+                        closest = check
+                    End If
+                End If
+                check = objlist(check).nextobj
+            Loop
+
+            If closest = oldclosest Then Exit Sub ' no more targets, all missed
+
+            '
+            ' trace a line from player to enemey
+            '
+            If CheckLine(closest) Then Exit Do
+        Loop
+
+        '
+        ' hit something
+        '
+        dx = Abs(objlist(closest).tilex - objlist(player).tilex)
+        dy = Abs(objlist(closest).tiley - objlist(player).tiley)
+        If dx > dy Then dist = dx Else dist = dy
+
+        If dist < 2 Then
+            damage = US_RndT \ 4
+        ElseIf dist < 4 Then
+            damage = US_RndT \ 6
+        Else
+            If US_RndT \ 12 < dist Then Exit Sub ' missed
+            damage = US_RndT \ 6
+        End If
+
+        DamageActor closest, damage
+    End Sub
+
+    '===============
+    '=
+    '= VictorySpin
+    '=
+    '===============
+    Sub VictorySpin ()
+        Dim desty As Long
+
+        If objlist(player).angle > 270 Then
+            objlist(player).angle = objlist(player).angle - tics * 3
+            If objlist(player).angle < 270 Then objlist(player).angle = 270
+        ElseIf objlist(player).angle < 270 Then
+            objlist(player).angle = objlist(player).angle + tics * 3
+            If objlist(player).angle > 270 Then objlist(player).angle = 270
+        End If
+
+        desty = (objlist(player).tiley - 5) * TILEGLOBAL - &H3000 ' (((long)player->tiley-5)<<TILESHIFT)-0x3000
+
+        If objlist(player).y > desty Then
+            objlist(player).y = objlist(player).y - tics * 4096
+            If objlist(player).y < desty Then objlist(player).y = desty
+        End If
+    End Sub
+
+    '===============
+    '=
+    '= T_Attack
+    '=
+    '===============
+    Sub T_Attack (ob As Integer)
+        Dim w As Integer, f As Integer
+
+        UpdateFace
+
+        If gamestate.victoryflag Then ' watching the BJ actor
+            VictorySpin
+            Exit Sub
+        End If
+
+        If buttonstate(bt_use) And Not buttonheld(bt_use) Then buttonstate(bt_use) = FALSE
+
+        If buttonstate(bt_attack) And Not buttonheld(bt_attack) Then buttonstate(bt_attack) = FALSE
+
+        ControlMovement ob
+        If gamestate.victoryflag Then Exit Sub ' watching the BJ actor
+
+        plux = SarL(objlist(player).x, UNSIGNEDSHIFT) ' scale to fit in unsigned
+        pluy = SarL(objlist(player).y, UNSIGNEDSHIFT)
+        objlist(player).tilex = SarL(objlist(player).x, TILESHIFT) ' scale to tile values
+        objlist(player).tiley = SarL(objlist(player).y, TILESHIFT)
+
+        '
+        ' change frame and fire
+        '
+        gamestate.attackcount = gamestate.attackcount - tics
+        Do While gamestate.attackcount <= 0
+            w = gamestate.weapon ' cur = &attackinfo[gamestate.weapon][gamestate.attackframe]
+            f = gamestate.attackframe
+            Select Case attackinfo(w, f).attack
+                Case -1
+                    objlist(ob).state = s_player
+                    If gamestate.ammo = 0 Then
+                        gamestate.weapon = wp_knife
+                        DrawWeapon
+                    Else
+                        If gamestate.weapon <> gamestate.chosenweapon Then
+                            gamestate.weapon = gamestate.chosenweapon
+                            DrawWeapon
+                        End If
+                    End If
+                    gamestate.attackframe = 0
+                    gamestate.weaponframe = 0
+                    Exit Sub
+
+                Case 4, 1
+                    ' case 4: if (!ammo) break; if (attack held) attackframe -= 2; then case 1
+                    If attackinfo(w, f).attack = 1 Or gamestate.ammo <> 0 Then
+                        If attackinfo(w, f).attack = 4 Then
+                            If buttonstate(bt_attack) Then gamestate.attackframe = gamestate.attackframe - 2
+                        End If
+                        If gamestate.ammo = 0 Then ' can only happen with chain gun
+                            gamestate.attackframe = gamestate.attackframe + 1
+                        Else
+                            GunAttack ob
+                            gamestate.ammo = gamestate.ammo - 1
+                            DrawAmmo
+                        End If
+                    End If
+
+                Case 2
+                    KnifeAttack ob
+
+                Case 3
+                    If gamestate.ammo <> 0 And buttonstate(bt_attack) Then gamestate.attackframe = gamestate.attackframe - 2
+            End Select
+
+            gamestate.attackcount = gamestate.attackcount + attackinfo(w, f).tics
+            gamestate.attackframe = gamestate.attackframe + 1
+            gamestate.weaponframe = attackinfo(gamestate.weapon, gamestate.attackframe).frame
+        Loop
     End Sub
 
     '===============
@@ -605,7 +863,7 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
     '===============
     Sub T_Player (ob As Integer)
         If gamestate.victoryflag Then ' watching the BJ actor
-            ' TODO 6h: VictorySpin
+            VictorySpin
             Exit Sub
         End If
 
@@ -613,7 +871,8 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         CheckWeaponChange
 
         If buttonstate(bt_use) Then Cmd_Use
-        ' TODO 6g: If buttonstate(bt_attack) And Not buttonheld(bt_attack) Then Cmd_Fire
+
+        If buttonstate(bt_attack) And Not buttonheld(bt_attack) Then Cmd_Fire
 
         ControlMovement ob
         If gamestate.victoryflag Then Exit Sub ' watching the BJ actor

@@ -6,6 +6,1149 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
 
     '$INCLUDE: 'WL_STATE.BI'
 
+    '===================
+    '=
+    '= SpawnNewObj
+    '=
+    '= Spaws a new actor at the given TILE coordinates, with the given state, and
+    '= the given size in GLOBAL units.
+    '=
+    '= new                   = a pointer to an initialized new actor
+    '=
+    '===================
+    Sub SpawnNewObj (tilex As Integer, tiley As Integer, state As Integer)
+        GetNewActor
+        objlist(newobj).state = state
+        If states(state).tictime Then
+            objlist(newobj).ticcount = US_RndT Mod states(state).tictime
+        Else
+            objlist(newobj).ticcount = 0
+        End If
+
+        objlist(newobj).tilex = tilex
+        objlist(newobj).tiley = tiley
+        objlist(newobj).x = tilex * TILEGLOBAL + TILEGLOBAL \ 2 ' ((long)tilex<<TILESHIFT)+TILEGLOBAL/2
+        objlist(newobj).y = tiley * TILEGLOBAL + TILEGLOBAL \ 2
+        objlist(newobj).dir = dt_nodir
+
+        actorat(tilex, tiley) = OBJ_BASE + newobj
+        objlist(newobj).areanumber = mapsegs(0, objlist(newobj).tiley * 64 + objlist(newobj).tilex) - AREATILE
+    End Sub
+
+    '===================
+    '=
+    '= NewState
+    '=
+    '= Changes ob to a new state, setting ticcount to the max for that state
+    '=
+    '===================
+    Sub NewState (ob As Integer, state As Integer)
+        objlist(ob).state = state
+        objlist(ob).ticcount = states(state).tictime
+    End Sub
+
+    '
+    ' =============================================================================
+    '                  ENEMY TILE WORLD MOVEMENT CODE
+    ' =============================================================================
+    '
+
+    ' CHECKDIAG (x,y) of TryWalk: FALSE when the tile blocks a diagonal move.
+    ' actorat() values: walls and doors are below 256 (C: temp<256), objects OBJ_BASE and up
+    Function CheckDiag% (x As Long, y As Long)
+        Dim temp As Integer
+
+        CheckDiag% = TRUE
+        temp = actorat(x, y)
+        If temp Then
+            If temp < 256 Then CheckDiag% = FALSE: Exit Function
+            If objlist(temp - OBJ_BASE).flags And FL_SHOOTABLE Then CheckDiag% = FALSE
+        End If
+    End Function
+
+    ' CHECKSIDE (x,y) of TryWalk: FALSE when the tile blocks; a door (128-255) sets doornumv
+    Function CheckSide% (x As Long, y As Long, doornumv As Integer)
+        Dim temp As Integer
+
+        CheckSide% = TRUE
+        temp = actorat(x, y)
+        If temp Then
+            If temp < 128 Then CheckSide% = FALSE: Exit Function
+            If temp < 256 Then
+                doornumv = temp And 63
+            ElseIf objlist(temp - OBJ_BASE).flags And FL_SHOOTABLE Then
+                CheckSide% = FALSE
+            End If
+        End If
+    End Function
+
+    '==================================
+    '=
+    '= TryWalk
+    '=
+    '= Attempts to move ob in its current (ob->dir) direction.
+    '=
+    '= If blocked by either a wall or an actor returns FALSE
+    '=
+    '= If move is either clear or blocked only by a door, returns TRUE and sets
+    '=
+    '= ob->tilex                     = new destination
+    '= ob->tiley
+    '= ob->areanumber    = the floor tile number (0-(NUMAREAS-1)) of destination
+    '= ob->distance          = TILEGLOBAl, or -doornumber if a door is blocking the way
+    '=
+    '= If a door is in the way, an OpenDoor call is made to start it opening.
+    '= The actor code should wait until
+    '=       doorobjlist[-ob->distance].action = dr_open, meaning the door has been
+    '=       fully opened
+    '=
+    '==================================
+    Function TryWalk% (ob As Integer)
+        Dim doornumv As Integer, tx As Long, ty As Long, dogfake As Integer
+
+        TryWalk% = FALSE
+        doornumv = -1
+        tx = objlist(ob).tilex
+        ty = objlist(ob).tiley
+
+        If objlist(ob).obclass = inertobj Then
+            Select Case objlist(ob).dir
+                Case dt_north
+                    objlist(ob).tiley = ty - 1
+                Case dt_northeast
+                    objlist(ob).tilex = tx + 1
+                    objlist(ob).tiley = ty - 1
+                Case dt_east
+                    objlist(ob).tilex = tx + 1
+                Case dt_southeast
+                    objlist(ob).tilex = tx + 1
+                    objlist(ob).tiley = ty + 1
+                Case dt_south
+                    objlist(ob).tiley = ty + 1
+                Case dt_southwest
+                    objlist(ob).tilex = tx - 1
+                    objlist(ob).tiley = ty + 1
+                Case dt_west
+                    objlist(ob).tilex = tx - 1
+                Case dt_northwest
+                    objlist(ob).tilex = tx - 1
+                    objlist(ob).tiley = ty - 1
+            End Select
+        Else
+            dogfake = (objlist(ob).obclass = dogobj Or objlist(ob).obclass = fakeobj)
+            Select Case objlist(ob).dir
+                Case dt_north
+                    If dogfake Then
+                        If Not CheckDiag(tx, ty - 1) Then Exit Function
+                    Else
+                        If Not CheckSide(tx, ty - 1, doornumv) Then Exit Function
+                    End If
+                    objlist(ob).tiley = ty - 1
+
+                Case dt_northeast
+                    If Not CheckDiag(tx + 1, ty - 1) Then Exit Function
+                    If Not CheckDiag(tx + 1, ty) Then Exit Function
+                    If Not CheckDiag(tx, ty - 1) Then Exit Function
+                    objlist(ob).tilex = tx + 1
+                    objlist(ob).tiley = ty - 1
+
+                Case dt_east
+                    If dogfake Then
+                        If Not CheckDiag(tx + 1, ty) Then Exit Function
+                    Else
+                        If Not CheckSide(tx + 1, ty, doornumv) Then Exit Function
+                    End If
+                    objlist(ob).tilex = tx + 1
+
+                Case dt_southeast
+                    If Not CheckDiag(tx + 1, ty + 1) Then Exit Function
+                    If Not CheckDiag(tx + 1, ty) Then Exit Function
+                    If Not CheckDiag(tx, ty + 1) Then Exit Function
+                    objlist(ob).tilex = tx + 1
+                    objlist(ob).tiley = ty + 1
+
+                Case dt_south
+                    If dogfake Then
+                        If Not CheckDiag(tx, ty + 1) Then Exit Function
+                    Else
+                        If Not CheckSide(tx, ty + 1, doornumv) Then Exit Function
+                    End If
+                    objlist(ob).tiley = ty + 1
+
+                Case dt_southwest
+                    If Not CheckDiag(tx - 1, ty + 1) Then Exit Function
+                    If Not CheckDiag(tx - 1, ty) Then Exit Function
+                    If Not CheckDiag(tx, ty + 1) Then Exit Function
+                    objlist(ob).tilex = tx - 1
+                    objlist(ob).tiley = ty + 1
+
+                Case dt_west
+                    If dogfake Then
+                        If Not CheckDiag(tx - 1, ty) Then Exit Function
+                    Else
+                        If Not CheckSide(tx - 1, ty, doornumv) Then Exit Function
+                    End If
+                    objlist(ob).tilex = tx - 1
+
+                Case dt_northwest
+                    If Not CheckDiag(tx - 1, ty - 1) Then Exit Function
+                    If Not CheckDiag(tx - 1, ty) Then Exit Function
+                    If Not CheckDiag(tx, ty - 1) Then Exit Function
+                    objlist(ob).tilex = tx - 1
+                    objlist(ob).tiley = ty - 1
+
+                Case dt_nodir
+                    Exit Function
+
+                Case Else
+                    Quit "Walk: Bad dir"
+            End Select
+        End If
+
+        If doornumv <> -1 Then
+            OpenDoor doornumv
+            objlist(ob).distance = -doornumv - 1
+            TryWalk% = TRUE
+            Exit Function
+        End If
+
+        objlist(ob).areanumber = mapsegs(0, objlist(ob).tiley * 64 + objlist(ob).tilex) - AREATILE
+
+        objlist(ob).distance = TILEGLOBAL
+        TryWalk% = TRUE
+    End Function
+
+    '==================================
+    '=
+    '= SelectDodgeDir
+    '=
+    '= Attempts to choose and initiate a movement for ob that sends it towards
+    '= the player while dodging
+    '=
+    '= If there is no possible move (ob is totally surrounded)
+    '=
+    '= ob->dir                       =       nodir
+    '=
+    '= Otherwise
+    '=
+    '= ob->dir                       = new direction to follow
+    '= ob->distance          = TILEGLOBAL or -doornumber
+    '= ob->tilex                     = new destination
+    '= ob->tiley
+    '= ob->areanumber    = the floor tile number (0-(NUMAREAS-1)) of destination
+    '=
+    '==================================
+    Sub SelectDodgeDir (ob As Integer)
+        Dim deltax As Integer, deltay As Integer, i As Integer
+        Dim absdx As Integer, absdy As Integer
+        Dim dirtry(0 To 4) As Integer
+        Dim turnaround As Integer, tdir As Integer
+
+        If objlist(ob).flags And FL_FIRSTATTACK Then
+            '
+            ' turning around is only ok the very first time after noticing the
+            ' player
+            '
+            turnaround = dt_nodir
+            objlist(ob).flags = objlist(ob).flags And (Not FL_FIRSTATTACK)
+        Else
+            turnaround = opposite(objlist(ob).dir)
+        End If
+
+        deltax = objlist(player).tilex - objlist(ob).tilex
+        deltay = objlist(player).tiley - objlist(ob).tiley
+
+        '
+        ' arange 5 direction choices in order of preference
+        ' the four cardinal directions plus the diagonal straight towards
+        ' the player
+        '
+        If deltax > 0 Then
+            dirtry(1) = dt_east
+            dirtry(3) = dt_west
+        Else
+            dirtry(1) = dt_west
+            dirtry(3) = dt_east
+        End If
+
+        If deltay > 0 Then
+            dirtry(2) = dt_south
+            dirtry(4) = dt_north
+        Else
+            dirtry(2) = dt_north
+            dirtry(4) = dt_south
+        End If
+
+        '
+        ' randomize a bit for dodging
+        '
+        absdx = Abs(deltax)
+        absdy = Abs(deltay)
+
+        If absdx > absdy Then
+            tdir = dirtry(1)
+            dirtry(1) = dirtry(2)
+            dirtry(2) = tdir
+            tdir = dirtry(3)
+            dirtry(3) = dirtry(4)
+            dirtry(4) = tdir
+        End If
+
+        If US_RndT < 128 Then
+            tdir = dirtry(1)
+            dirtry(1) = dirtry(2)
+            dirtry(2) = tdir
+            tdir = dirtry(3)
+            dirtry(3) = dirtry(4)
+            dirtry(4) = tdir
+        End If
+
+        dirtry(0) = diagonal(dirtry(1), dirtry(2))
+
+        '
+        ' try the directions util one works
+        '
+        For i = 0 To 4
+            If dirtry(i) = dt_nodir Or dirtry(i) = turnaround Then _Continue
+
+            objlist(ob).dir = dirtry(i)
+            If TryWalk(ob) Then Exit Sub
+        Next i
+
+        '
+        ' turn around only as a last resort
+        '
+        If turnaround <> dt_nodir Then
+            objlist(ob).dir = turnaround
+
+            If TryWalk(ob) Then Exit Sub
+        End If
+
+        objlist(ob).dir = dt_nodir
+    End Sub
+
+    '============================
+    '=
+    '= SelectChaseDir
+    '=
+    '= As SelectDodgeDir, but doesn't try to dodge
+    '=
+    '============================
+    Sub SelectChaseDir (ob As Integer)
+        Dim deltax As Integer, deltay As Integer
+        Dim d(1 To 2) As Integer
+        Dim tdir As Integer, olddir As Integer, turnaround As Integer
+
+        olddir = objlist(ob).dir
+        turnaround = opposite(olddir)
+
+        deltax = objlist(player).tilex - objlist(ob).tilex
+        deltay = objlist(player).tiley - objlist(ob).tiley
+
+        d(1) = dt_nodir
+        d(2) = dt_nodir
+
+        If deltax > 0 Then
+            d(1) = dt_east
+        ElseIf deltax < 0 Then
+            d(1) = dt_west
+        End If
+        If deltay > 0 Then
+            d(2) = dt_south
+        ElseIf deltay < 0 Then
+            d(2) = dt_north
+        End If
+
+        If Abs(deltay) > Abs(deltax) Then
+            tdir = d(1)
+            d(1) = d(2)
+            d(2) = tdir
+        End If
+
+        If d(1) = turnaround Then d(1) = dt_nodir
+        If d(2) = turnaround Then d(2) = dt_nodir
+
+        If d(1) <> dt_nodir Then
+            objlist(ob).dir = d(1)
+            If TryWalk(ob) Then Exit Sub ' either moved forward or attacked
+        End If
+
+        If d(2) <> dt_nodir Then
+            objlist(ob).dir = d(2)
+            If TryWalk(ob) Then Exit Sub
+        End If
+
+        ' there is no direct path to the player, so pick another direction
+
+        If olddir <> dt_nodir Then
+            objlist(ob).dir = olddir
+            If TryWalk(ob) Then Exit Sub
+        End If
+
+        If US_RndT > 128 Then ' randomly determine direction of search
+            For tdir = dt_north To dt_west
+                If tdir <> turnaround Then
+                    objlist(ob).dir = tdir
+                    If TryWalk(ob) Then Exit Sub
+                End If
+            Next tdir
+        Else
+            For tdir = dt_west To dt_north Step -1
+                If tdir <> turnaround Then
+                    objlist(ob).dir = tdir
+                    If TryWalk(ob) Then Exit Sub
+                End If
+            Next tdir
+        End If
+
+        If turnaround <> dt_nodir Then
+            objlist(ob).dir = turnaround
+            If objlist(ob).dir <> dt_nodir Then
+                If TryWalk(ob) Then Exit Sub
+            End If
+        End If
+
+        objlist(ob).dir = dt_nodir ' can't move
+    End Sub
+
+    '============================
+    '=
+    '= SelectRunDir
+    '=
+    '= Run Away from player
+    '=
+    '============================
+    Sub SelectRunDir (ob As Integer)
+        Dim deltax As Integer, deltay As Integer
+        Dim d(1 To 2) As Integer
+        Dim tdir As Integer
+
+        deltax = objlist(player).tilex - objlist(ob).tilex
+        deltay = objlist(player).tiley - objlist(ob).tiley
+
+        If deltax < 0 Then
+            d(1) = dt_east
+        Else
+            d(1) = dt_west
+        End If
+        If deltay < 0 Then
+            d(2) = dt_south
+        Else
+            d(2) = dt_north
+        End If
+
+        If Abs(deltay) > Abs(deltax) Then
+            tdir = d(1)
+            d(1) = d(2)
+            d(2) = tdir
+        End If
+
+        objlist(ob).dir = d(1)
+        If TryWalk(ob) Then Exit Sub ' either moved forward or attacked
+
+        objlist(ob).dir = d(2)
+        If TryWalk(ob) Then Exit Sub
+
+        ' there is no direct path to the player, so pick another direction
+
+        If US_RndT > 128 Then ' randomly determine direction of search
+            For tdir = dt_north To dt_west
+                objlist(ob).dir = tdir
+                If TryWalk(ob) Then Exit Sub
+            Next tdir
+        Else
+            For tdir = dt_west To dt_north Step -1
+                objlist(ob).dir = tdir
+                If TryWalk(ob) Then Exit Sub
+            Next tdir
+        End If
+
+        objlist(ob).dir = dt_nodir ' can't move
+    End Sub
+
+    ' One move of MoveObj in direction dir: sign +1 moves, -1 backs up
+    Sub MoveObjDir (ob As Integer, dir As Integer, move As Long)
+        Select Case dir
+            Case dt_north
+                objlist(ob).y = objlist(ob).y - move
+            Case dt_northeast
+                objlist(ob).x = objlist(ob).x + move
+                objlist(ob).y = objlist(ob).y - move
+            Case dt_east
+                objlist(ob).x = objlist(ob).x + move
+            Case dt_southeast
+                objlist(ob).x = objlist(ob).x + move
+                objlist(ob).y = objlist(ob).y + move
+            Case dt_south
+                objlist(ob).y = objlist(ob).y + move
+            Case dt_southwest
+                objlist(ob).x = objlist(ob).x - move
+                objlist(ob).y = objlist(ob).y + move
+            Case dt_west
+                objlist(ob).x = objlist(ob).x - move
+            Case dt_northwest
+                objlist(ob).x = objlist(ob).x - move
+                objlist(ob).y = objlist(ob).y - move
+        End Select
+    End Sub
+
+    '=================
+    '=
+    '= MoveObj
+    '=
+    '= Moves ob be move global units in ob->dir direction
+    '= Actors are not allowed to move inside the player
+    '= Does NOT check to see if the move is tile map valid
+    '=
+    '= ob->x                 = adjusted for new position
+    '= ob->y
+    '=
+    '=================
+    Sub MoveObj (ob As Integer, move As Long)
+        Dim deltax As Long, deltay As Long
+
+        If objlist(ob).dir = dt_nodir Then Exit Sub
+        If objlist(ob).dir < 0 Or objlist(ob).dir > dt_nodir Then Quit "MoveObj: bad dir!"
+
+        MoveObjDir ob, objlist(ob).dir, move
+
+        '
+        ' check to make sure it's not on top of player
+        '
+        If areabyplayer(objlist(ob).areanumber) Then
+            deltax = objlist(ob).x - objlist(player).x
+            If deltax >= -MINACTORDIST And deltax <= MINACTORDIST Then
+                deltay = objlist(ob).y - objlist(player).y
+                If deltay >= -MINACTORDIST And deltay <= MINACTORDIST Then
+                    If objlist(ob).obclass = ghostobj Or objlist(ob).obclass = spectreobj Then TakeDamage tics * 2, ob
+
+                    '
+                    ' back up
+                    '
+                    MoveObjDir ob, objlist(ob).dir, -move
+                    Exit Sub
+                End If
+            End If
+        End If
+        ' moveok:
+        objlist(ob).distance = objlist(ob).distance - move
+    End Sub
+
+    '
+    ' =============================================================================
+    '                              STUFF
+    ' =============================================================================
+    '
+
+    '===============
+    '=
+    '= DropItem
+    '=
+    '= Tries to drop a bonus item somewhere in the tiles surrounding the
+    '= given tilex/tiley
+    '=
+    '===============
+    Sub DropItem (itemtype As Integer, tilex As Integer, tiley As Integer)
+        Dim x As Integer, y As Integer
+
+        '
+        ' find a free spot to put it in
+        '
+        If actorat(tilex, tiley) = 0 Then
+            PlaceItemType itemtype, tilex, tiley
+            Exit Sub
+        End If
+
+        For x = tilex - 1 To tilex + 1
+            For y = tiley - 1 To tiley + 1
+                If actorat(x, y) = 0 Then
+                    PlaceItemType itemtype, x, y
+                    Exit Sub
+                End If
+            Next y
+        Next x
+    End Sub
+
+    '===============
+    '=
+    '= KillActor
+    '=
+    '===============
+    Sub KillActor (ob As Integer)
+        Dim tilex As Integer, tiley As Integer
+
+        objlist(ob).tilex = SarL(objlist(ob).x, TILESHIFT) ' drop item on center
+        objlist(ob).tiley = SarL(objlist(ob).y, TILESHIFT)
+        tilex = objlist(ob).tilex
+        tiley = objlist(ob).tiley
+
+        Select Case objlist(ob).obclass
+            Case guardobj
+                GivePoints 100
+                NewState ob, s_grddie1
+                PlaceItemType bo_clip2, tilex, tiley
+
+            Case officerobj
+                GivePoints 400
+                NewState ob, s_ofcdie1
+                PlaceItemType bo_clip2, tilex, tiley
+
+            Case mutantobj
+                GivePoints 700
+                NewState ob, s_mutdie1
+                PlaceItemType bo_clip2, tilex, tiley
+
+            Case ssobj
+                GivePoints 500
+                NewState ob, s_ssdie1
+                If gamestate.bestweapon < wp_machinegun Then
+                    PlaceItemType bo_machinegun, tilex, tiley
+                Else
+                    PlaceItemType bo_clip2, tilex, tiley
+                End If
+
+            Case dogobj
+                GivePoints 200
+                NewState ob, s_dogdie1
+
+            Case Else
+                KillBoss ob, tilex, tiley
+        End Select
+
+        gamestate.killcount = gamestate.killcount + 1
+        objlist(ob).flags = objlist(ob).flags And (Not FL_SHOOTABLE)
+        actorat(objlist(ob).tilex, objlist(ob).tiley) = 0
+        objlist(ob).flags = objlist(ob).flags Or FL_NONMARK
+    End Sub
+
+    ' The boss cases of KillActor (a $If between Case lines breaks Select Case)
+    Sub KillBoss (ob As Integer, tilex As Integer, tiley As Integer)
+        $If SPEAR = UNDEFINED Then
+            Select Case objlist(ob).obclass
+                Case bossobj
+                    GivePoints 5000
+                    NewState ob, s_bossdie1
+                    PlaceItemType bo_key1, tilex, tiley
+
+                Case gretelobj
+                    GivePoints 5000
+                    NewState ob, s_greteldie1
+                    PlaceItemType bo_key1, tilex, tiley
+
+                Case giftobj
+                    GivePoints 5000
+                    gamestate.killx = objlist(player).x
+                    gamestate.killy = objlist(player).y
+                    NewState ob, s_giftdie1
+
+                Case fatobj
+                    GivePoints 5000
+                    gamestate.killx = objlist(player).x
+                    gamestate.killy = objlist(player).y
+                    NewState ob, s_fatdie1
+
+                Case schabbobj
+                    GivePoints 5000
+                    gamestate.killx = objlist(player).x
+                    gamestate.killy = objlist(player).y
+                    NewState ob, s_schabbdie1
+                    A_DeathScream ob
+
+                Case fakeobj
+                    GivePoints 2000
+                    NewState ob, s_fakedie1
+
+                Case mechahitlerobj
+                    GivePoints 5000
+                    NewState ob, s_mechadie1
+
+                Case realhitlerobj
+                    GivePoints 5000
+                    gamestate.killx = objlist(player).x
+                    gamestate.killy = objlist(player).y
+                    NewState ob, s_hitlerdie1
+                    A_DeathScream ob
+            End Select
+        $Else
+            Select Case objlist(ob).obclass
+                Case spectreobj
+                    GivePoints 200
+                    NewState ob, s_spectredie1
+
+                Case angelobj
+                    GivePoints 5000
+                    NewState ob, s_angeldie1
+
+                Case transobj
+                    GivePoints 5000
+                    NewState ob, s_transdie0
+                    PlaceItemType bo_key1, tilex, tiley
+
+                Case uberobj
+                    GivePoints 5000
+                    NewState ob, s_uberdie0
+                    PlaceItemType bo_key1, tilex, tiley
+
+                Case willobj
+                    GivePoints 5000
+                    NewState ob, s_willdie1
+                    PlaceItemType bo_key1, tilex, tiley
+
+                Case deathobj
+                    GivePoints 5000
+                    NewState ob, s_deathdie1
+                    PlaceItemType bo_key1, tilex, tiley
+            End Select
+        $End If
+    End Sub
+
+    '===================
+    '=
+    '= DamageActor
+    '=
+    '= Called when the player succesfully hits an enemy.
+    '=
+    '= Does damage points to enemy ob, either putting it into a stun frame or
+    '= killing it.
+    '=
+    '===================
+    Sub DamageActor (ob As Integer, damage As Integer)
+        Dim dmg As Long
+
+        madenoise = TRUE
+
+        '
+        ' do double damage if shooting a non attack mode actor
+        '
+        dmg = damage
+        If (objlist(ob).flags And FL_ATTACKMODE) = 0 Then dmg = dmg * 2
+
+        objlist(ob).hitpoints = objlist(ob).hitpoints - dmg
+
+        If objlist(ob).hitpoints <= 0 Then
+            KillActor ob
+        Else
+            If (objlist(ob).flags And FL_ATTACKMODE) = 0 Then FirstSighting ob ' put into combat mode
+
+            Select Case objlist(ob).obclass ' dogs only have one hit point
+                Case guardobj
+                    If objlist(ob).hitpoints And 1 Then
+                        NewState ob, s_grdpain
+                    Else
+                        NewState ob, s_grdpain1
+                    End If
+
+                Case officerobj
+                    If objlist(ob).hitpoints And 1 Then
+                        NewState ob, s_ofcpain
+                    Else
+                        NewState ob, s_ofcpain1
+                    End If
+
+                Case mutantobj
+                    If objlist(ob).hitpoints And 1 Then
+                        NewState ob, s_mutpain
+                    Else
+                        NewState ob, s_mutpain1
+                    End If
+
+                Case ssobj
+                    If objlist(ob).hitpoints And 1 Then
+                        NewState ob, s_sspain
+                    Else
+                        NewState ob, s_sspain1
+                    End If
+            End Select
+        End If
+    End Sub
+
+    '
+    ' =============================================================================
+    '                              CHECKSIGHT
+    ' =============================================================================
+    '
+
+    ' tilemap[x][y] as the C byte array: a y outside 0-63 reads the next / previous column.
+    ' (Outside the whole array C read other memory; here that is an empty tile.)
+    Function TileAt% (x As Integer, y As Integer)
+        Dim idx As Long
+
+        idx = CLng(x) * MAPSIZE + y
+        If idx < 0 Or idx >= MAPSIZE * MAPSIZE Then
+            TileAt% = 0
+        Else
+            TileAt% = tilemap(idx \ MAPSIZE, idx Mod MAPSIZE)
+        End If
+    End Function
+
+    ' One tile of CheckLine's trace: FALSE when it blocks the line. frac is the 1/256 tile
+    ' position after the step, stepv the step (C: int)
+    Function CheckLineTile% (value As Integer, frac As Integer, stepv As Integer)
+        Dim intercept As Long, door As Integer
+
+        CheckLineTile% = TRUE
+        If value = 0 Then Exit Function
+
+        If value < 128 Or value > 256 Then CheckLineTile% = FALSE: Exit Function
+
+        '
+        ' see if the door is open enough
+        '
+        door = value And (Not &H80)
+        ' (a moving push wall is |0xc0: C read doorposition[] past its end; here it blocks)
+        If door >= MAXDOORS Then CheckLineTile% = FALSE: Exit Function
+        intercept = (frac - Fix(stepv / 2)) And &HFFFF& ' unsigned
+
+        If intercept > doorposition(door) Then CheckLineTile% = FALSE
+    End Function
+
+    '=====================
+    '=
+    '= CheckLine
+    '=
+    '= Returns true if a straight line between the player and ob is unobstructed
+    '=
+    '= (int is 16-bit in the C code: Wrap16 where the sums can leave its range)
+    '=
+    '=====================
+    Function CheckLine% (ob As Integer)
+        Dim x1 As Integer, y1 As Integer, xt1 As Integer, yt1 As Integer
+        Dim x2 As Integer, y2 As Integer, xt2 As Integer, yt2 As Integer
+        Dim x As Integer, y As Integer
+        Dim xdist As Integer, ydist As Integer, xstep As Integer, ystep As Integer
+        Dim partial As Integer, delta As Integer
+        Dim ltemp As Long
+        Dim xfrac As Integer, yfrac As Integer, deltafrac As Integer
+        Dim value As Integer
+
+        CheckLine% = FALSE
+
+        x1 = Wrap16%(SarL(objlist(ob).x, UNSIGNEDSHIFT)) ' 1/256 tile precision
+        y1 = Wrap16%(SarL(objlist(ob).y, UNSIGNEDSHIFT))
+        xt1 = SarL(x1, 8)
+        yt1 = SarL(y1, 8)
+
+        x2 = plux
+        y2 = pluy
+        xt2 = objlist(player).tilex
+        yt2 = objlist(player).tiley
+
+        xdist = Abs(xt2 - xt1)
+
+        If xdist > 0 Then
+            If xt2 > xt1 Then
+                partial = 256 - (x1 And &HFF)
+                xstep = 1
+            Else
+                partial = x1 And &HFF
+                xstep = -1
+            End If
+
+            deltafrac = Abs(x2 - x1)
+            delta = y2 - y1
+            ltemp = Fix((CLng(delta) * 256) / deltafrac) ' C long division truncates
+            If ltemp > &H7FFF& Then
+                ystep = &H7FFF
+            ElseIf ltemp < -&H7FFF& Then
+                ystep = -&H7FFF
+            Else
+                ystep = ltemp
+            End If
+            yfrac = Wrap16%(y1 + SarL(CLng(ystep) * partial, 8))
+
+            x = xt1 + xstep
+            xt2 = xt2 + xstep
+            Do
+                y = SarL(yfrac, 8)
+                yfrac = Wrap16%(CLng(yfrac) + ystep)
+
+                value = TileAt(x, y)
+                x = x + xstep
+
+                If Not CheckLineTile(value, yfrac, ystep) Then Exit Function
+            Loop While x <> xt2
+        End If
+
+        ydist = Abs(yt2 - yt1)
+
+        If ydist > 0 Then
+            If yt2 > yt1 Then
+                partial = 256 - (y1 And &HFF)
+                ystep = 1
+            Else
+                partial = y1 And &HFF
+                ystep = -1
+            End If
+
+            deltafrac = Abs(y2 - y1)
+            delta = x2 - x1
+            ltemp = Fix((CLng(delta) * 256) / deltafrac)
+            If ltemp > &H7FFF& Then
+                xstep = &H7FFF
+            ElseIf ltemp < -&H7FFF& Then
+                xstep = -&H7FFF
+            Else
+                xstep = ltemp
+            End If
+            xfrac = Wrap16%(x1 + SarL(CLng(xstep) * partial, 8))
+
+            y = yt1 + ystep
+            yt2 = yt2 + ystep
+            Do
+                x = SarL(xfrac, 8)
+                xfrac = Wrap16%(CLng(xfrac) + xstep)
+
+                value = TileAt(x, y)
+                y = y + ystep
+
+                If Not CheckLineTile(value, xfrac, xstep) Then Exit Function
+            Loop While y <> yt2
+        End If
+
+        CheckLine% = TRUE
+    End Function
+
+    '================
+    '=
+    '= CheckSight
+    '=
+    '= Checks a straight line between player and current object
+    '=
+    '= If the sight is ok, check alertness and angle to see if they notice
+    '=
+    '= returns true if the player has been spoted
+    '=
+    '================
+    Function CheckSight% (ob As Integer)
+        Const MINSIGHT = &H18000
+        Dim deltax As Long, deltay As Long
+
+        CheckSight% = FALSE
+
+        '
+        ' don't bother tracing a line if the area isn't connected to the player's
+        '
+        If Not areabyplayer(objlist(ob).areanumber) Then Exit Function
+
+        '
+        ' if the player is real close, sight is automatic
+        '
+        deltax = objlist(player).x - objlist(ob).x
+        deltay = objlist(player).y - objlist(ob).y
+
+        If deltax > -MINSIGHT And deltax < MINSIGHT And deltay > -MINSIGHT And deltay < MINSIGHT Then
+            CheckSight% = TRUE
+            Exit Function
+        End If
+
+        '
+        ' see if they are looking in the right direction
+        '
+        Select Case objlist(ob).dir
+            Case dt_north
+                If deltay > 0 Then Exit Function
+            Case dt_east
+                If deltax < 0 Then Exit Function
+            Case dt_south
+                If deltay < 0 Then Exit Function
+            Case dt_west
+                If deltax > 0 Then Exit Function
+        End Select
+
+        '
+        ' trace a line to check for blocking tiles (corners)
+        '
+        CheckSight% = CheckLine(ob)
+    End Function
+
+    '===============
+    '=
+    '= FirstSighting
+    '=
+    '= Puts an actor into attack mode and possibly reverses the direction
+    '= if the player is behind it
+    '=
+    '===============
+    Sub FirstSighting (ob As Integer)
+        '
+        ' react to the player
+        '
+        Select Case objlist(ob).obclass
+            Case guardobj
+                PlaySoundLocActor HALTSND, ob
+                NewState ob, s_grdchase1
+                objlist(ob).speed = objlist(ob).speed * 3 ' go faster when chasing player
+
+            Case officerobj
+                PlaySoundLocActor SPIONSND, ob
+                NewState ob, s_ofcchase1
+                objlist(ob).speed = objlist(ob).speed * 5 ' go faster when chasing player
+
+            Case mutantobj
+                NewState ob, s_mutchase1
+                objlist(ob).speed = objlist(ob).speed * 3 ' go faster when chasing player
+
+            Case ssobj
+                PlaySoundLocActor SCHUTZADSND, ob
+                NewState ob, s_sschase1
+                objlist(ob).speed = objlist(ob).speed * 4 ' go faster when chasing player
+
+            Case dogobj
+                PlaySoundLocActor DOGBARKSND, ob
+                NewState ob, s_dogchase1
+                objlist(ob).speed = objlist(ob).speed * 2 ' go faster when chasing player
+
+            Case Else
+                FirstSightingBoss ob
+        End Select
+
+        If objlist(ob).distance < 0 Then objlist(ob).distance = 0 ' ignore the door opening command
+
+        objlist(ob).flags = objlist(ob).flags Or FL_ATTACKMODE Or FL_FIRSTATTACK
+    End Sub
+
+    ' The boss cases of FirstSighting (a $If between Case lines breaks Select Case)
+    Sub FirstSightingBoss (ob As Integer)
+        Dim played As Integer
+
+        $If SPEAR = UNDEFINED Then
+            Select Case objlist(ob).obclass
+                Case bossobj
+                    played = SD_PlaySound(GUTENTAGSND)
+                    NewState ob, s_bosschase1
+                    objlist(ob).speed = SPDPATROL * 3 ' go faster when chasing player
+
+                Case gretelobj
+                    played = SD_PlaySound(KEINSND)
+                    NewState ob, s_gretelchase1
+                    objlist(ob).speed = objlist(ob).speed * 3
+
+                Case giftobj
+                    played = SD_PlaySound(EINESND)
+                    NewState ob, s_giftchase1
+                    objlist(ob).speed = objlist(ob).speed * 3
+
+                Case fatobj
+                    played = SD_PlaySound(ERLAUBENSND)
+                    NewState ob, s_fatchase1
+                    objlist(ob).speed = objlist(ob).speed * 3
+
+                Case schabbobj
+                    played = SD_PlaySound(SCHABBSHASND)
+                    NewState ob, s_schabbchase1
+                    objlist(ob).speed = objlist(ob).speed * 3
+
+                Case fakeobj
+                    played = SD_PlaySound(TOT_HUNDSND)
+                    NewState ob, s_fakechase1
+                    objlist(ob).speed = objlist(ob).speed * 3
+
+                Case mechahitlerobj
+                    played = SD_PlaySound(DIESND)
+                    NewState ob, s_mechachase1
+                    objlist(ob).speed = objlist(ob).speed * 3
+
+                Case realhitlerobj
+                    played = SD_PlaySound(DIESND)
+                    NewState ob, s_hitlerchase1
+                    objlist(ob).speed = objlist(ob).speed * 5
+
+                Case ghostobj
+                    NewState ob, s_blinkychase1
+                    objlist(ob).speed = objlist(ob).speed * 2
+            End Select
+        $Else
+            Select Case objlist(ob).obclass
+                Case spectreobj
+                    played = SD_PlaySound(GHOSTSIGHTSND)
+                    NewState ob, s_spectrechase1
+                    objlist(ob).speed = 800 ' go faster when chasing player
+
+                Case angelobj
+                    played = SD_PlaySound(ANGELSIGHTSND)
+                    NewState ob, s_angelchase1
+                    objlist(ob).speed = 1536
+
+                Case transobj
+                    played = SD_PlaySound(TRANSSIGHTSND)
+                    NewState ob, s_transchase1
+                    objlist(ob).speed = 1536
+
+                Case uberobj
+                    NewState ob, s_uberchase1
+                    objlist(ob).speed = 3000
+
+                Case willobj
+                    played = SD_PlaySound(WILHELMSIGHTSND)
+                    NewState ob, s_willchase1
+                    objlist(ob).speed = 2048
+
+                Case deathobj
+                    played = SD_PlaySound(KNIGHTSIGHTSND)
+                    NewState ob, s_deathchase1
+                    objlist(ob).speed = 2048
+            End Select
+        $End If
+    End Sub
+
+    '===============
+    '=
+    '= SightPlayer
+    '=
+    '= Called by actors that ARE NOT chasing the player.  If the player
+    '= is detected (by sight, noise, or proximity), the actor is put into
+    '= it's combat frame and true is returned.
+    '=
+    '= Incorporates a random reaction delay
+    '=
+    '===============
+    Function SightPlayer% (ob As Integer)
+        SightPlayer% = FALSE
+
+        If objlist(ob).flags And FL_ATTACKMODE Then Quit "An actor in ATTACKMODE called SightPlayer!"
+
+        If objlist(ob).temp2 Then
+            '
+            ' count down reaction time
+            '
+            objlist(ob).temp2 = objlist(ob).temp2 - tics
+            If objlist(ob).temp2 > 0 Then Exit Function
+            objlist(ob).temp2 = 0 ' time to react
+        Else
+            If Not areabyplayer(objlist(ob).areanumber) Then Exit Function
+
+            If objlist(ob).flags And FL_AMBUSH Then
+                If Not CheckSight(ob) Then Exit Function
+                objlist(ob).flags = objlist(ob).flags And (Not FL_AMBUSH)
+            Else
+                If Not madenoise Then ' C: !madenoise && !CheckSight (ob)
+                    If Not CheckSight(ob) Then Exit Function
+                End If
+            End If
+
+            Select Case objlist(ob).obclass
+                Case guardobj
+                    objlist(ob).temp2 = 1 + US_RndT \ 4
+                Case officerobj
+                    objlist(ob).temp2 = 2
+                Case mutantobj
+                    objlist(ob).temp2 = 1 + US_RndT \ 6
+                Case ssobj
+                    objlist(ob).temp2 = 1 + US_RndT \ 6
+                Case dogobj
+                    objlist(ob).temp2 = 1 + US_RndT \ 8
+
+                Case bossobj, schabbobj, fakeobj, mechahitlerobj, realhitlerobj, gretelobj, giftobj, fatobj, spectreobj, angelobj, transobj, uberobj, willobj, deathobj
+                    objlist(ob).temp2 = 1
+            End Select
+            Exit Function
+        End If
+
+        FirstSighting ob
+
+        SightPlayer% = TRUE
+    End Function
+
     ' One state: statetype s = {rotate, shapenum, tictime, think, action, next}
     Sub SetState (s As Integer, rotate As Integer, shapenum As Integer, tictime As Integer, think As Integer, action As Integer, nextstate As Integer)
         states(s).rotate = rotate
@@ -16,10 +1159,462 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
         states(s).nextstate = nextstate
     End Sub
 
-    ' The statetype initializers of the C files
+    ' The statetype initializers of the C files (generated by gen_states.py)
+    ' statetype s = {rotate, shapenum, tictime, think, action, next}
     Sub InitStates ()
         ' WL_AGENT.C
-        SetState s_player, FALSE, 0, 0, RT_T_PLAYER, RT_NONE, 0
+        SetState s_player, 0, 0, 0, RT_T_PLAYER, RT_NONE, 0
+        SetState s_attack, 0, 0, 0, RT_T_ATTACK, RT_NONE, 0
+        ' WL_ACT2.C
+        SetState s_rocket, 1, SPR_ROCKET_1, 3, RT_T_PROJECTILE, RT_A_SMOKE, s_rocket
+        SetState s_smoke1, 0, SPR_SMOKE_1, 3, RT_NONE, RT_NONE, s_smoke2
+        SetState s_smoke2, 0, SPR_SMOKE_2, 3, RT_NONE, RT_NONE, s_smoke3
+        SetState s_smoke3, 0, SPR_SMOKE_3, 3, RT_NONE, RT_NONE, s_smoke4
+        SetState s_smoke4, 0, SPR_SMOKE_4, 3, RT_NONE, RT_NONE, 0
+        SetState s_boom1, 0, SPR_BOOM_1, 6, RT_NONE, RT_NONE, s_boom2
+        SetState s_boom2, 0, SPR_BOOM_2, 6, RT_NONE, RT_NONE, s_boom3
+        SetState s_boom3, 0, SPR_BOOM_3, 6, RT_NONE, RT_NONE, 0
+        $If SPEAR = DEFINED Then
+            SetState s_hrocket, 1, SPR_HROCKET_1, 3, RT_T_PROJECTILE, RT_A_SMOKE, s_hrocket
+            SetState s_hsmoke1, 0, SPR_HSMOKE_1, 3, RT_NONE, RT_NONE, s_hsmoke2
+            SetState s_hsmoke2, 0, SPR_HSMOKE_2, 3, RT_NONE, RT_NONE, s_hsmoke3
+            SetState s_hsmoke3, 0, SPR_HSMOKE_3, 3, RT_NONE, RT_NONE, s_hsmoke4
+            SetState s_hsmoke4, 0, SPR_HSMOKE_4, 3, RT_NONE, RT_NONE, 0
+            SetState s_hboom1, 0, SPR_HBOOM_1, 6, RT_NONE, RT_NONE, s_hboom2
+            SetState s_hboom2, 0, SPR_HBOOM_2, 6, RT_NONE, RT_NONE, s_hboom3
+            SetState s_hboom3, 0, SPR_HBOOM_3, 6, RT_NONE, RT_NONE, 0
+        $End If
+        SetState s_grdstand, 1, SPR_GRD_S_1, 0, RT_T_STAND, RT_NONE, s_grdstand
+        SetState s_grdpath1, 1, SPR_GRD_W1_1, 20, RT_T_PATH, RT_NONE, s_grdpath1s
+        SetState s_grdpath1s, 1, SPR_GRD_W1_1, 5, RT_NONE, RT_NONE, s_grdpath2
+        SetState s_grdpath2, 1, SPR_GRD_W2_1, 15, RT_T_PATH, RT_NONE, s_grdpath3
+        SetState s_grdpath3, 1, SPR_GRD_W3_1, 20, RT_T_PATH, RT_NONE, s_grdpath3s
+        SetState s_grdpath3s, 1, SPR_GRD_W3_1, 5, RT_NONE, RT_NONE, s_grdpath4
+        SetState s_grdpath4, 1, SPR_GRD_W4_1, 15, RT_T_PATH, RT_NONE, s_grdpath1
+        SetState s_grdpain, 2, SPR_GRD_PAIN_1, 10, RT_NONE, RT_NONE, s_grdchase1
+        SetState s_grdpain1, 2, SPR_GRD_PAIN_2, 10, RT_NONE, RT_NONE, s_grdchase1
+        SetState s_grdshoot1, 0, SPR_GRD_SHOOT1, 20, RT_NONE, RT_NONE, s_grdshoot2
+        SetState s_grdshoot2, 0, SPR_GRD_SHOOT2, 20, RT_NONE, RT_T_SHOOT, s_grdshoot3
+        SetState s_grdshoot3, 0, SPR_GRD_SHOOT3, 20, RT_NONE, RT_NONE, s_grdchase1
+        SetState s_grdchase1, 1, SPR_GRD_W1_1, 10, RT_T_CHASE, RT_NONE, s_grdchase1s
+        SetState s_grdchase1s, 1, SPR_GRD_W1_1, 3, RT_NONE, RT_NONE, s_grdchase2
+        SetState s_grdchase2, 1, SPR_GRD_W2_1, 8, RT_T_CHASE, RT_NONE, s_grdchase3
+        SetState s_grdchase3, 1, SPR_GRD_W3_1, 10, RT_T_CHASE, RT_NONE, s_grdchase3s
+        SetState s_grdchase3s, 1, SPR_GRD_W3_1, 3, RT_NONE, RT_NONE, s_grdchase4
+        SetState s_grdchase4, 1, SPR_GRD_W4_1, 8, RT_T_CHASE, RT_NONE, s_grdchase1
+        SetState s_grddie1, 0, SPR_GRD_DIE_1, 15, RT_NONE, RT_A_DEATHSCREAM, s_grddie2
+        SetState s_grddie2, 0, SPR_GRD_DIE_2, 15, RT_NONE, RT_NONE, s_grddie3
+        SetState s_grddie3, 0, SPR_GRD_DIE_3, 15, RT_NONE, RT_NONE, s_grddie4
+        SetState s_grddie4, 0, SPR_GRD_DEAD, 0, RT_NONE, RT_NONE, s_grddie4
+        $If SPEAR = UNDEFINED Then
+            SetState s_blinkychase1, 0, SPR_BLINKY_W1, 10, RT_T_GHOSTS, RT_NONE, s_blinkychase2
+            SetState s_blinkychase2, 0, SPR_BLINKY_W2, 10, RT_T_GHOSTS, RT_NONE, s_blinkychase1
+            SetState s_inkychase1, 0, SPR_INKY_W1, 10, RT_T_GHOSTS, RT_NONE, s_inkychase2
+            SetState s_inkychase2, 0, SPR_INKY_W2, 10, RT_T_GHOSTS, RT_NONE, s_inkychase1
+            SetState s_pinkychase1, 0, SPR_PINKY_W1, 10, RT_T_GHOSTS, RT_NONE, s_pinkychase2
+            SetState s_pinkychase2, 0, SPR_PINKY_W2, 10, RT_T_GHOSTS, RT_NONE, s_pinkychase1
+            SetState s_clydechase1, 0, SPR_CLYDE_W1, 10, RT_T_GHOSTS, RT_NONE, s_clydechase2
+            SetState s_clydechase2, 0, SPR_CLYDE_W2, 10, RT_T_GHOSTS, RT_NONE, s_clydechase1
+        $End If
+        SetState s_dogpath1, 1, SPR_DOG_W1_1, 20, RT_T_PATH, RT_NONE, s_dogpath1s
+        SetState s_dogpath1s, 1, SPR_DOG_W1_1, 5, RT_NONE, RT_NONE, s_dogpath2
+        SetState s_dogpath2, 1, SPR_DOG_W2_1, 15, RT_T_PATH, RT_NONE, s_dogpath3
+        SetState s_dogpath3, 1, SPR_DOG_W3_1, 20, RT_T_PATH, RT_NONE, s_dogpath3s
+        SetState s_dogpath3s, 1, SPR_DOG_W3_1, 5, RT_NONE, RT_NONE, s_dogpath4
+        SetState s_dogpath4, 1, SPR_DOG_W4_1, 15, RT_T_PATH, RT_NONE, s_dogpath1
+        SetState s_dogjump1, 0, SPR_DOG_JUMP1, 10, RT_NONE, RT_NONE, s_dogjump2
+        SetState s_dogjump2, 0, SPR_DOG_JUMP2, 10, RT_NONE, RT_T_BITE, s_dogjump3
+        SetState s_dogjump3, 0, SPR_DOG_JUMP3, 10, RT_NONE, RT_NONE, s_dogjump4
+        SetState s_dogjump4, 0, SPR_DOG_JUMP1, 10, RT_NONE, RT_NONE, s_dogjump5
+        SetState s_dogjump5, 0, SPR_DOG_W1_1, 10, RT_NONE, RT_NONE, s_dogchase1
+        SetState s_dogchase1, 1, SPR_DOG_W1_1, 10, RT_T_DOGCHASE, RT_NONE, s_dogchase1s
+        SetState s_dogchase1s, 1, SPR_DOG_W1_1, 3, RT_NONE, RT_NONE, s_dogchase2
+        SetState s_dogchase2, 1, SPR_DOG_W2_1, 8, RT_T_DOGCHASE, RT_NONE, s_dogchase3
+        SetState s_dogchase3, 1, SPR_DOG_W3_1, 10, RT_T_DOGCHASE, RT_NONE, s_dogchase3s
+        SetState s_dogchase3s, 1, SPR_DOG_W3_1, 3, RT_NONE, RT_NONE, s_dogchase4
+        SetState s_dogchase4, 1, SPR_DOG_W4_1, 8, RT_T_DOGCHASE, RT_NONE, s_dogchase1
+        SetState s_dogdie1, 0, SPR_DOG_DIE_1, 15, RT_NONE, RT_A_DEATHSCREAM, s_dogdie2
+        SetState s_dogdie2, 0, SPR_DOG_DIE_2, 15, RT_NONE, RT_NONE, s_dogdie3
+        SetState s_dogdie3, 0, SPR_DOG_DIE_3, 15, RT_NONE, RT_NONE, s_dogdead
+        SetState s_dogdead, 0, SPR_DOG_DEAD, 15, RT_NONE, RT_NONE, s_dogdead
+        SetState s_ofcstand, 1, SPR_OFC_S_1, 0, RT_T_STAND, RT_NONE, s_ofcstand
+        SetState s_ofcpath1, 1, SPR_OFC_W1_1, 20, RT_T_PATH, RT_NONE, s_ofcpath1s
+        SetState s_ofcpath1s, 1, SPR_OFC_W1_1, 5, RT_NONE, RT_NONE, s_ofcpath2
+        SetState s_ofcpath2, 1, SPR_OFC_W2_1, 15, RT_T_PATH, RT_NONE, s_ofcpath3
+        SetState s_ofcpath3, 1, SPR_OFC_W3_1, 20, RT_T_PATH, RT_NONE, s_ofcpath3s
+        SetState s_ofcpath3s, 1, SPR_OFC_W3_1, 5, RT_NONE, RT_NONE, s_ofcpath4
+        SetState s_ofcpath4, 1, SPR_OFC_W4_1, 15, RT_T_PATH, RT_NONE, s_ofcpath1
+        SetState s_ofcpain, 2, SPR_OFC_PAIN_1, 10, RT_NONE, RT_NONE, s_ofcchase1
+        SetState s_ofcpain1, 2, SPR_OFC_PAIN_2, 10, RT_NONE, RT_NONE, s_ofcchase1
+        SetState s_ofcshoot1, 0, SPR_OFC_SHOOT1, 6, RT_NONE, RT_NONE, s_ofcshoot2
+        SetState s_ofcshoot2, 0, SPR_OFC_SHOOT2, 20, RT_NONE, RT_T_SHOOT, s_ofcshoot3
+        SetState s_ofcshoot3, 0, SPR_OFC_SHOOT3, 10, RT_NONE, RT_NONE, s_ofcchase1
+        SetState s_ofcchase1, 1, SPR_OFC_W1_1, 10, RT_T_CHASE, RT_NONE, s_ofcchase1s
+        SetState s_ofcchase1s, 1, SPR_OFC_W1_1, 3, RT_NONE, RT_NONE, s_ofcchase2
+        SetState s_ofcchase2, 1, SPR_OFC_W2_1, 8, RT_T_CHASE, RT_NONE, s_ofcchase3
+        SetState s_ofcchase3, 1, SPR_OFC_W3_1, 10, RT_T_CHASE, RT_NONE, s_ofcchase3s
+        SetState s_ofcchase3s, 1, SPR_OFC_W3_1, 3, RT_NONE, RT_NONE, s_ofcchase4
+        SetState s_ofcchase4, 1, SPR_OFC_W4_1, 8, RT_T_CHASE, RT_NONE, s_ofcchase1
+        SetState s_ofcdie1, 0, SPR_OFC_DIE_1, 11, RT_NONE, RT_A_DEATHSCREAM, s_ofcdie2
+        SetState s_ofcdie2, 0, SPR_OFC_DIE_2, 11, RT_NONE, RT_NONE, s_ofcdie3
+        SetState s_ofcdie3, 0, SPR_OFC_DIE_3, 11, RT_NONE, RT_NONE, s_ofcdie4
+        SetState s_ofcdie4, 0, SPR_OFC_DIE_4, 11, RT_NONE, RT_NONE, s_ofcdie5
+        SetState s_ofcdie5, 0, SPR_OFC_DEAD, 0, RT_NONE, RT_NONE, s_ofcdie5
+        SetState s_mutstand, 1, SPR_MUT_S_1, 0, RT_T_STAND, RT_NONE, s_mutstand
+        SetState s_mutpath1, 1, SPR_MUT_W1_1, 20, RT_T_PATH, RT_NONE, s_mutpath1s
+        SetState s_mutpath1s, 1, SPR_MUT_W1_1, 5, RT_NONE, RT_NONE, s_mutpath2
+        SetState s_mutpath2, 1, SPR_MUT_W2_1, 15, RT_T_PATH, RT_NONE, s_mutpath3
+        SetState s_mutpath3, 1, SPR_MUT_W3_1, 20, RT_T_PATH, RT_NONE, s_mutpath3s
+        SetState s_mutpath3s, 1, SPR_MUT_W3_1, 5, RT_NONE, RT_NONE, s_mutpath4
+        SetState s_mutpath4, 1, SPR_MUT_W4_1, 15, RT_T_PATH, RT_NONE, s_mutpath1
+        SetState s_mutpain, 2, SPR_MUT_PAIN_1, 10, RT_NONE, RT_NONE, s_mutchase1
+        SetState s_mutpain1, 2, SPR_MUT_PAIN_2, 10, RT_NONE, RT_NONE, s_mutchase1
+        SetState s_mutshoot1, 0, SPR_MUT_SHOOT1, 6, RT_NONE, RT_T_SHOOT, s_mutshoot2
+        SetState s_mutshoot2, 0, SPR_MUT_SHOOT2, 20, RT_NONE, RT_NONE, s_mutshoot3
+        SetState s_mutshoot3, 0, SPR_MUT_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_mutshoot4
+        SetState s_mutshoot4, 0, SPR_MUT_SHOOT4, 20, RT_NONE, RT_NONE, s_mutchase1
+        SetState s_mutchase1, 1, SPR_MUT_W1_1, 10, RT_T_CHASE, RT_NONE, s_mutchase1s
+        SetState s_mutchase1s, 1, SPR_MUT_W1_1, 3, RT_NONE, RT_NONE, s_mutchase2
+        SetState s_mutchase2, 1, SPR_MUT_W2_1, 8, RT_T_CHASE, RT_NONE, s_mutchase3
+        SetState s_mutchase3, 1, SPR_MUT_W3_1, 10, RT_T_CHASE, RT_NONE, s_mutchase3s
+        SetState s_mutchase3s, 1, SPR_MUT_W3_1, 3, RT_NONE, RT_NONE, s_mutchase4
+        SetState s_mutchase4, 1, SPR_MUT_W4_1, 8, RT_T_CHASE, RT_NONE, s_mutchase1
+        SetState s_mutdie1, 0, SPR_MUT_DIE_1, 7, RT_NONE, RT_A_DEATHSCREAM, s_mutdie2
+        SetState s_mutdie2, 0, SPR_MUT_DIE_2, 7, RT_NONE, RT_NONE, s_mutdie3
+        SetState s_mutdie3, 0, SPR_MUT_DIE_3, 7, RT_NONE, RT_NONE, s_mutdie4
+        SetState s_mutdie4, 0, SPR_MUT_DIE_4, 7, RT_NONE, RT_NONE, s_mutdie5
+        SetState s_mutdie5, 0, SPR_MUT_DEAD, 0, RT_NONE, RT_NONE, s_mutdie5
+        SetState s_ssstand, 1, SPR_SS_S_1, 0, RT_T_STAND, RT_NONE, s_ssstand
+        SetState s_sspath1, 1, SPR_SS_W1_1, 20, RT_T_PATH, RT_NONE, s_sspath1s
+        SetState s_sspath1s, 1, SPR_SS_W1_1, 5, RT_NONE, RT_NONE, s_sspath2
+        SetState s_sspath2, 1, SPR_SS_W2_1, 15, RT_T_PATH, RT_NONE, s_sspath3
+        SetState s_sspath3, 1, SPR_SS_W3_1, 20, RT_T_PATH, RT_NONE, s_sspath3s
+        SetState s_sspath3s, 1, SPR_SS_W3_1, 5, RT_NONE, RT_NONE, s_sspath4
+        SetState s_sspath4, 1, SPR_SS_W4_1, 15, RT_T_PATH, RT_NONE, s_sspath1
+        SetState s_sspain, 2, SPR_SS_PAIN_1, 10, RT_NONE, RT_NONE, s_sschase1
+        SetState s_sspain1, 2, SPR_SS_PAIN_2, 10, RT_NONE, RT_NONE, s_sschase1
+        SetState s_ssshoot1, 0, SPR_SS_SHOOT1, 20, RT_NONE, RT_NONE, s_ssshoot2
+        SetState s_ssshoot2, 0, SPR_SS_SHOOT2, 20, RT_NONE, RT_T_SHOOT, s_ssshoot3
+        SetState s_ssshoot3, 0, SPR_SS_SHOOT3, 10, RT_NONE, RT_NONE, s_ssshoot4
+        SetState s_ssshoot4, 0, SPR_SS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_ssshoot5
+        SetState s_ssshoot5, 0, SPR_SS_SHOOT3, 10, RT_NONE, RT_NONE, s_ssshoot6
+        SetState s_ssshoot6, 0, SPR_SS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_ssshoot7
+        SetState s_ssshoot7, 0, SPR_SS_SHOOT3, 10, RT_NONE, RT_NONE, s_ssshoot8
+        SetState s_ssshoot8, 0, SPR_SS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_ssshoot9
+        SetState s_ssshoot9, 0, SPR_SS_SHOOT3, 10, RT_NONE, RT_NONE, s_sschase1
+        SetState s_sschase1, 1, SPR_SS_W1_1, 10, RT_T_CHASE, RT_NONE, s_sschase1s
+        SetState s_sschase1s, 1, SPR_SS_W1_1, 3, RT_NONE, RT_NONE, s_sschase2
+        SetState s_sschase2, 1, SPR_SS_W2_1, 8, RT_T_CHASE, RT_NONE, s_sschase3
+        SetState s_sschase3, 1, SPR_SS_W3_1, 10, RT_T_CHASE, RT_NONE, s_sschase3s
+        SetState s_sschase3s, 1, SPR_SS_W3_1, 3, RT_NONE, RT_NONE, s_sschase4
+        SetState s_sschase4, 1, SPR_SS_W4_1, 8, RT_T_CHASE, RT_NONE, s_sschase1
+        SetState s_ssdie1, 0, SPR_SS_DIE_1, 15, RT_NONE, RT_A_DEATHSCREAM, s_ssdie2
+        SetState s_ssdie2, 0, SPR_SS_DIE_2, 15, RT_NONE, RT_NONE, s_ssdie3
+        SetState s_ssdie3, 0, SPR_SS_DIE_3, 15, RT_NONE, RT_NONE, s_ssdie4
+        SetState s_ssdie4, 0, SPR_SS_DEAD, 0, RT_NONE, RT_NONE, s_ssdie4
+        $If SPEAR = UNDEFINED Then
+            SetState s_bossstand, 0, SPR_BOSS_W1, 0, RT_T_STAND, RT_NONE, s_bossstand
+            SetState s_bosschase1, 0, SPR_BOSS_W1, 10, RT_T_CHASE, RT_NONE, s_bosschase1s
+            SetState s_bosschase1s, 0, SPR_BOSS_W1, 3, RT_NONE, RT_NONE, s_bosschase2
+            SetState s_bosschase2, 0, SPR_BOSS_W2, 8, RT_T_CHASE, RT_NONE, s_bosschase3
+            SetState s_bosschase3, 0, SPR_BOSS_W3, 10, RT_T_CHASE, RT_NONE, s_bosschase3s
+            SetState s_bosschase3s, 0, SPR_BOSS_W3, 3, RT_NONE, RT_NONE, s_bosschase4
+            SetState s_bosschase4, 0, SPR_BOSS_W4, 8, RT_T_CHASE, RT_NONE, s_bosschase1
+            SetState s_bossdie1, 0, SPR_BOSS_DIE1, 15, RT_NONE, RT_A_DEATHSCREAM, s_bossdie2
+            SetState s_bossdie2, 0, SPR_BOSS_DIE2, 15, RT_NONE, RT_NONE, s_bossdie3
+            SetState s_bossdie3, 0, SPR_BOSS_DIE3, 15, RT_NONE, RT_NONE, s_bossdie4
+            SetState s_bossdie4, 0, SPR_BOSS_DEAD, 0, RT_NONE, RT_NONE, s_bossdie4
+            SetState s_bossshoot1, 0, SPR_BOSS_SHOOT1, 30, RT_NONE, RT_NONE, s_bossshoot2
+            SetState s_bossshoot2, 0, SPR_BOSS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_bossshoot3
+            SetState s_bossshoot3, 0, SPR_BOSS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_bossshoot4
+            SetState s_bossshoot4, 0, SPR_BOSS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_bossshoot5
+            SetState s_bossshoot5, 0, SPR_BOSS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_bossshoot6
+            SetState s_bossshoot6, 0, SPR_BOSS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_bossshoot7
+            SetState s_bossshoot7, 0, SPR_BOSS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_bossshoot8
+            SetState s_bossshoot8, 0, SPR_BOSS_SHOOT1, 10, RT_NONE, RT_NONE, s_bosschase1
+            SetState s_gretelstand, 0, SPR_GRETEL_W1, 0, RT_T_STAND, RT_NONE, s_gretelstand
+            SetState s_gretelchase1, 0, SPR_GRETEL_W1, 10, RT_T_CHASE, RT_NONE, s_gretelchase1s
+            SetState s_gretelchase1s, 0, SPR_GRETEL_W1, 3, RT_NONE, RT_NONE, s_gretelchase2
+            SetState s_gretelchase2, 0, SPR_GRETEL_W2, 8, RT_T_CHASE, RT_NONE, s_gretelchase3
+            SetState s_gretelchase3, 0, SPR_GRETEL_W3, 10, RT_T_CHASE, RT_NONE, s_gretelchase3s
+            SetState s_gretelchase3s, 0, SPR_GRETEL_W3, 3, RT_NONE, RT_NONE, s_gretelchase4
+            SetState s_gretelchase4, 0, SPR_GRETEL_W4, 8, RT_T_CHASE, RT_NONE, s_gretelchase1
+            SetState s_greteldie1, 0, SPR_GRETEL_DIE1, 15, RT_NONE, RT_A_DEATHSCREAM, s_greteldie2
+            SetState s_greteldie2, 0, SPR_GRETEL_DIE2, 15, RT_NONE, RT_NONE, s_greteldie3
+            SetState s_greteldie3, 0, SPR_GRETEL_DIE3, 15, RT_NONE, RT_NONE, s_greteldie4
+            SetState s_greteldie4, 0, SPR_GRETEL_DEAD, 0, RT_NONE, RT_NONE, s_greteldie4
+            SetState s_gretelshoot1, 0, SPR_GRETEL_SHOOT1, 30, RT_NONE, RT_NONE, s_gretelshoot2
+            SetState s_gretelshoot2, 0, SPR_GRETEL_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_gretelshoot3
+            SetState s_gretelshoot3, 0, SPR_GRETEL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_gretelshoot4
+            SetState s_gretelshoot4, 0, SPR_GRETEL_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_gretelshoot5
+            SetState s_gretelshoot5, 0, SPR_GRETEL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_gretelshoot6
+            SetState s_gretelshoot6, 0, SPR_GRETEL_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_gretelshoot7
+            SetState s_gretelshoot7, 0, SPR_GRETEL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_gretelshoot8
+            SetState s_gretelshoot8, 0, SPR_GRETEL_SHOOT1, 10, RT_NONE, RT_NONE, s_gretelchase1
+        $End If
+        $If SPEAR = DEFINED Then
+            SetState s_transstand, 0, SPR_TRANS_W1, 0, RT_T_STAND, RT_NONE, s_transstand
+            SetState s_transchase1, 0, SPR_TRANS_W1, 10, RT_T_CHASE, RT_NONE, s_transchase1s
+            SetState s_transchase1s, 0, SPR_TRANS_W1, 3, RT_NONE, RT_NONE, s_transchase2
+            SetState s_transchase2, 0, SPR_TRANS_W2, 8, RT_T_CHASE, RT_NONE, s_transchase3
+            SetState s_transchase3, 0, SPR_TRANS_W3, 10, RT_T_CHASE, RT_NONE, s_transchase3s
+            SetState s_transchase3s, 0, SPR_TRANS_W3, 3, RT_NONE, RT_NONE, s_transchase4
+            SetState s_transchase4, 0, SPR_TRANS_W4, 8, RT_T_CHASE, RT_NONE, s_transchase1
+            SetState s_transdie0, 0, SPR_TRANS_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_transdie01
+            SetState s_transdie01, 0, SPR_TRANS_W1, 1, RT_NONE, RT_NONE, s_transdie1
+            SetState s_transdie1, 0, SPR_TRANS_DIE1, 15, RT_NONE, RT_NONE, s_transdie2
+            SetState s_transdie2, 0, SPR_TRANS_DIE2, 15, RT_NONE, RT_NONE, s_transdie3
+            SetState s_transdie3, 0, SPR_TRANS_DIE3, 15, RT_NONE, RT_NONE, s_transdie4
+            SetState s_transdie4, 0, SPR_TRANS_DEAD, 0, RT_NONE, RT_NONE, s_transdie4
+            SetState s_transshoot1, 0, SPR_TRANS_SHOOT1, 30, RT_NONE, RT_NONE, s_transshoot2
+            SetState s_transshoot2, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot3
+            SetState s_transshoot3, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot4
+            SetState s_transshoot4, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot5
+            SetState s_transshoot5, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot6
+            SetState s_transshoot6, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot7
+            SetState s_transshoot7, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot8
+            SetState s_transshoot8, 0, SPR_TRANS_SHOOT1, 10, RT_NONE, RT_NONE, s_transchase1
+            SetState s_uberstand, 0, SPR_UBER_W1, 0, RT_T_STAND, RT_NONE, s_uberstand
+            SetState s_uberchase1, 0, SPR_UBER_W1, 10, RT_T_CHASE, RT_NONE, s_uberchase1s
+            SetState s_uberchase1s, 0, SPR_UBER_W1, 3, RT_NONE, RT_NONE, s_uberchase2
+            SetState s_uberchase2, 0, SPR_UBER_W2, 8, RT_T_CHASE, RT_NONE, s_uberchase3
+            SetState s_uberchase3, 0, SPR_UBER_W3, 10, RT_T_CHASE, RT_NONE, s_uberchase3s
+            SetState s_uberchase3s, 0, SPR_UBER_W3, 3, RT_NONE, RT_NONE, s_uberchase4
+            SetState s_uberchase4, 0, SPR_UBER_W4, 8, RT_T_CHASE, RT_NONE, s_uberchase1
+            SetState s_uberdie0, 0, SPR_UBER_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_uberdie01
+            SetState s_uberdie01, 0, SPR_UBER_W1, 1, RT_NONE, RT_NONE, s_uberdie1
+            SetState s_uberdie1, 0, SPR_UBER_DIE1, 15, RT_NONE, RT_NONE, s_uberdie2
+            SetState s_uberdie2, 0, SPR_UBER_DIE2, 15, RT_NONE, RT_NONE, s_uberdie3
+            SetState s_uberdie3, 0, SPR_UBER_DIE3, 15, RT_NONE, RT_NONE, s_uberdie4
+            SetState s_uberdie4, 0, SPR_UBER_DIE4, 15, RT_NONE, RT_NONE, s_uberdie5
+            SetState s_uberdie5, 0, SPR_UBER_DEAD, 0, RT_NONE, RT_NONE, s_uberdie5
+            SetState s_ubershoot1, 0, SPR_UBER_SHOOT1, 30, RT_NONE, RT_NONE, s_ubershoot2
+            SetState s_ubershoot2, 0, SPR_UBER_SHOOT2, 12, RT_NONE, RT_T_USHOOT, s_ubershoot3
+            SetState s_ubershoot3, 0, SPR_UBER_SHOOT3, 12, RT_NONE, RT_T_USHOOT, s_ubershoot4
+            SetState s_ubershoot4, 0, SPR_UBER_SHOOT4, 12, RT_NONE, RT_T_USHOOT, s_ubershoot5
+            SetState s_ubershoot5, 0, SPR_UBER_SHOOT3, 12, RT_NONE, RT_T_USHOOT, s_ubershoot6
+            SetState s_ubershoot6, 0, SPR_UBER_SHOOT2, 12, RT_NONE, RT_T_USHOOT, s_ubershoot7
+            SetState s_ubershoot7, 0, SPR_UBER_SHOOT1, 12, RT_NONE, RT_NONE, s_uberchase1
+            SetState s_willstand, 0, SPR_WILL_W1, 0, RT_T_STAND, RT_NONE, s_willstand
+            SetState s_willchase1, 0, SPR_WILL_W1, 10, RT_T_WILL, RT_NONE, s_willchase1s
+            SetState s_willchase1s, 0, SPR_WILL_W1, 3, RT_NONE, RT_NONE, s_willchase2
+            SetState s_willchase2, 0, SPR_WILL_W2, 8, RT_T_WILL, RT_NONE, s_willchase3
+            SetState s_willchase3, 0, SPR_WILL_W3, 10, RT_T_WILL, RT_NONE, s_willchase3s
+            SetState s_willchase3s, 0, SPR_WILL_W3, 3, RT_NONE, RT_NONE, s_willchase4
+            SetState s_willchase4, 0, SPR_WILL_W4, 8, RT_T_WILL, RT_NONE, s_willchase1
+            SetState s_willdeathcam, 0, SPR_WILL_W1, 1, RT_NONE, RT_NONE, s_willdie1
+            SetState s_willdie1, 0, SPR_WILL_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_willdie2
+            SetState s_willdie2, 0, SPR_WILL_W1, 10, RT_NONE, RT_NONE, s_willdie3
+            SetState s_willdie3, 0, SPR_WILL_DIE1, 10, RT_NONE, RT_NONE, s_willdie4
+            SetState s_willdie4, 0, SPR_WILL_DIE2, 10, RT_NONE, RT_NONE, s_willdie5
+            SetState s_willdie5, 0, SPR_WILL_DIE3, 10, RT_NONE, RT_NONE, s_willdie6
+            SetState s_willdie6, 0, SPR_WILL_DEAD, 20, RT_NONE, RT_NONE, s_willdie6
+            SetState s_willshoot1, 0, SPR_WILL_SHOOT1, 30, RT_NONE, RT_NONE, s_willshoot2
+            SetState s_willshoot2, 0, SPR_WILL_SHOOT2, 10, RT_NONE, RT_T_LAUNCH, s_willshoot3
+            SetState s_willshoot3, 0, SPR_WILL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_willshoot4
+            SetState s_willshoot4, 0, SPR_WILL_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_willshoot5
+            SetState s_willshoot5, 0, SPR_WILL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_willshoot6
+            SetState s_willshoot6, 0, SPR_WILL_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_willchase1
+            SetState s_deathstand, 0, SPR_DEATH_W1, 0, RT_T_STAND, RT_NONE, s_deathstand
+            SetState s_deathchase1, 0, SPR_DEATH_W1, 10, RT_T_WILL, RT_NONE, s_deathchase1s
+            SetState s_deathchase1s, 0, SPR_DEATH_W1, 3, RT_NONE, RT_NONE, s_deathchase2
+            SetState s_deathchase2, 0, SPR_DEATH_W2, 8, RT_T_WILL, RT_NONE, s_deathchase3
+            SetState s_deathchase3, 0, SPR_DEATH_W3, 10, RT_T_WILL, RT_NONE, s_deathchase3s
+            SetState s_deathchase3s, 0, SPR_DEATH_W3, 3, RT_NONE, RT_NONE, s_deathchase4
+            SetState s_deathchase4, 0, SPR_DEATH_W4, 8, RT_T_WILL, RT_NONE, s_deathchase1
+            SetState s_deathdeathcam, 0, SPR_DEATH_W1, 1, RT_NONE, RT_NONE, s_deathdie1
+            SetState s_deathdie1, 0, SPR_DEATH_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_deathdie2
+            SetState s_deathdie2, 0, SPR_DEATH_W1, 10, RT_NONE, RT_NONE, s_deathdie3
+            SetState s_deathdie3, 0, SPR_DEATH_DIE1, 10, RT_NONE, RT_NONE, s_deathdie4
+            SetState s_deathdie4, 0, SPR_DEATH_DIE2, 10, RT_NONE, RT_NONE, s_deathdie5
+            SetState s_deathdie5, 0, SPR_DEATH_DIE3, 10, RT_NONE, RT_NONE, s_deathdie6
+            SetState s_deathdie6, 0, SPR_DEATH_DIE4, 10, RT_NONE, RT_NONE, s_deathdie7
+            SetState s_deathdie7, 0, SPR_DEATH_DIE5, 10, RT_NONE, RT_NONE, s_deathdie8
+            SetState s_deathdie8, 0, SPR_DEATH_DIE6, 10, RT_NONE, RT_NONE, s_deathdie9
+            SetState s_deathdie9, 0, SPR_DEATH_DEAD, 0, RT_NONE, RT_NONE, s_deathdie9
+            SetState s_deathshoot1, 0, SPR_DEATH_SHOOT1, 30, RT_NONE, RT_NONE, s_deathshoot2
+            SetState s_deathshoot2, 0, SPR_DEATH_SHOOT2, 10, RT_NONE, RT_T_LAUNCH, s_deathshoot3
+            SetState s_deathshoot3, 0, SPR_DEATH_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_deathshoot4
+            SetState s_deathshoot4, 0, SPR_DEATH_SHOOT3, 10, RT_NONE, RT_T_LAUNCH, s_deathshoot5
+            SetState s_deathshoot5, 0, SPR_DEATH_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_deathchase1
+            SetState s_angelstand, 0, SPR_ANGEL_W1, 0, RT_T_STAND, RT_NONE, s_angelstand
+            SetState s_angelchase1, 0, SPR_ANGEL_W1, 10, RT_T_WILL, RT_NONE, s_angelchase1s
+            SetState s_angelchase1s, 0, SPR_ANGEL_W1, 3, RT_NONE, RT_NONE, s_angelchase2
+            SetState s_angelchase2, 0, SPR_ANGEL_W2, 8, RT_T_WILL, RT_NONE, s_angelchase3
+            SetState s_angelchase3, 0, SPR_ANGEL_W3, 10, RT_T_WILL, RT_NONE, s_angelchase3s
+            SetState s_angelchase3s, 0, SPR_ANGEL_W3, 3, RT_NONE, RT_NONE, s_angelchase4
+            SetState s_angelchase4, 0, SPR_ANGEL_W4, 8, RT_T_WILL, RT_NONE, s_angelchase1
+            SetState s_angeldie1, 0, SPR_ANGEL_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_angeldie11
+            SetState s_angeldie11, 0, SPR_ANGEL_W1, 1, RT_NONE, RT_NONE, s_angeldie2
+            SetState s_angeldie2, 0, SPR_ANGEL_DIE1, 10, RT_NONE, RT_A_SLURPIE, s_angeldie3
+            SetState s_angeldie3, 0, SPR_ANGEL_DIE2, 10, RT_NONE, RT_NONE, s_angeldie4
+            SetState s_angeldie4, 0, SPR_ANGEL_DIE3, 10, RT_NONE, RT_NONE, s_angeldie5
+            SetState s_angeldie5, 0, SPR_ANGEL_DIE4, 10, RT_NONE, RT_NONE, s_angeldie6
+            SetState s_angeldie6, 0, SPR_ANGEL_DIE5, 10, RT_NONE, RT_NONE, s_angeldie7
+            SetState s_angeldie7, 0, SPR_ANGEL_DIE6, 10, RT_NONE, RT_NONE, s_angeldie8
+            SetState s_angeldie8, 0, SPR_ANGEL_DIE7, 10, RT_NONE, RT_NONE, s_angeldie9
+            SetState s_angeldie9, 0, SPR_ANGEL_DEAD, 130, RT_NONE, RT_A_VICTORY, s_angeldie9
+            SetState s_angelshoot1, 0, SPR_ANGEL_SHOOT1, 10, RT_NONE, RT_A_STARTATTACK, s_angelshoot2
+            SetState s_angelshoot2, 0, SPR_ANGEL_SHOOT2, 20, RT_NONE, RT_T_LAUNCH, s_angelshoot3
+            SetState s_angelshoot3, 0, SPR_ANGEL_SHOOT1, 10, RT_NONE, RT_A_RELAUNCH, s_angelshoot2
+            SetState s_angeltired, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired2
+            SetState s_angeltired2, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired3
+            SetState s_angeltired3, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired4
+            SetState s_angeltired4, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired5
+            SetState s_angeltired5, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired6
+            SetState s_angeltired6, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired7
+            SetState s_angeltired7, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angelchase1
+            SetState s_spark1, 0, SPR_SPARK1, 6, RT_T_PROJECTILE, RT_NONE, s_spark2
+            SetState s_spark2, 0, SPR_SPARK2, 6, RT_T_PROJECTILE, RT_NONE, s_spark3
+            SetState s_spark3, 0, SPR_SPARK3, 6, RT_T_PROJECTILE, RT_NONE, s_spark4
+            SetState s_spark4, 0, SPR_SPARK4, 6, RT_T_PROJECTILE, RT_NONE, s_spark1
+            SetState s_spectrewait1, 0, SPR_SPECTRE_W1, 10, RT_T_STAND, RT_NONE, s_spectrewait2
+            SetState s_spectrewait2, 0, SPR_SPECTRE_W2, 10, RT_T_STAND, RT_NONE, s_spectrewait3
+            SetState s_spectrewait3, 0, SPR_SPECTRE_W3, 10, RT_T_STAND, RT_NONE, s_spectrewait4
+            SetState s_spectrewait4, 0, SPR_SPECTRE_W4, 10, RT_T_STAND, RT_NONE, s_spectrewait1
+            SetState s_spectrechase1, 0, SPR_SPECTRE_W1, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase2
+            SetState s_spectrechase2, 0, SPR_SPECTRE_W2, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase3
+            SetState s_spectrechase3, 0, SPR_SPECTRE_W3, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase4
+            SetState s_spectrechase4, 0, SPR_SPECTRE_W4, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase1
+            SetState s_spectredie1, 0, SPR_SPECTRE_F1, 10, RT_NONE, RT_NONE, s_spectredie2
+            SetState s_spectredie2, 0, SPR_SPECTRE_F2, 10, RT_NONE, RT_NONE, s_spectredie3
+            SetState s_spectredie3, 0, SPR_SPECTRE_F3, 10, RT_NONE, RT_NONE, s_spectredie4
+            SetState s_spectredie4, 0, SPR_SPECTRE_F4, 300, RT_NONE, RT_NONE, s_spectrewake
+            SetState s_spectrewake, 0, SPR_SPECTRE_F4, 10, RT_NONE, RT_A_DORMANT, s_spectrewake
+        $End If
+        $If SPEAR = UNDEFINED Then
+            SetState s_schabbstand, 0, SPR_SCHABB_W1, 0, RT_T_STAND, RT_NONE, s_schabbstand
+            SetState s_schabbchase1, 0, SPR_SCHABB_W1, 10, RT_T_SCHABB, RT_NONE, s_schabbchase1s
+            SetState s_schabbchase1s, 0, SPR_SCHABB_W1, 3, RT_NONE, RT_NONE, s_schabbchase2
+            SetState s_schabbchase2, 0, SPR_SCHABB_W2, 8, RT_T_SCHABB, RT_NONE, s_schabbchase3
+            SetState s_schabbchase3, 0, SPR_SCHABB_W3, 10, RT_T_SCHABB, RT_NONE, s_schabbchase3s
+            SetState s_schabbchase3s, 0, SPR_SCHABB_W3, 3, RT_NONE, RT_NONE, s_schabbchase4
+            SetState s_schabbchase4, 0, SPR_SCHABB_W4, 8, RT_T_SCHABB, RT_NONE, s_schabbchase1
+            SetState s_schabbdeathcam, 0, SPR_SCHABB_W1, 1, RT_NONE, RT_NONE, s_schabbdie1
+            SetState s_schabbdie1, 0, SPR_SCHABB_W1, 10, RT_NONE, RT_A_DEATHSCREAM, s_schabbdie2
+            SetState s_schabbdie2, 0, SPR_SCHABB_W1, 10, RT_NONE, RT_NONE, s_schabbdie3
+            SetState s_schabbdie3, 0, SPR_SCHABB_DIE1, 10, RT_NONE, RT_NONE, s_schabbdie4
+            SetState s_schabbdie4, 0, SPR_SCHABB_DIE2, 10, RT_NONE, RT_NONE, s_schabbdie5
+            SetState s_schabbdie5, 0, SPR_SCHABB_DIE3, 10, RT_NONE, RT_NONE, s_schabbdie6
+            SetState s_schabbdie6, 0, SPR_SCHABB_DEAD, 20, RT_NONE, RT_A_STARTDEATHCAM, s_schabbdie6
+            SetState s_schabbshoot1, 0, SPR_SCHABB_SHOOT1, 30, RT_NONE, RT_NONE, s_schabbshoot2
+            SetState s_schabbshoot2, 0, SPR_SCHABB_SHOOT2, 10, RT_NONE, RT_T_SCHABBTHROW, s_schabbchase1
+            SetState s_needle1, 0, SPR_HYPO1, 6, RT_T_PROJECTILE, RT_NONE, s_needle2
+            SetState s_needle2, 0, SPR_HYPO2, 6, RT_T_PROJECTILE, RT_NONE, s_needle3
+            SetState s_needle3, 0, SPR_HYPO3, 6, RT_T_PROJECTILE, RT_NONE, s_needle4
+            SetState s_needle4, 0, SPR_HYPO4, 6, RT_T_PROJECTILE, RT_NONE, s_needle1
+            SetState s_giftstand, 0, SPR_GIFT_W1, 0, RT_T_STAND, RT_NONE, s_giftstand
+            SetState s_giftchase1, 0, SPR_GIFT_W1, 10, RT_T_GIFT, RT_NONE, s_giftchase1s
+            SetState s_giftchase1s, 0, SPR_GIFT_W1, 3, RT_NONE, RT_NONE, s_giftchase2
+            SetState s_giftchase2, 0, SPR_GIFT_W2, 8, RT_T_GIFT, RT_NONE, s_giftchase3
+            SetState s_giftchase3, 0, SPR_GIFT_W3, 10, RT_T_GIFT, RT_NONE, s_giftchase3s
+            SetState s_giftchase3s, 0, SPR_GIFT_W3, 3, RT_NONE, RT_NONE, s_giftchase4
+            SetState s_giftchase4, 0, SPR_GIFT_W4, 8, RT_T_GIFT, RT_NONE, s_giftchase1
+            SetState s_giftdeathcam, 0, SPR_GIFT_W1, 1, RT_NONE, RT_NONE, s_giftdie1
+            SetState s_giftdie1, 0, SPR_GIFT_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_giftdie2
+            SetState s_giftdie2, 0, SPR_GIFT_W1, 10, RT_NONE, RT_NONE, s_giftdie3
+            SetState s_giftdie3, 0, SPR_GIFT_DIE1, 10, RT_NONE, RT_NONE, s_giftdie4
+            SetState s_giftdie4, 0, SPR_GIFT_DIE2, 10, RT_NONE, RT_NONE, s_giftdie5
+            SetState s_giftdie5, 0, SPR_GIFT_DIE3, 10, RT_NONE, RT_NONE, s_giftdie6
+            SetState s_giftdie6, 0, SPR_GIFT_DEAD, 20, RT_NONE, RT_A_STARTDEATHCAM, s_giftdie6
+            SetState s_giftshoot1, 0, SPR_GIFT_SHOOT1, 30, RT_NONE, RT_NONE, s_giftshoot2
+            SetState s_giftshoot2, 0, SPR_GIFT_SHOOT2, 10, RT_NONE, RT_T_GIFTTHROW, s_giftchase1
+            SetState s_fatstand, 0, SPR_FAT_W1, 0, RT_T_STAND, RT_NONE, s_fatstand
+            SetState s_fatchase1, 0, SPR_FAT_W1, 10, RT_T_FAT, RT_NONE, s_fatchase1s
+            SetState s_fatchase1s, 0, SPR_FAT_W1, 3, RT_NONE, RT_NONE, s_fatchase2
+            SetState s_fatchase2, 0, SPR_FAT_W2, 8, RT_T_FAT, RT_NONE, s_fatchase3
+            SetState s_fatchase3, 0, SPR_FAT_W3, 10, RT_T_FAT, RT_NONE, s_fatchase3s
+            SetState s_fatchase3s, 0, SPR_FAT_W3, 3, RT_NONE, RT_NONE, s_fatchase4
+            SetState s_fatchase4, 0, SPR_FAT_W4, 8, RT_T_FAT, RT_NONE, s_fatchase1
+            SetState s_fatdeathcam, 0, SPR_FAT_W1, 1, RT_NONE, RT_NONE, s_fatdie1
+            SetState s_fatdie1, 0, SPR_FAT_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_fatdie2
+            SetState s_fatdie2, 0, SPR_FAT_W1, 10, RT_NONE, RT_NONE, s_fatdie3
+            SetState s_fatdie3, 0, SPR_FAT_DIE1, 10, RT_NONE, RT_NONE, s_fatdie4
+            SetState s_fatdie4, 0, SPR_FAT_DIE2, 10, RT_NONE, RT_NONE, s_fatdie5
+            SetState s_fatdie5, 0, SPR_FAT_DIE3, 10, RT_NONE, RT_NONE, s_fatdie6
+            SetState s_fatdie6, 0, SPR_FAT_DEAD, 20, RT_NONE, RT_A_STARTDEATHCAM, s_fatdie6
+            SetState s_fatshoot1, 0, SPR_FAT_SHOOT1, 30, RT_NONE, RT_NONE, s_fatshoot2
+            SetState s_fatshoot2, 0, SPR_FAT_SHOOT2, 10, RT_NONE, RT_T_GIFTTHROW, s_fatshoot3
+            SetState s_fatshoot3, 0, SPR_FAT_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_fatshoot4
+            SetState s_fatshoot4, 0, SPR_FAT_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_fatshoot5
+            SetState s_fatshoot5, 0, SPR_FAT_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_fatshoot6
+            SetState s_fatshoot6, 0, SPR_FAT_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_fatchase1
+            SetState s_fakestand, 0, SPR_FAKE_W1, 0, RT_T_STAND, RT_NONE, s_fakestand
+            SetState s_fakechase1, 0, SPR_FAKE_W1, 10, RT_T_FAKE, RT_NONE, s_fakechase1s
+            SetState s_fakechase1s, 0, SPR_FAKE_W1, 3, RT_NONE, RT_NONE, s_fakechase2
+            SetState s_fakechase2, 0, SPR_FAKE_W2, 8, RT_T_FAKE, RT_NONE, s_fakechase3
+            SetState s_fakechase3, 0, SPR_FAKE_W3, 10, RT_T_FAKE, RT_NONE, s_fakechase3s
+            SetState s_fakechase3s, 0, SPR_FAKE_W3, 3, RT_NONE, RT_NONE, s_fakechase4
+            SetState s_fakechase4, 0, SPR_FAKE_W4, 8, RT_T_FAKE, RT_NONE, s_fakechase1
+            SetState s_fakedie1, 0, SPR_FAKE_DIE1, 10, RT_NONE, RT_A_DEATHSCREAM, s_fakedie2
+            SetState s_fakedie2, 0, SPR_FAKE_DIE2, 10, RT_NONE, RT_NONE, s_fakedie3
+            SetState s_fakedie3, 0, SPR_FAKE_DIE3, 10, RT_NONE, RT_NONE, s_fakedie4
+            SetState s_fakedie4, 0, SPR_FAKE_DIE4, 10, RT_NONE, RT_NONE, s_fakedie5
+            SetState s_fakedie5, 0, SPR_FAKE_DIE5, 10, RT_NONE, RT_NONE, s_fakedie6
+            SetState s_fakedie6, 0, SPR_FAKE_DEAD, 0, RT_NONE, RT_NONE, s_fakedie6
+            SetState s_fakeshoot1, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_T_FAKEFIRE, s_fakeshoot2
+            SetState s_fakeshoot2, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_T_FAKEFIRE, s_fakeshoot3
+            SetState s_fakeshoot3, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_T_FAKEFIRE, s_fakeshoot4
+            SetState s_fakeshoot4, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_T_FAKEFIRE, s_fakeshoot5
+            SetState s_fakeshoot5, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_T_FAKEFIRE, s_fakeshoot6
+            SetState s_fakeshoot6, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_T_FAKEFIRE, s_fakeshoot7
+            SetState s_fakeshoot7, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_T_FAKEFIRE, s_fakeshoot8
+            SetState s_fakeshoot8, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_T_FAKEFIRE, s_fakeshoot9
+            SetState s_fakeshoot9, 0, SPR_FAKE_SHOOT, 8, RT_NONE, RT_NONE, s_fakechase1
+            SetState s_fire1, 0, SPR_FIRE1, 6, RT_NONE, RT_T_PROJECTILE, s_fire2
+            SetState s_fire2, 0, SPR_FIRE2, 6, RT_NONE, RT_T_PROJECTILE, s_fire1
+            SetState s_mechastand, 0, SPR_MECHA_W1, 0, RT_T_STAND, RT_NONE, s_mechastand
+            SetState s_mechachase1, 0, SPR_MECHA_W1, 10, RT_T_CHASE, RT_A_MECHASOUND, s_mechachase1s
+            SetState s_mechachase1s, 0, SPR_MECHA_W1, 6, RT_NONE, RT_NONE, s_mechachase2
+            SetState s_mechachase2, 0, SPR_MECHA_W2, 8, RT_T_CHASE, RT_NONE, s_mechachase3
+            SetState s_mechachase3, 0, SPR_MECHA_W3, 10, RT_T_CHASE, RT_A_MECHASOUND, s_mechachase3s
+            SetState s_mechachase3s, 0, SPR_MECHA_W3, 6, RT_NONE, RT_NONE, s_mechachase4
+            SetState s_mechachase4, 0, SPR_MECHA_W4, 8, RT_T_CHASE, RT_NONE, s_mechachase1
+            SetState s_mechadie1, 0, SPR_MECHA_DIE1, 10, RT_NONE, RT_A_DEATHSCREAM, s_mechadie2
+            SetState s_mechadie2, 0, SPR_MECHA_DIE2, 10, RT_NONE, RT_NONE, s_mechadie3
+            SetState s_mechadie3, 0, SPR_MECHA_DIE3, 10, RT_NONE, RT_A_HITLERMORPH, s_mechadie4
+            SetState s_mechadie4, 0, SPR_MECHA_DEAD, 0, RT_NONE, RT_NONE, s_mechadie4
+            SetState s_mechashoot1, 0, SPR_MECHA_SHOOT1, 30, RT_NONE, RT_NONE, s_mechashoot2
+            SetState s_mechashoot2, 0, SPR_MECHA_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_mechashoot3
+            SetState s_mechashoot3, 0, SPR_MECHA_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_mechashoot4
+            SetState s_mechashoot4, 0, SPR_MECHA_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_mechashoot5
+            SetState s_mechashoot5, 0, SPR_MECHA_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_mechashoot6
+            SetState s_mechashoot6, 0, SPR_MECHA_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_mechachase1
+            SetState s_hitlerchase1, 0, SPR_HITLER_W1, 6, RT_T_CHASE, RT_NONE, s_hitlerchase1s
+            SetState s_hitlerchase1s, 0, SPR_HITLER_W1, 4, RT_NONE, RT_NONE, s_hitlerchase2
+            SetState s_hitlerchase2, 0, SPR_HITLER_W2, 2, RT_T_CHASE, RT_NONE, s_hitlerchase3
+            SetState s_hitlerchase3, 0, SPR_HITLER_W3, 6, RT_T_CHASE, RT_NONE, s_hitlerchase3s
+            SetState s_hitlerchase3s, 0, SPR_HITLER_W3, 4, RT_NONE, RT_NONE, s_hitlerchase4
+            SetState s_hitlerchase4, 0, SPR_HITLER_W4, 2, RT_T_CHASE, RT_NONE, s_hitlerchase1
+            SetState s_hitlerdeathcam, 0, SPR_HITLER_W1, 10, RT_NONE, RT_NONE, s_hitlerdie1
+            SetState s_hitlerdie1, 0, SPR_HITLER_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_hitlerdie2
+            SetState s_hitlerdie2, 0, SPR_HITLER_W1, 10, RT_NONE, RT_NONE, s_hitlerdie3
+            SetState s_hitlerdie3, 0, SPR_HITLER_DIE1, 10, RT_NONE, RT_A_SLURPIE, s_hitlerdie4
+            SetState s_hitlerdie4, 0, SPR_HITLER_DIE2, 10, RT_NONE, RT_NONE, s_hitlerdie5
+            SetState s_hitlerdie5, 0, SPR_HITLER_DIE3, 10, RT_NONE, RT_NONE, s_hitlerdie6
+            SetState s_hitlerdie6, 0, SPR_HITLER_DIE4, 10, RT_NONE, RT_NONE, s_hitlerdie7
+            SetState s_hitlerdie7, 0, SPR_HITLER_DIE5, 10, RT_NONE, RT_NONE, s_hitlerdie8
+            SetState s_hitlerdie8, 0, SPR_HITLER_DIE6, 10, RT_NONE, RT_NONE, s_hitlerdie9
+            SetState s_hitlerdie9, 0, SPR_HITLER_DIE7, 10, RT_NONE, RT_NONE, s_hitlerdie10
+            SetState s_hitlerdie10, 0, SPR_HITLER_DEAD, 20, RT_NONE, RT_A_STARTDEATHCAM, s_hitlerdie10
+            SetState s_hitlershoot1, 0, SPR_HITLER_SHOOT1, 30, RT_NONE, RT_NONE, s_hitlershoot2
+            SetState s_hitlershoot2, 0, SPR_HITLER_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_hitlershoot3
+            SetState s_hitlershoot3, 0, SPR_HITLER_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_hitlershoot4
+            SetState s_hitlershoot4, 0, SPR_HITLER_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_hitlershoot5
+            SetState s_hitlershoot5, 0, SPR_HITLER_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_hitlershoot6
+            SetState s_hitlershoot6, 0, SPR_HITLER_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_hitlerchase1
+            SetState s_bjrun1, 0, SPR_BJ_W1, 12, RT_T_BJRUN, RT_NONE, s_bjrun1s
+            SetState s_bjrun1s, 0, SPR_BJ_W1, 3, RT_NONE, RT_NONE, s_bjrun2
+            SetState s_bjrun2, 0, SPR_BJ_W2, 8, RT_T_BJRUN, RT_NONE, s_bjrun3
+            SetState s_bjrun3, 0, SPR_BJ_W3, 12, RT_T_BJRUN, RT_NONE, s_bjrun3s
+            SetState s_bjrun3s, 0, SPR_BJ_W3, 3, RT_NONE, RT_NONE, s_bjrun4
+            SetState s_bjrun4, 0, SPR_BJ_W4, 8, RT_T_BJRUN, RT_NONE, s_bjrun1
+            SetState s_bjjump1, 0, SPR_BJ_JUMP1, 14, RT_T_BJJUMP, RT_NONE, s_bjjump2
+            SetState s_bjjump2, 0, SPR_BJ_JUMP2, 14, RT_T_BJJUMP, RT_T_BJYELL, s_bjjump3
+            SetState s_bjjump3, 0, SPR_BJ_JUMP3, 14, RT_T_BJJUMP, RT_NONE, s_bjjump4
+            SetState s_bjjump4, 0, SPR_BJ_JUMP4, 300, RT_NONE, RT_T_BJDONE, s_bjjump4
+            SetState s_deathcam, 0, 0, 0, RT_NONE, RT_NONE, 0
+        $End If
     End Sub
 
     ' Calls a think / action routine of a state (C function pointer) for object ob
@@ -27,6 +1622,30 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
         Select Case routine
             Case RT_T_PLAYER
                 T_Player ob
+            Case RT_T_ATTACK
+                T_Attack ob
+            Case RT_T_PROJECTILE
+                T_Projectile ob
+            Case RT_A_SMOKE
+                A_Smoke ob
+            Case RT_T_STAND
+                T_Stand ob
+            Case RT_T_PATH
+                T_Path ob
+            Case RT_T_SHOOT
+                T_Shoot ob
+            Case RT_T_CHASE
+                T_Chase ob
+            Case RT_A_DEATHSCREAM
+                A_DeathScream ob
+            Case RT_T_GHOSTS
+                T_Ghosts ob
+            Case RT_T_BITE
+                T_Bite ob
+            Case RT_T_DOGCHASE
+                T_DogChase ob
+            Case Else
+                ' TODO 6h: T_UShoot, T_Will, T_Launch, A_Slurpie, A_Victory, A_StartAttack, A_Relaunch, A_Breathing, A_Dormant, T_Schabb, A_StartDeathCam, T_SchabbThrow, T_Gift, T_GiftThrow, T_Fat, T_Fake, T_FakeFire, A_MechaSound, A_HitlerMorph, T_BJRun, T_BJJump, T_BJYell, T_BJDone
         End Select
     End Sub
 

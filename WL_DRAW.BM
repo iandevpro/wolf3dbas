@@ -852,7 +852,7 @@ $If INCLUDE_WL_DRAW_BM = UNDEFINED Then
     ' One tile of the 9 around an actor, by the offset of the C byte pointers:
     ' spotvis / tilemap are [x][y], so +-1 is y and +-64 is x
     Function SpotSeen% (spotloc As Long)
-        SpotSeen% = spotvis(spotloc \ MAPSIZE, spotloc Mod MAPSIZE)
+        SpotSeen% = (spotvis(spotloc \ MAPSIZE, spotloc Mod MAPSIZE) <> 0) ' TRUE / FALSE (Not 1 = -2)
     End Function
 
     Function SpotOpen% (spotloc As Long)

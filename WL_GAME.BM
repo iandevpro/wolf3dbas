@@ -373,13 +373,13 @@ End Sub
 '=
 '===================
 Sub GameLoop ()
-    Dim died As Integer
+    Dim diedflag As Integer ' C: died (DIED is the Died sub here)
 
     Do ' restartgame:
         ClearMemory
         SETFONTCOLOR 0, 15
         DrawPlayScreen
-        died = FALSE
+        diedflag = FALSE
 
         Do ' restart:
             If Not loadedgame Then gamestate.score = gamestate.oldscore
@@ -395,10 +395,10 @@ Sub GameLoop ()
             ingame = TRUE
             StartLevelMusic
             ' PM_CheckMainMem - memory management, not needed in QB64
-            If Not died Then
+            If Not diedflag Then
                 PreloadGraphics
             Else
-                died = FALSE
+                diedflag = FALSE
             End If
 
             fizzlein = TRUE
@@ -430,14 +430,16 @@ Sub GameLoop ()
                     NextLevelMap
 
                 Case ex_died
-                    ' TODO 6g: Died (death cam, fade, lives--) - only the life is taken here
-                    gamestate.lives = gamestate.lives - 1
-                    died = TRUE ' don't "get psyched!"
+                    Died
+                    diedflag = TRUE ' don't "get psyched!"
 
                     If gamestate.lives <= -1 Then
-                        ' TODO 6g: VW_FadeOut, ClearMemory, CheckHighScore
                         VW_FadeOut
+
                         ClearMemory
+
+                        CheckHighScore gamestate.score, gamestate.mapon + 1
+
                         GameLoopEnd
                         Exit Sub
                     End If
@@ -503,15 +505,140 @@ Sub NextLevelMap ()
     $End If
 End Sub
 
+'==================
+'=
+'= Died
+'=
+'==================
+Sub Died ()
+    Const DEATHROTATE = 2
+    Dim fangle As Single
+    Dim dx As Long, dy As Long
+    Dim iangle As Integer, curangle As Integer, clockwise As Integer, counter As Integer, change As Integer
+    Dim played As Integer, result As Integer
+
+    gamestate.weapon = -1 ' take away weapon
+    played = SD_PlaySound(PLAYERDEATHSND)
+    '
+    ' swing around to face attacker
+    '
+    dx = objlist(killerobj).x - objlist(player).x
+    dy = objlist(player).y - objlist(killerobj).y
+
+    fangle = _Atan2(dy, dx) ' returns -pi to pi
+    If fangle < 0 Then fangle = _Pi * 2 + fangle
+
+    iangle = Fix(fangle / (_Pi * 2) * ANGLES)
+
+    If objlist(player).angle > iangle Then
+        counter = objlist(player).angle - iangle
+        clockwise = ANGLES - objlist(player).angle + iangle
+    Else
+        clockwise = iangle - objlist(player).angle
+        counter = objlist(player).angle + ANGLES - iangle
+    End If
+
+    curangle = objlist(player).angle
+
+    If clockwise < counter Then
+        '
+        ' rotate clockwise
+        '
+        If curangle > iangle Then curangle = curangle - ANGLES
+        Do
+            change = tics * DEATHROTATE
+            If curangle + change > iangle Then change = iangle - curangle
+
+            curangle = curangle + change
+            objlist(player).angle = objlist(player).angle + change
+            If objlist(player).angle >= ANGLES Then objlist(player).angle = objlist(player).angle - ANGLES
+
+            ThreeDRefresh
+            CalcTics
+        Loop While curangle <> iangle
+    Else
+        '
+        ' rotate counterclockwise
+        '
+        If curangle < iangle Then curangle = curangle + ANGLES
+        Do
+            change = -tics * DEATHROTATE
+            If curangle + change < iangle Then change = iangle - curangle
+
+            curangle = curangle + change
+            objlist(player).angle = objlist(player).angle + change
+            If objlist(player).angle < 0 Then objlist(player).angle = objlist(player).angle + ANGLES
+
+            ThreeDRefresh
+            CalcTics
+        Loop While curangle <> iangle
+    End If
+
+    '
+    ' fade to red
+    '
+    FinishPaletteShifts
+
+    FadeViewToRed
+    result = IN_UserInput(100)
+    SD_WaitSoundDone
+
+    If tedlevel = FALSE Then gamestate.lives = gamestate.lives - 1 ' SO'S YA DON'T GET KILLED WHILE LAUNCHING!
+
+    If gamestate.lives > -1 Then
+        gamestate.health = 100
+        gamestate.weapon = wp_pistol
+        gamestate.bestweapon = wp_pistol
+        gamestate.chosenweapon = wp_pistol
+        gamestate.ammo = STARTAMMO
+        gamestate.keys = 0
+        gamestate.attackframe = 0
+        gamestate.attackcount = 0
+        gamestate.weaponframe = 0
+
+        DrawKeys
+        DrawWeapon
+        DrawAmmo
+        DrawHealth
+        DrawFace
+        DrawLives
+    End If
+End Sub
+
+' Died: VW_Bar (0,0,viewwidth,viewheight,4) into the hidden page, then FizzleFade to it
+' (one screen page here: the view is saved, filled red, and FizzleFade goes from the old view)
+Sub FadeViewToRed ()
+    Dim oldview(0 To 320, 0 To 200) As _Unsigned _Byte
+    Dim x As Integer, y As Integer, result As Integer
+
+    drawscreen = _MemImage(0)
+    For y = 0 To viewheight
+        For x = 0 To viewwidth
+            If viewscreenx + x < 320 And viewscreeny + y < 200 Then
+                oldview(x, y) = _MemGet(drawscreen, drawscreen.OFFSET + (viewscreeny + y) * 320 + viewscreenx + x, _Unsigned _Byte)
+            End If
+        Next x
+    Next y
+    _MemFree drawscreen
+
+    VWB_Bar viewscreenx, viewscreeny, viewwidth, viewheight, 4
+    IN_ClearKeysDown
+    result = FizzleFade(oldview(), viewscreenx, viewscreeny, viewwidth, viewheight, 70, FALSE)
+End Sub
+
 '==========================
 '=
-'= PlaySoundLocTile / PlaySoundLocGlobal
+'= PlaySoundLocTile / PlaySoundLocActor / PlaySoundLocGlobal
 '=
 '= TODO 6i: the left / right volumes (SetSoundLoc, SD_PositionSound) for digitized sounds
 '=
 '==========================
 Sub PlaySoundLocTile (s As Integer, tx As Integer, ty As Integer)
     PlaySoundLocGlobal s, tx * TILEGLOBAL + TILEGLOBAL \ 2, ty * TILEGLOBAL + TILEGLOBAL \ 2
+End Sub
+
+Sub PlaySoundLocActor (s As Integer, ob As Integer)
+    PlaySoundLocGlobal s, objlist(ob).x, objlist(ob).y
 End Sub
 
 Sub PlaySoundLocGlobal (s As Integer, gx As Long, gy As Long)
@@ -521,7 +648,6 @@ Sub PlaySoundLocGlobal (s As Integer, gx As Long, gy As Long)
 End Sub
 
 ' The end of a game in GameLoop: restore "View Scores" in the main menu
-' TODO 6g: VW_FadeOut, ClearMemory, CheckHighScore before
 Sub GameLoopEnd ()
     MainMenu(mi_viewscores).txt = STR_VS
     MainMenu(mi_viewscores).routine = RTN_VIEWSCORES

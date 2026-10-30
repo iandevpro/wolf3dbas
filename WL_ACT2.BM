@@ -1,20 +1,331 @@
 ' WL_ACT2.C - enemies, bosses, projectiles
-' Only the spawn entry points exist so far; the enemies come in step 6g / 6h
+' Ported so far: guards, officers, SS, dogs, mutants, projectiles (step 6g). Bosses and ghosts: 6h
 
 $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
     $Let INCLUDE_WL_ACT2_BM = 1
 
-    ' TODO 6g: SpawnStand, SpawnPatrol, SpawnDeadGuard (states, killtotal)
+    '=================
+    '=
+    '= A_Smoke
+    '=
+    '=================
+    Sub A_Smoke (ob As Integer)
+        GetNewActor
+        $If SPEAR = DEFINED Then
+            If objlist(ob).obclass = hrocketobj Then
+                objlist(newobj).state = s_hsmoke1
+            Else
+                objlist(newobj).state = s_smoke1
+            End If
+        $Else
+            objlist(newobj).state = s_smoke1
+        $End If
+        objlist(newobj).ticcount = 6
+
+        objlist(newobj).tilex = objlist(ob).tilex
+        objlist(newobj).tiley = objlist(ob).tiley
+        objlist(newobj).x = objlist(ob).x
+        objlist(newobj).y = objlist(ob).y
+        objlist(newobj).obclass = inertobj
+        objlist(newobj).active = ac_yes
+
+        objlist(newobj).flags = FL_NEVERMARK
+    End Sub
+
+    '===================
+    '=
+    '= ProjectileTryMove
+    '=
+    '= returns true if move ok
+    '===================
+    Function ProjectileTryMove% (ob As Integer)
+        Const PROJSIZE = &H2000
+        Dim xl As Integer, yl As Integer, xh As Integer, yh As Integer, x As Integer, y As Integer
+        Dim check As Integer
+
+        xl = SarL(objlist(ob).x - PROJSIZE, TILESHIFT)
+        yl = SarL(objlist(ob).y - PROJSIZE, TILESHIFT)
+
+        xh = SarL(objlist(ob).x + PROJSIZE, TILESHIFT)
+        yh = SarL(objlist(ob).y + PROJSIZE, TILESHIFT)
+
+        '
+        ' check for solid walls
+        '
+        For y = yl To yh
+            For x = xl To xh
+                check = actorat(x, y)
+                If check <> 0 And check < OBJ_BASE Then ' check && check<objlist
+                    ProjectileTryMove% = FALSE
+                    Exit Function
+                End If
+            Next x
+        Next y
+
+        ProjectileTryMove% = TRUE
+    End Function
+
+    '=================
+    '=
+    '= T_Projectile
+    '=
+    '=================
+    Sub T_Projectile (ob As Integer)
+        Dim deltax As Long, deltay As Long
+        Dim damage As Integer
+        Dim speed As Long
+
+        speed = objlist(ob).speed * tics
+
+        deltax = FixedByFrac(speed, costable(objlist(ob).angle))
+        deltay = -FixedByFrac(speed, sintable(objlist(ob).angle))
+
+        If deltax > &H10000 Then deltax = &H10000
+        If deltay > &H10000 Then deltay = &H10000
+
+        objlist(ob).x = objlist(ob).x + deltax
+        objlist(ob).y = objlist(ob).y + deltay
+
+        deltax = Abs(objlist(ob).x - objlist(player).x)
+        deltay = Abs(objlist(ob).y - objlist(player).y)
+
+        If Not ProjectileTryMove(ob) Then
+            If objlist(ob).obclass = rocketobj Then
+                PlaySoundLocActor MISSILEHITSND, ob
+                objlist(ob).state = s_boom1
+            ElseIf objlist(ob).obclass = hrocketobj Then
+                $If SPEAR = DEFINED Then
+                    PlaySoundLocActor MISSILEHITSND, ob
+                    objlist(ob).state = s_hboom1
+                $Else
+                    objlist(ob).state = 0 ' mark for removal
+                $End If
+            Else
+                objlist(ob).state = 0 ' mark for removal
+            End If
+
+            Exit Sub
+        End If
+
+        If deltax < PROJECTILESIZE And deltay < PROJECTILESIZE Then
+            ' hit the player
+            Select Case objlist(ob).obclass
+                Case needleobj
+                    damage = US_RndT \ 8 + 20
+                Case rocketobj, hrocketobj, sparkobj
+                    damage = US_RndT \ 8 + 30
+                Case fireobj
+                    damage = US_RndT \ 8
+            End Select
+
+            TakeDamage damage, ob
+            objlist(ob).state = 0 ' mark for removal
+            Exit Sub
+        End If
+
+        objlist(ob).tilex = SarL(objlist(ob).x, TILESHIFT)
+        objlist(ob).tiley = SarL(objlist(ob).y, TILESHIFT)
+    End Sub
+
+    '
+    ' =============================================================================
+    '                          GUARD
+    ' =============================================================================
+    '
+
+    ' The state of the standing / patrolling enemies of SpawnStand / SpawnPatrol
+    Function EnemyStartState% (which As Integer, patrol As Integer)
+        EnemyStartState% = 0
+        Select Case which
+            Case en_guard
+                If patrol Then EnemyStartState% = s_grdpath1 Else EnemyStartState% = s_grdstand
+            Case en_officer
+                If patrol Then EnemyStartState% = s_ofcpath1 Else EnemyStartState% = s_ofcstand
+            Case en_mutant
+                If patrol Then EnemyStartState% = s_mutpath1 Else EnemyStartState% = s_mutstand
+            Case en_ss
+                If patrol Then EnemyStartState% = s_sspath1 Else EnemyStartState% = s_ssstand
+            Case en_dog
+                If patrol Then EnemyStartState% = s_dogpath1
+        End Select
+    End Function
+
+    '===============
+    '=
+    '= SpawnStand
+    '=
+    '===============
     Sub SpawnStand (which As Integer, tilex As Integer, tiley As Integer, dir As Integer)
+        Dim map As Long, tile As Long, state As Integer
+
+        state = EnemyStartState(which, FALSE)
+        If state Then ' en_guard, en_officer, en_mutant, en_ss
+            SpawnNewObj tilex, tiley, state
+            objlist(newobj).speed = SPDPATROL
+            If Not loadedgame Then gamestate.killtotal = gamestate.killtotal + 1
+        End If
+
+        map = tiley * 64 + tilex ' mapsegs[0]+farmapylookup[tiley]+tilex
+        If mapsegs(0, map) = AMBUSHTILE Then
+            tilemap(tilex, tiley) = 0
+
+            If mapsegs(0, map + 1) >= AREATILE Then tile = mapsegs(0, map + 1)
+            If mapsegs(0, map - mapwidth) >= AREATILE Then tile = mapsegs(0, map - mapwidth)
+            If mapsegs(0, map + mapwidth) >= AREATILE Then tile = mapsegs(0, map + mapwidth)
+            If mapsegs(0, map - 1) >= AREATILE Then tile = mapsegs(0, map - 1)
+
+            mapsegs(0, map) = tile
+            objlist(newobj).areanumber = tile - AREATILE
+
+            objlist(newobj).flags = objlist(newobj).flags Or FL_AMBUSH
+        End If
+
+        objlist(newobj).obclass = guardobj + which
+        objlist(newobj).hitpoints = starthitpoints(gamestate.difficulty, which)
+        objlist(newobj).dir = dir * 2
+        objlist(newobj).flags = objlist(newobj).flags Or FL_SHOOTABLE
     End Sub
 
-    Sub SpawnPatrol (which As Integer, tilex As Integer, tiley As Integer, dir As Integer)
-    End Sub
-
+    '===============
+    '=
+    '= SpawnDeadGuard
+    '=
+    '===============
     Sub SpawnDeadGuard (tilex As Integer, tiley As Integer)
+        SpawnNewObj tilex, tiley, s_grddie4
+        objlist(newobj).obclass = inertobj
     End Sub
 
-    ' TODO 6h: bosses and ghosts
+    '===============
+    '=
+    '= SpawnPatrol
+    '=
+    '===============
+    Sub SpawnPatrol (which As Integer, tilex As Integer, tiley As Integer, dir As Integer)
+        Dim state As Integer
+
+        state = EnemyStartState(which, TRUE)
+        If state Then ' en_guard, en_officer, en_ss, en_mutant, en_dog
+            SpawnNewObj tilex, tiley, state
+            If which = en_dog Then
+                objlist(newobj).speed = SPDDOG
+            Else
+                objlist(newobj).speed = SPDPATROL
+            End If
+            If Not loadedgame Then gamestate.killtotal = gamestate.killtotal + 1
+        End If
+
+        objlist(newobj).obclass = guardobj + which
+        objlist(newobj).dir = dir * 2
+        objlist(newobj).hitpoints = starthitpoints(gamestate.difficulty, which)
+        objlist(newobj).distance = TILEGLOBAL
+        objlist(newobj).flags = objlist(newobj).flags Or FL_SHOOTABLE
+        objlist(newobj).active = ac_yes
+
+        actorat(objlist(newobj).tilex, objlist(newobj).tiley) = 0 ' don't use original spot
+
+        Select Case dir
+            Case 0
+                objlist(newobj).tilex = objlist(newobj).tilex + 1
+            Case 1
+                objlist(newobj).tiley = objlist(newobj).tiley - 1
+            Case 2
+                objlist(newobj).tilex = objlist(newobj).tilex - 1
+            Case 3
+                objlist(newobj).tiley = objlist(newobj).tiley + 1
+        End Select
+
+        actorat(objlist(newobj).tilex, objlist(newobj).tiley) = OBJ_BASE + newobj
+    End Sub
+
+    '==================
+    '=
+    '= A_DeathScream
+    '=
+    '==================
+    Sub A_DeathScream (ob As Integer)
+        Dim played As Integer, secretmap As Integer
+
+        $If UPLOAD = UNDEFINED Then
+            $If SPEAR = UNDEFINED Then
+                secretmap = (mapon = 9)
+            $Else
+                secretmap = (mapon = 18 Or mapon = 19)
+            $End If
+            If secretmap Then
+                If US_RndT = 0 Then
+                    Select Case objlist(ob).obclass
+                        Case mutantobj, guardobj, officerobj, ssobj, dogobj
+                            PlaySoundLocActor DEATHSCREAM6SND, ob
+                            Exit Sub
+                    End Select
+                End If
+            End If
+        $End If
+
+        Select Case objlist(ob).obclass
+            Case mutantobj
+                PlaySoundLocActor AHHHGSND, ob
+
+            Case guardobj
+                $If UPLOAD = UNDEFINED Then
+                    PlaySoundLocActor deathscreams(US_RndT Mod 8), ob
+                $Else
+                    PlaySoundLocActor deathscreams(US_RndT Mod 2), ob
+                $End If
+            Case officerobj
+                PlaySoundLocActor NEINSOVASSND, ob
+            Case ssobj
+                PlaySoundLocActor LEBENSND, ob ' JAB
+            Case dogobj
+                PlaySoundLocActor DOGDEATHSND, ob ' JAB
+            Case Else
+                A_DeathScreamBoss ob
+        End Select
+    End Sub
+
+    ' The boss cases of A_DeathScream (a $If between Case lines breaks Select Case)
+    Sub A_DeathScreamBoss (ob As Integer)
+        Dim played As Integer
+
+        $If SPEAR = UNDEFINED Then
+            Select Case objlist(ob).obclass
+                Case bossobj
+                    played = SD_PlaySound(MUTTISND) ' JAB
+                Case schabbobj
+                    played = SD_PlaySound(MEINGOTTSND)
+                Case fakeobj
+                    played = SD_PlaySound(HITLERHASND)
+                Case mechahitlerobj
+                    played = SD_PlaySound(SCHEISTSND)
+                Case realhitlerobj
+                    played = SD_PlaySound(EVASND)
+                Case gretelobj
+                    played = SD_PlaySound(MEINSND)
+                Case giftobj
+                    played = SD_PlaySound(DONNERSND)
+                Case fatobj
+                    played = SD_PlaySound(ROSESND)
+            End Select
+        $Else
+            Select Case objlist(ob).obclass
+                Case spectreobj
+                    played = SD_PlaySound(GHOSTFADESND)
+                Case angelobj
+                    played = SD_PlaySound(ANGELDEATHSND)
+                Case transobj
+                    played = SD_PlaySound(TRANSDEATHSND)
+                Case uberobj
+                    played = SD_PlaySound(UBERDEATHSND)
+                Case willobj
+                    played = SD_PlaySound(WILHELMDEATHSND)
+                Case deathobj
+                    played = SD_PlaySound(KNIGHTDEATHSND)
+            End Select
+        $End If
+    End Sub
+
+    ' TODO 6h: Spear actors, ghosts, bosses (SpawnBoss... T_Schabb...) and BJ victory
     Sub SpawnBoss (tilex As Integer, tiley As Integer)
     End Sub
 
@@ -37,6 +348,411 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
     End Sub
 
     Sub SpawnGhosts (which As Integer, tilex As Integer, tiley As Integer)
+    End Sub
+
+    '
+    ' ============================================================================
+    '                              STAND
+    ' ============================================================================
+    '
+
+    '===============
+    '=
+    '= T_Stand
+    '=
+    '===============
+    Sub T_Stand (ob As Integer)
+        Dim seen As Integer
+
+        seen = SightPlayer(ob)
+    End Sub
+
+    '
+    ' ============================================================================
+    '                              CHASE
+    ' ============================================================================
+    '
+
+    ' The way an actor walks toward its goal tile in T_Chase / T_Ghosts / T_DogChase / T_Path:
+    ' the end of the C while (move) loops, TRUE when the goal tile was reached
+    Function ReachedGoal% (ob As Integer, move As Long)
+        If move < objlist(ob).distance Then
+            MoveObj ob, move
+            ReachedGoal% = FALSE
+            Exit Function
+        End If
+
+        '
+        ' reached goal tile, so select another one
+        '
+
+        '
+        ' fix position to account for round off during moving
+        '
+        objlist(ob).x = objlist(ob).tilex * TILEGLOBAL + TILEGLOBAL \ 2
+        objlist(ob).y = objlist(ob).tiley * TILEGLOBAL + TILEGLOBAL \ 2
+
+        move = move - objlist(ob).distance
+        ReachedGoal% = TRUE
+    End Function
+
+    ' A door in the way (ob->distance < 0): FALSE while it is still opening
+    Function DoorOpenForActor% (ob As Integer)
+        DoorOpenForActor% = TRUE
+        If objlist(ob).distance < 0 Then
+            '
+            ' waiting for a door to open
+            '
+            OpenDoor -objlist(ob).distance - 1
+            If doorobjlist(-objlist(ob).distance - 1).action <> dr_open Then
+                DoorOpenForActor% = FALSE
+                Exit Function
+            End If
+            objlist(ob).distance = TILEGLOBAL ' go ahead, the door is now opoen
+        End If
+    End Function
+
+    '=================
+    '=
+    '= T_Chase
+    '=
+    '=================
+    Sub T_Chase (ob As Integer)
+        Dim move As Long
+        Dim dx As Integer, dy As Integer, dist As Integer, chance As Integer
+        Dim dodge As Integer
+
+        If gamestate.victoryflag Then Exit Sub
+
+        dodge = FALSE
+        If CheckLine(ob) Then ' got a shot at player?
+            dx = Abs(objlist(ob).tilex - objlist(player).tilex)
+            dy = Abs(objlist(ob).tiley - objlist(player).tiley)
+            If dx > dy Then dist = dx Else dist = dy
+            chance = 0
+            If dist = 0 Then
+                chance = 300
+            ElseIf dist = 1 And objlist(ob).distance < &H4000 Then
+                chance = 300
+            Else
+                chance = (tics * 16) \ dist
+            End If
+
+            If US_RndT < chance Then
+                '
+                ' go into attack frame
+                '
+                Select Case objlist(ob).obclass
+                    Case guardobj
+                        NewState ob, s_grdshoot1
+                    Case officerobj
+                        NewState ob, s_ofcshoot1
+                    Case mutantobj
+                        NewState ob, s_mutshoot1
+                    Case ssobj
+                        NewState ob, s_ssshoot1
+                    Case Else
+                        T_ChaseBossShoot ob
+                End Select
+                Exit Sub
+            End If
+            dodge = TRUE
+        End If
+
+        If objlist(ob).dir = dt_nodir Then
+            If dodge Then
+                SelectDodgeDir ob
+            Else
+                SelectChaseDir ob
+            End If
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+        End If
+
+        move = objlist(ob).speed * tics
+
+        Do While move
+            If Not DoorOpenForActor(ob) Then Exit Sub
+
+            If Not ReachedGoal(ob, move) Then Exit Do
+
+            If dodge Then
+                SelectDodgeDir ob
+            Else
+                SelectChaseDir ob
+            End If
+
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+        Loop
+    End Sub
+
+    ' The boss cases of T_Chase's attack (a $If between Case lines breaks Select Case)
+    Sub T_ChaseBossShoot (ob As Integer)
+        $If SPEAR = UNDEFINED Then
+            Select Case objlist(ob).obclass
+                Case bossobj
+                    NewState ob, s_bossshoot1
+                Case gretelobj
+                    NewState ob, s_gretelshoot1
+                Case mechahitlerobj
+                    NewState ob, s_mechashoot1
+                Case realhitlerobj
+                    NewState ob, s_hitlershoot1
+            End Select
+        $Else
+            Select Case objlist(ob).obclass
+                Case angelobj
+                    NewState ob, s_angelshoot1
+                Case transobj
+                    NewState ob, s_transshoot1
+                Case uberobj
+                    NewState ob, s_ubershoot1
+                Case willobj
+                    NewState ob, s_willshoot1
+                Case deathobj
+                    NewState ob, s_deathshoot1
+            End Select
+        $End If
+    End Sub
+
+    '=================
+    '=
+    '= T_Ghosts
+    '=
+    '=================
+    Sub T_Ghosts (ob As Integer)
+        Dim move As Long
+
+        If objlist(ob).dir = dt_nodir Then
+            SelectChaseDir ob
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+        End If
+
+        move = objlist(ob).speed * tics
+
+        Do While move
+            If Not ReachedGoal(ob, move) Then Exit Do
+
+            SelectChaseDir ob
+
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+        Loop
+    End Sub
+
+    '=================
+    '=
+    '= T_DogChase
+    '=
+    '=================
+    Sub T_DogChase (ob As Integer)
+        Dim move As Long
+        Dim dx As Long, dy As Long
+
+        If objlist(ob).dir = dt_nodir Then
+            SelectDodgeDir ob
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+        End If
+
+        move = objlist(ob).speed * tics
+
+        Do While move
+            '
+            ' check for byte range
+            '
+            dx = objlist(player).x - objlist(ob).x
+            If dx < 0 Then dx = -dx
+            dx = dx - move
+            If dx <= MINACTORDIST Then
+                dy = objlist(player).y - objlist(ob).y
+                If dy < 0 Then dy = -dy
+                dy = dy - move
+                If dy <= MINACTORDIST Then
+                    NewState ob, s_dogjump1
+                    Exit Sub
+                End If
+            End If
+
+            If Not ReachedGoal(ob, move) Then Exit Do
+
+            SelectDodgeDir ob
+
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+        Loop
+    End Sub
+
+    '
+    ' ============================================================================
+    '                              PATH
+    ' ============================================================================
+    '
+
+    '===============
+    '=
+    '= SelectPathDir
+    '=
+    '===============
+    Sub SelectPathDir (ob As Integer)
+        Dim spot As Long
+
+        spot = (mapsegs(1, objlist(ob).tiley * 64 + objlist(ob).tilex) - ICONARROWS) And &HFFFF& ' unsigned
+
+        If spot < 8 Then
+            ' new direction
+            objlist(ob).dir = spot
+        End If
+
+        objlist(ob).distance = TILEGLOBAL
+
+        If Not TryWalk(ob) Then objlist(ob).dir = dt_nodir
+    End Sub
+
+    '===============
+    '=
+    '= T_Path
+    '=
+    '===============
+    Sub T_Path (ob As Integer)
+        Dim move As Long
+
+        If SightPlayer(ob) Then Exit Sub
+
+        If objlist(ob).dir = dt_nodir Then
+            SelectPathDir ob
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' all movement is blocked
+        End If
+
+        move = objlist(ob).speed * tics
+
+        Do While move
+            If Not DoorOpenForActor(ob) Then Exit Sub
+
+            If move < objlist(ob).distance Then
+                MoveObj ob, move
+                Exit Do
+            End If
+
+            If objlist(ob).tilex > MAPSIZE Or objlist(ob).tiley > MAPSIZE Then
+                Quit "T_Path hit a wall at" + Str$(objlist(ob).tilex) + "," + Str$(objlist(ob).tiley) + ", dir" + Str$(objlist(ob).dir)
+            End If
+
+            objlist(ob).x = objlist(ob).tilex * TILEGLOBAL + TILEGLOBAL \ 2
+            objlist(ob).y = objlist(ob).tiley * TILEGLOBAL + TILEGLOBAL \ 2
+            move = move - objlist(ob).distance
+
+            SelectPathDir ob
+
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' all movement is blocked
+        Loop
+    End Sub
+
+    '
+    ' =============================================================================
+    '                              FIGHT
+    ' =============================================================================
+    '
+
+    '===============
+    '=
+    '= T_Shoot
+    '=
+    '= Try to damage the player, based on skill level and player's speed
+    '=
+    '===============
+    Sub T_Shoot (ob As Integer)
+        Dim dx As Integer, dy As Integer, dist As Integer
+        Dim hitchance As Integer, damage As Integer
+
+        hitchance = 128
+
+        If Not areabyplayer(objlist(ob).areanumber) Then Exit Sub
+
+        If Not CheckLine(ob) Then Exit Sub ' player is behind a wall
+
+        dx = Abs(objlist(ob).tilex - objlist(player).tilex)
+        dy = Abs(objlist(ob).tiley - objlist(player).tiley)
+        If dx > dy Then dist = dx Else dist = dy
+
+        If objlist(ob).obclass = ssobj Or objlist(ob).obclass = bossobj Then dist = dist * 2 \ 3 ' ss are better shots
+
+        If thrustspeed >= RUNSPEED Then
+            If objlist(ob).flags And FL_VISABLE Then
+                hitchance = 160 - dist * 16 ' player can see to dodge
+            Else
+                hitchance = 160 - dist * 8
+            End If
+        Else
+            If objlist(ob).flags And FL_VISABLE Then
+                hitchance = 256 - dist * 16 ' player can see to dodge
+            Else
+                hitchance = 256 - dist * 8
+            End If
+        End If
+
+        ' see if the shot was a hit
+
+        If US_RndT < hitchance Then
+            If dist < 2 Then
+                damage = US_RndT \ 4
+            ElseIf dist < 4 Then
+                damage = US_RndT \ 8
+            Else
+                damage = US_RndT \ 16
+            End If
+
+            TakeDamage damage, ob
+        End If
+
+        Select Case objlist(ob).obclass
+            Case ssobj
+                PlaySoundLocActor SSFIRESND, ob
+            Case giftobj, fatobj, mechahitlerobj, realhitlerobj, bossobj, schabbobj, fakeobj
+                T_ShootBossSound ob
+            Case Else
+                PlaySoundLocActor NAZIFIRESND, ob
+        End Select
+    End Sub
+
+    ' The boss sounds of T_Shoot (#ifndef SPEAR; in Spear these classes use the default)
+    Sub T_ShootBossSound (ob As Integer)
+        $If SPEAR = UNDEFINED Then
+            Select Case objlist(ob).obclass
+                Case giftobj, fatobj
+                    PlaySoundLocActor MISSILEFIRESND, ob
+                Case mechahitlerobj, realhitlerobj, bossobj
+                    PlaySoundLocActor BOSSFIRESND, ob
+                Case schabbobj
+                    PlaySoundLocActor SCHABBSTHROWSND, ob
+                Case fakeobj
+                    PlaySoundLocActor FLAMETHROWERSND, ob
+            End Select
+        $Else
+            PlaySoundLocActor NAZIFIRESND, ob
+        $End If
+    End Sub
+
+    '===============
+    '=
+    '= T_Bite
+    '=
+    '===============
+    Sub T_Bite (ob As Integer)
+        Dim dx As Long, dy As Long
+
+        PlaySoundLocActor DOGATTACKSND, ob ' JAB
+
+        dx = objlist(player).x - objlist(ob).x
+        If dx < 0 Then dx = -dx
+        dx = dx - TILEGLOBAL
+        If dx <= MINACTORDIST Then
+            dy = objlist(player).y - objlist(ob).y
+            If dy < 0 Then dy = -dy
+            dy = dy - TILEGLOBAL
+            If dy <= MINACTORDIST Then
+                If US_RndT < 180 Then
+                    TakeDamage US_RndT \ 16, ob
+                    Exit Sub
+                End If
+            End If
+        End If
     End Sub
 
 $EndIf
