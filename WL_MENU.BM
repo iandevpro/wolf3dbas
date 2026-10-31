@@ -1782,7 +1782,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
     '////////////////////////////////////////////////////////////////////
     '//
-    '// LOAD / SAVE GAME (LoadTheGame / SaveTheGame are stubs until the game is ported)
+    '// LOAD / SAVE GAME (LoadTheGame / SaveTheGame are in WOLF3D.BAS)
     '//
     '////////////////////////////////////////////////////////////////////
     ' SaveName "SAVEGAM?.WL6" with the ? replaced by the save slot
@@ -1839,9 +1839,20 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 result = LoadTheGame(handle, 0, 0)
                 loadedgame = FALSE
                 Close #handle
+                If Not result Then ' (port: not a save game of the port)
+                    DrawAllPlayBorder
+                    CP_LoadGame% = 1
+                    Exit Function
+                End If
 
-                ' TODO: DrawFace, DrawHealth, DrawLives, DrawLevel, DrawAmmo, DrawKeys,
-                ' DrawWeapon, DrawScore - the status bar comes with the game
+                DrawFace
+                DrawHealth
+                DrawLives
+                DrawLevel
+                DrawAmmo
+                DrawKeys
+                DrawWeapon
+                DrawScore
                 CP_LoadGame% = 1
                 Exit Function
             End If
@@ -1864,6 +1875,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
                     result = LoadTheGame(handle, LSA_X + 8, LSA_Y + 5)
                     Close #handle
+                    If Not result Then ' (port: not a save game of the port)
+                        loadedgame = FALSE
+                        DrawLoadSaveScreen 0
+                        _Continue
+                    End If
 
                     StartGameMenu = 1
                     CP_ShootSnd

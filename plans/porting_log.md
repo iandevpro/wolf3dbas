@@ -483,7 +483,7 @@ Commit 7f29afe.
   - PC speaker sounds (`sdm_PC`, `sds_PC`) are still not ported.
 
 ## 2026-10-30: Step 6j, demos
-Not committed yet.
+Commit 26f9f95.
 
 - **What works:** the attract loop plays the four demos after the title, credits and high scores, in turn. A key press during a demo goes to the menu ("Back to Demo"). The demos play back exactly: the original demos were recorded until the player died, and each one ends with BJ dying on its very last input frame. The results are identical run after run:
 
@@ -512,3 +512,30 @@ Not committed yet.
 - **Not done yet:**
   - `RecordDemo` / `FinishDemoRecord` (Tab with the "goobers" parameter) are not ported.
   - Not compared on screen with DOSBox-X. The end-of-data deaths are strong evidence; the end scores above can be checked there.
+
+## 2026-10-30: Step 6k, config and save games
+Not committed yet.
+
+- **What works:** settings and high scores survive a restart through CONFIG.WL6. The Save / Load Game menus save and load real games, F8 / F9 quick save and load work, and a save game from the DOS version is refused with a message. That completes step 6: the WL6 game is fully playable.
+- **`ReadConfig` / `WriteConfig` (WOLF3D.BAS):**
+  - The original CONFIG.WL6 layout: 7 high scores of 66 bytes, then 16-bit ints for the sound / music / digitized modes, mouse and joystick settings, the key and button bindings, the view size and the mouse sensitivity.
+  - `InitGame` calls `ReadConfig`, then loads the sounds of the configured sound mode and applies the configured view size.
+  - With a config, "Read This!" goes back to normal colour and the cursor starts on New Game, as in the original. With no config, the hardware defaults apply (AdLib, Sound Blaster, view size 15).
+  - `Quit` writes the config on a normal exit, once it has been read.
+- **`SaveTheGame` / `LoadTheGame` (WOLF3D.BAS):** replace the 5c stubs.
+  - **What is saved,** in the original order: gamestate, the level ratios, tilemap, actorat, the area connections, every actor in list order with an end marker, the statics, the doors, and the push wall. The checksum (`DoChecksum`, 32-bit wrap) covers the same parts as in C.
+  - **Loading:** the level is set up again before the saved state goes over it. Actors are re-created with `GetNewActor`, keeping their new links.
+  - **Not compatible with DOS saves:** the DOS saves store near pointers (each actor's state and its list links) that mean nothing to the port. So the port's saves start with a `WQB1` signature after the 32-byte name. A file without it, like the DOS save, gets "This save game was not made by this version of the game", and nothing is loaded. Through the menu you go back to the save list; through F9 the current game continues.
+  - The free disk space check is left out.
+- **`WL_MENU.BM`:** quick load now redraws the status bar, as in C.
+- **`ID_IN.BI`:** `joystickprogressive`, so the config keeps that setting (the joystick itself is not ported).
+- **Tested** (CONFIG.WL6 and the save files were backed up first, and the config was restored afterwards):
+  - **Reading the config:** the CONFIG.WL6 in the source tree is the original DOS config, and its 522 bytes match the layout exactly. It has sound, music and digitized sound off, and view size 19. The game started with the larger view and "Read This!" in normal colour.
+  - **Writing it back:** quitting through the menu wrote a config byte-identical to the original. Turning sound effects to AdLib in the Sound menu and quitting changed exactly one byte (offset 462 → 2).
+  - **Saving and loading:** saved to slot 3 ("PORT TEST", 21275 bytes). Then, in a new run, loading it put me back where I saved.
+  - **Quick keys:** F9 with nothing quick-saved yet opened the load menu. F8 quick-saved, and the next F9 asked "Load Game called "PORT TEST"?" and loaded it.
+  - **The DOS save** in slot 0 (SAVEGAM0.WL6, 1992) is refused with the message.
+- **Not done yet:**
+  - The WL_DEBUG keys (Tab + letter with the "goobers" parameter) are not ported.
+  - The ORDERSCREEN / ERRORSCREEN text screens on exit are not ported.
+  - Note that the original config in the source tree turns all sound off. Delete CONFIG.WL6, or turn sound on in the Sound menu, to hear the game.

@@ -19,7 +19,7 @@ $If INCLUDE_ID_US_BI = UNDEFINED Then
     End Type
 
     Dim Shared Scores(0 To MaxScores - 1) As HighScore
-    ' TODO: ReadConfig (WL_MAIN.C) loads the saved scores from CONFIG.WL6
+    ' ReadConfig (WOLF3D.BAS) loads the saved scores from CONFIG.WL6
     Scores(0).name = "id software-'92" + Chr$(0): Scores(0).score = 10000: Scores(0).completed = 1
     Scores(1).name = "Adrian Carmack" + Chr$(0): Scores(1).score = 10000: Scores(1).completed = 1
     Scores(2).name = "John Carmack" + Chr$(0): Scores(2).score = 10000: Scores(2).completed = 1

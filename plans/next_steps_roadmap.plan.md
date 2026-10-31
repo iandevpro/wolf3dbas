@@ -40,7 +40,7 @@ The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step
 - **5b — DONE 2026-10-27:** sub-menus New Game (episode, difficulty), Sound, Control (mouse sensitivity, customize controls), Change View. Still empty: Load Game, Read This.
 - **5c — DONE 2026-10-27:** Load/Save menus (`LoadTheGame` / `SaveTheGame` are stubs until the game exists), Read This (`HelpScreens`, WL_TEXT.C).
 
-### 6. The game (largest) — next
+### 6. The game (largest) — DONE 2026-10-30 (WL6; the Spear actors, demo recording, PC speaker sounds and the debug keys are not ported)
 Planned in sub-steps 6a-6k in `step6_game.plan.md`: groundwork, map and VSWAP data, play screen and level setup, raycaster and movement, sprites and items, doors and level exit, enemies, bosses, digitized sounds, demos, config and save/load.
 
 ## Cross-cutting decisions

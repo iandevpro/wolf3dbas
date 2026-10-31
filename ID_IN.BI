@@ -129,6 +129,7 @@ $If INCLUDE_ID_IN_BI = UNDEFINED Then
     Dim Shared KbdDefs As KeyboardDef
     Dim Shared mouseenabled As Integer
     Dim Shared joystickenabled As Integer
+    Dim Shared joystickprogressive As Integer ' (kept in the config, the joystick is not ported)
     Dim Shared MousePresent As Integer
     Dim Shared JoysPresent(0 To 1) As Integer ' Joystick is not ported, always FALSE
     Dim Shared inDeferredRelease(0 To 127) As Integer ' see INL_KeyService

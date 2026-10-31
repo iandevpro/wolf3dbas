@@ -353,6 +353,10 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     Dim Shared ENDGAMESTR As String
 
     Const STR_LGC = "Load Game called" ' + "\n\"" (added where used)
+    Const STR_SAVECHT1 = "Your Save Game file is,"
+    Dim Shared STR_SAVECHT2 As String ' (Chr$ can't be in a Const)
+    Const STR_SAVECHT3 = "But I'll let you go on and"
+    Const STR_SAVECHT4 = "play anyway...."
     Const STR_CHEATER1 = "You now have 100% Health,"
     Const STR_CHEATER2 = "99 Ammo and both Keys!"
     Const STR_CHEATER3 = "Note that you have basically"
@@ -360,6 +364,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     Const STR_CHEATER5 = "getting a high score!"
 
     GAMESVD = "There's already a game" + Chr$(10) + "saved at this position." + Chr$(10) + "      Overwrite?"
+    STR_SAVECHT2 = "shall we say, " + Chr$(34) + "corrupted" + Chr$(34) + "."
     ENDGAMESTR = "Are you sure you want" + Chr$(10) + "to end the game you" + Chr$(10) + "are playing? (Y or N):"
 
     ' LSItems={LSM_X,LSM_Y,10,0,24}

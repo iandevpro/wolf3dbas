@@ -97,7 +97,7 @@ Each sub-step below ends with something visible to test against the original in 
 - Remove the temporary `VW_FadeOut` from the attract loop.
 - **Test:** the attract loop plays the 4 demos, and each one plays out the same as in DOSBox-X (a wrong integer result makes the demo drift).
 
-### 6k. Config, save and load, in-game keys
+### 6k. Config, save and load, in-game keys — DONE 2026-10-30 (WL_DEBUG keys not ported; DOS save games can't be loaded)
 - `ReadConfig` / `WriteConfig` (CONFIG.WL6: scores, sound, controls, view size); this also replaces the defaults set in `InitGame`, `IN_Startup` and ID_US.BI.
 - `SaveTheGame` / `LoadTheGame` (replace the 5c stubs), quick save and load (F8/F9), `CP_CheckQuick` (F7 end game, F10 quit), `CP_EndGame`, pause.
 - Optional: WL_DEBUG keys (Tab + letters with the "goobers" parameter) for testing.

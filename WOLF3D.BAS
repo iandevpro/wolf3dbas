@@ -68,6 +68,8 @@ Dim Shared mouseadjustment As Integer
 ' File and Episode Variables
 Dim Shared configname As String * 13
 Dim Shared SaveName As String * 13
+Dim Shared configread As Integer ' ReadConfig was done: Quit writes the config
+Const SAVESIGNATURE = "WQB1" ' the port's save games (SaveTheGame)
 Dim Shared PageFileName As String * 13
 Dim Shared audioname As String * 13
 Dim Shared demoname As String * 13
@@ -173,7 +175,8 @@ System
 '=
 '==========================
 Sub Quit (errmsg As String)
-    ' TODO: WriteConfig, and the ORDERSCREEN / ERRORSCREEN text mode screens
+    ' TODO: the ORDERSCREEN / ERRORSCREEN text mode screens
+    If Len(errmsg) = 0 And configread Then WriteConfig
     IN_Shutdown
     SD_Shutdown
     PM_Shutdown
@@ -486,10 +489,9 @@ Sub InitGame
     ' US_Startup - starts the User Mgr: random numbers (the original also checked for Ted, the level editor)
     US_InitRndT TRUE
 
-    ' TODO: ReadConfig - with no config the sound effects default to the AdLib
-    If SD_SetSoundMode(sdm_AdLib) Then CA_LoadAllSounds
-    If SD_SetMusicMode(smm_AdLib) Then MusicMode = smm_AdLib
-    If SoundBlasterPresent Then SD_SetDigiDevice sds_SoundBlaster ' (ReadConfig default)
+    ReadConfig
+    CA_LoadAllSounds ' the sounds of the sound mode
+    NewViewSize viewsize ' (the view size of the config)
 
     '
     ' load in and lock down some basic chunks
@@ -621,19 +623,342 @@ Sub NewViewSize (width As Integer)
     result = SetViewSize(width * 16, width * 16 * HEIGHTRATIO)
 End Sub
 
+'====================
+'=
+'= ReadConfig
+'=
+'= CONFIG.WL6 has the layout of the original: the high scores (66 bytes each), then
+'= 16-bit ints. A config written by the DOS game can be read, and the other way round.
+'=
+'====================
+Sub ReadConfig
+    Dim file As Integer, i As Integer
+    Dim sd As Integer, sm As Integer, sds As Integer, result As Integer
+
+    If _FileExists(RTrim$(configname)) Then
+        '
+        ' valid config file
+        '
+        file = FreeFile
+        Open RTrim$(configname) For Binary As #file
+        For i = 0 To MaxScores - 1
+            Get #file, , Scores(i)
+        Next i
+
+        Get #file, , sd
+        Get #file, , sm
+        Get #file, , sds
+
+        Get #file, , mouseenabled
+        Get #file, , joystickenabled
+        Get #file, , joypadenabled
+        Get #file, , joystickprogressive
+        Get #file, , joystickport
+
+        For i = 0 To 3: Get #file, , dirscan(i): Next i
+        For i = 0 To NUMBUTTONS - 1: Get #file, , buttonscan(i): Next i
+        For i = 0 To 3: Get #file, , buttonmouse(i): Next i
+        For i = 0 To 3: Get #file, , buttonjoy(i): Next i
+
+        Get #file, , viewsize
+        Get #file, , mouseadjustment
+
+        Close #file
+
+        If sd = sdm_AdLib And Not AdLibPresent And Not SoundBlasterPresent Then
+            sd = sdm_PC
+            sd = smm_Off ' (sic)
+        End If
+
+        If (sds = sds_SoundBlaster And Not SoundBlasterPresent) Or (sds = sds_SoundSource And Not SoundSourcePresent) Then sds = sds_Off
+
+        If Not MousePresent Then mouseenabled = FALSE
+        If Not JoysPresent(joystickport) Then joystickenabled = FALSE
+
+        MainMenu(6).active = 1 ' (MainMenu[6]: "Read This!" in normal color)
+        MainItems.curpos = 0
+    Else
+        '
+        ' no config file, so select by hardware
+        '
+        If SoundBlasterPresent Or AdLibPresent Then
+            sd = sdm_AdLib
+            sm = smm_AdLib
+        Else
+            sd = sdm_PC
+            sm = smm_Off
+        End If
+
+        If SoundBlasterPresent Then
+            sds = sds_SoundBlaster
+        ElseIf SoundSourcePresent Then
+            sds = sds_SoundSource
+        Else
+            sds = sds_Off
+        End If
+
+        If MousePresent Then mouseenabled = 1 ' true
+
+        joystickenabled = FALSE
+        joypadenabled = FALSE
+        joystickport = 0
+        joystickprogressive = FALSE
+
+        viewsize = 15
+        mouseadjustment = 5
+    End If
+
+    result = SD_SetMusicMode(sm)
+    result = SD_SetSoundMode(sd)
+    SD_SetDigiDevice sds
+
+    configread = TRUE
+End Sub
+
+'====================
+'=
+'= WriteConfig
+'=
+'====================
+Sub WriteConfig
+    Dim file As Integer, i As Integer
+
+    file = FreeFile
+    Open RTrim$(configname) For Output As #file: Close #file ' O_CREAT (truncate)
+    Open RTrim$(configname) For Binary As #file
+    For i = 0 To MaxScores - 1
+        Put #file, , Scores(i)
+    Next i
+
+    Put #file, , SoundMode
+    Put #file, , MusicMode
+    Put #file, , DigiMode
+
+    Put #file, , mouseenabled
+    Put #file, , joystickenabled
+    Put #file, , joypadenabled
+    Put #file, , joystickprogressive
+    Put #file, , joystickport
+
+    For i = 0 To 3: Put #file, , dirscan(i): Next i
+    For i = 0 To NUMBUTTONS - 1: Put #file, , buttonscan(i): Next i
+    For i = 0 To 3: Put #file, , buttonmouse(i): Next i
+    For i = 0 To 3: Put #file, , buttonjoy(i): Next i
+
+    Put #file, , viewsize
+    Put #file, , mouseadjustment
+
+    Close #file
+End Sub
+
+'===========================================================================
+
+Sub DiskFlopAnim (x As Integer, y As Integer)
+    Static which As Integer
+
+    If x = 0 And y = 0 Then Exit Sub
+    VWB_DrawPic x, y, C_DISKLOADING1PIC + which
+    VW_UpdateScreen
+    which = which Xor 1
+End Sub
+
+' DoChecksum over the bytes s (C: byte far *source, unsigned size), 32-bit wrap
+Function DoChecksum& (s As String, checksum As Long)
+    Dim i As Long, sum As _Integer64
+
+    sum = checksum
+    For i = 1 To Len(s) - 1
+        sum = sum + (Asc(s, i) Xor Asc(s, i + 1))
+    Next i
+    DoChecksum& = Wrap32&(sum)
+End Function
+
+' CA_FarWrite of a variable (its memory m), with or without the checksum
+Sub SaveBlock (handle As Long, m As _MEM, checksum As Long, withsum As Integer)
+    Dim s As String
+
+    s = Space$(SDL_OffsetToLong&(m.SIZE))
+    _MemGet m, m.OFFSET, s
+    Put #handle, , s
+    If withsum Then checksum = DoChecksum&(s, checksum)
+End Sub
+
+' CA_FarRead into a variable (its memory m), with or without the checksum
+Sub LoadBlock (handle As Long, m As _MEM, checksum As Long, withsum As Integer)
+    Dim s As String
+
+    s = Space$(SDL_OffsetToLong&(m.SIZE))
+    Get #handle, , s
+    _MemPut m, m.OFFSET, s
+    If withsum Then checksum = DoChecksum&(s, checksum)
+End Sub
+
 '==================================
 '=
-'= SaveTheGame / LoadTheGame
+'= SaveTheGame
 '=
-'= TODO: save and load the game state (gamestate, levels, actors, statics, doors...)
-'= when the game is ported. The menus write and read the 32 byte save game name.
+'= The records of the port, in the order of the original. A DOS save game can't be read:
+'= it holds near pointers (the actors' states and links) that only meant something there.
+'= So the port's save games start with SAVESIGNATURE (after the 32 byte name).
+'= (The free disk space check is left out.)
 '=
 '==================================
 Function SaveTheGame% (handle As Long, x As Integer, y As Integer)
+    Dim checksum As Long, ob As Integer, m As _MEM
+    Dim nullobj As objtype
+
+    Dim sig As String * 4
+
+    checksum = 0
+
+    sig = SAVESIGNATURE
+    Put #handle, , sig
+
+    DiskFlopAnim x, y
+    m = _Mem(gamestate): SaveBlock handle, m, checksum, TRUE: _MemFree m
+
+    DiskFlopAnim x, y
+    m = _Mem(LevelRatios()): SaveBlock handle, m, checksum, TRUE: _MemFree m ' 8 (Spear: 20) LRstruct
+
+    DiskFlopAnim x, y
+    m = _Mem(tilemap()): SaveBlock handle, m, checksum, TRUE: _MemFree m
+    DiskFlopAnim x, y
+    m = _Mem(actorat()): SaveBlock handle, m, checksum, TRUE: _MemFree m
+
+    m = _Mem(areaconnect()): SaveBlock handle, m, checksum, FALSE: _MemFree m
+    m = _Mem(areabyplayer()): SaveBlock handle, m, checksum, FALSE: _MemFree m
+
+    ob = player
+    Do While ob <> -1
+        DiskFlopAnim x, y
+        Put #handle, , objlist(ob)
+        ob = objlist(ob).nextobj
+    Loop
+    nullobj.active = ac_badobject ' end of file marker
+    DiskFlopAnim x, y
+    Put #handle, , nullobj
+
+    DiskFlopAnim x, y
+    m = _Mem(laststatobj): SaveBlock handle, m, checksum, TRUE: _MemFree m
+    DiskFlopAnim x, y
+    m = _Mem(statobjlist()): SaveBlock handle, m, checksum, TRUE: _MemFree m
+
+    DiskFlopAnim x, y
+    m = _Mem(doorposition()): SaveBlock handle, m, checksum, TRUE: _MemFree m
+    DiskFlopAnim x, y
+    m = _Mem(doorobjlist()): SaveBlock handle, m, checksum, TRUE: _MemFree m
+
+    DiskFlopAnim x, y
+    m = _Mem(pwallstate): SaveBlock handle, m, checksum, TRUE: _MemFree m
+    m = _Mem(pwallx): SaveBlock handle, m, checksum, TRUE: _MemFree m
+    m = _Mem(pwally): SaveBlock handle, m, checksum, TRUE: _MemFree m
+    m = _Mem(pwalldir): SaveBlock handle, m, checksum, TRUE: _MemFree m
+    m = _Mem(pwallpos): SaveBlock handle, m, checksum, TRUE: _MemFree m
+
+    '
+    ' WRITE OUT CHECKSUM
+    '
+    Put #handle, , checksum
+
     SaveTheGame% = TRUE
 End Function
 
+'==================================
+'=
+'= LoadTheGame
+'=
+'==================================
 Function LoadTheGame% (handle As Long, x As Integer, y As Integer)
+    Dim checksum As Long, oldchecksum As Long, m As _MEM
+    Dim nullobj As objtype, nextobj As Integer, prevobj As Integer
+    Dim sig As String * 4
+
+    LoadTheGame% = FALSE
+
+    ' (port: not a save game of the port, e.g. one made by the DOS game - nothing is loaded)
+    Get #handle, , sig
+    If sig <> SAVESIGNATURE Then
+        Message "This save game was not" + Chr$(10) + "made by this version of" + Chr$(10) + "the game. It can't be loaded."
+        IN_ClearKeysDown
+        IN_Ack
+        Exit Function
+    End If
+
+    checksum = 0
+
+    DiskFlopAnim x, y
+    m = _Mem(gamestate): LoadBlock handle, m, checksum, TRUE: _MemFree m
+
+    DiskFlopAnim x, y
+    m = _Mem(LevelRatios()): LoadBlock handle, m, checksum, TRUE: _MemFree m
+
+    DiskFlopAnim x, y
+    SetupGameLevel
+
+    DiskFlopAnim x, y
+    m = _Mem(tilemap()): LoadBlock handle, m, checksum, TRUE: _MemFree m
+    DiskFlopAnim x, y
+    m = _Mem(actorat()): LoadBlock handle, m, checksum, TRUE: _MemFree m
+
+    m = _Mem(areaconnect()): LoadBlock handle, m, checksum, FALSE: _MemFree m
+    m = _Mem(areabyplayer()): LoadBlock handle, m, checksum, FALSE: _MemFree m
+
+    InitActorList
+    DiskFlopAnim x, y
+    ' (C read the player with its saved links; GetNewActor below links it again. Here the
+    ' links of InitActorList are kept)
+    nextobj = objlist(player).nextobj
+    prevobj = objlist(player).prevobj
+    Get #handle, , objlist(player)
+    objlist(player).nextobj = nextobj
+    objlist(player).prevobj = prevobj
+
+    Do
+        DiskFlopAnim x, y
+        Get #handle, , nullobj
+        If nullobj.active = ac_badobject Then Exit Do
+        GetNewActor
+        ' don't copy over the links
+        nextobj = objlist(newobj).nextobj
+        prevobj = objlist(newobj).prevobj
+        objlist(newobj) = nullobj
+        objlist(newobj).nextobj = nextobj
+        objlist(newobj).prevobj = prevobj
+    Loop
+
+    DiskFlopAnim x, y
+    m = _Mem(laststatobj): LoadBlock handle, m, checksum, TRUE: _MemFree m
+    DiskFlopAnim x, y
+    m = _Mem(statobjlist()): LoadBlock handle, m, checksum, TRUE: _MemFree m
+
+    DiskFlopAnim x, y
+    m = _Mem(doorposition()): LoadBlock handle, m, checksum, TRUE: _MemFree m
+    DiskFlopAnim x, y
+    m = _Mem(doorobjlist()): LoadBlock handle, m, checksum, TRUE: _MemFree m
+
+    DiskFlopAnim x, y
+    m = _Mem(pwallstate): LoadBlock handle, m, checksum, TRUE: _MemFree m
+    m = _Mem(pwallx): LoadBlock handle, m, checksum, TRUE: _MemFree m
+    m = _Mem(pwally): LoadBlock handle, m, checksum, TRUE: _MemFree m
+    m = _Mem(pwalldir): LoadBlock handle, m, checksum, TRUE: _MemFree m
+    m = _Mem(pwallpos): LoadBlock handle, m, checksum, TRUE: _MemFree m
+
+    Get #handle, , oldchecksum
+
+    If oldchecksum <> checksum Then
+        Message STR_SAVECHT1 + Chr$(10) + STR_SAVECHT2 + Chr$(10) + STR_SAVECHT3 + Chr$(10) + STR_SAVECHT4
+
+        IN_ClearKeysDown
+        IN_Ack
+
+        gamestate.score = 0
+        gamestate.lives = 1
+        gamestate.weapon = wp_pistol
+        gamestate.chosenweapon = wp_pistol
+        gamestate.bestweapon = wp_pistol
+        gamestate.ammo = 8
+    End If
+
     LoadTheGame% = TRUE
 End Function
 
