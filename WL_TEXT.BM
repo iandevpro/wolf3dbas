@@ -559,7 +559,7 @@ $If INCLUDE_WL_TEXT_BM = UNDEFINED Then
         VW_FadeOut
         SETFONTCOLOR 0, 15
         IN_ClearKeysDown
-        ' TODO: if (MousePresent) Mouse(MDelta) - clear accumulated mouse movement
+        If MousePresent Then IN_ClearMouseDelta ' Clear accumulated mouse movement
 
         FreeMusic
     End Sub

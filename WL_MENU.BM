@@ -467,7 +467,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         If loadedgame Then playstate = ex_abort
 
         lasttimecount = TimeCount
-        ' TODO: clear accumulated mouse movement
+        If MousePresent Then IN_ClearMouseDelta ' Clear accumulated mouse movement
     End Sub
 
     '////////////////////////////////////////////////////////////////////
@@ -840,7 +840,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             Select Case which
                 Case CTL_MOUSEENABLE
                     mouseenabled = mouseenabled Xor 1
-                    ' TODO: center the mouse (Mouse(4))
+                    IN_SetMousePos CENTER, CENTER ' _CX=_DX=CENTER; Mouse(4)
                     DrawCtlScreen
                     CusItems.curpos = -1
                     CP_ShootSnd
@@ -2184,7 +2184,10 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         '
         ScanSaveGames
 
-        ' TODO: CENTER MOUSE
+        '
+        ' CENTER MOUSE
+        '
+        IN_SetMousePos CENTER, CENTER
     End Sub
 
     '////////////////////////////////////////////////////////////////////
@@ -2548,12 +2551,35 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '//
     '////////////////////////////////////////////////////////////////////
     Sub ReadAnyControl (ci As ControlInfo)
-        Dim buttons As Integer
+        Dim buttons As Integer, mousex As Integer, mousey As Integer
 
         IN_ReadControl 0, ci
 
         If mouseenabled Then
-            ' TODO: mouse motion moves the cursor (Mouse(3) counters around CENTER, SENSITIVE)
+            '
+            ' READ MOUSE MOTION COUNTERS
+            ' RETURN DIRECTION
+            ' HOME MOUSE
+            ' CHECK MOUSE BUTTONS
+            '
+            IN_GetMousePos mousex, mousey ' Mouse(3)
+
+            If mousey < CENTER - SENSITIVE Then
+                ci.dir = dir_North
+                IN_SetMousePos CENTER, CENTER ' Mouse(4)
+            ElseIf mousey > CENTER + SENSITIVE Then
+                ci.dir = dir_South
+                IN_SetMousePos CENTER, CENTER
+            End If
+
+            If mousex < CENTER - SENSITIVE Then
+                ci.dir = dir_West
+                IN_SetMousePos CENTER, CENTER
+            ElseIf mousex > CENTER + SENSITIVE Then
+                ci.dir = dir_East
+                IN_SetMousePos CENTER, CENTER
+            End If
+
             buttons = IN_MouseButtons%
             If buttons Then
                 ci.button0 = (buttons And 1) <> 0

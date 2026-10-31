@@ -177,6 +177,20 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
 
     '===================
     '=
+    '= PollMouseMove
+    '=
+    '===================
+    Sub PollMouseMove ()
+        Dim mousexmove As Long, mouseymove As Long
+
+        INL_GetMouseDelta mousexmove, mouseymove ' Mouse(MDelta)
+
+        controlx = controlx + mousexmove * 10 \ (13 - mouseadjustment)
+        controly = controly + mouseymove * 20 \ (13 - mouseadjustment)
+    End Sub
+
+    '===================
+    '=
     '= PollKeyboardMove
     '=
     '===================
@@ -274,7 +288,9 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         '
         PollKeyboardMove
 
-        ' TODO: mouse motion (PollMouseMove, Mouse(MDelta) mickeys), joystick (PollJoystickMove)
+        If mouseenabled Then PollMouseMove
+
+        ' TODO: joystick (PollJoystickMove)
 
         '
         ' bound movement to a maximum
@@ -372,7 +388,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             IN_ClearKeysDown
             If MusicMode = smm_AdLib Then sqActive = 1 ' SD_MusicOn
             Paused = FALSE
-            ' TODO: clear accumulated mouse movement
+            If MousePresent Then IN_ClearMouseDelta ' Clear accumulated mouse movement
             Exit Sub
         End If
 
@@ -409,7 +425,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             End If
             If loadedgame Then playstate = ex_abort
             lasttimecount = TimeCount
-            ' TODO: clear accumulated mouse movement
+            If MousePresent Then IN_ClearMouseDelta ' Clear accumulated mouse movement
             Exit Sub
         End If
 
@@ -662,7 +678,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             buttonstate(i) = FALSE
         Next i
         ClearPaletteShifts
-        ' TODO: clear accumulated mouse movement
+        If MousePresent Then IN_ClearMouseDelta ' Clear accumulated mouse movement
 
         If demoplayback Then IN_StartAck
 

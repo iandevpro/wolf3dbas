@@ -135,6 +135,12 @@ $If INCLUDE_ID_IN_BI = UNDEFINED Then
     Dim Shared inDeferredRelease(0 To 127) As Integer ' see INL_KeyService
     Dim Shared inPressTime(0 To 127) As Double
     Dim Shared inAckButtons As Integer ' mouse buttons held at IN_StartAck
+    ' The counters of the DOS mouse driver, fed by INL_MouseService from _MouseMovementX/Y
+    ' (raw counts, like the mickeys): the motion since the last Mouse(MDelta)
+    ' (INL_GetMouseDelta), and the virtual cursor of Mouse(3) / Mouse(4) (x 0-639, one
+    ' mickey per pixel; y 0-199, two mickeys per pixel, so inMouseY is in mickeys)
+    Dim Shared inMouseDX As Long, inMouseDY As Long
+    Dim Shared inMouseX As Long, inMouseY As Long
     ' Key press queue (scan code + ASCII), the original only had LastScan / LastASCII.
     ' INL_KeyService handles all key events of up to ~16 ms at once, so text input
     ' (US_LineInput) reads the presses from here to not lose fast typed characters
@@ -150,6 +156,11 @@ $If INCLUDE_ID_IN_BI = UNDEFINED Then
     Declare Function IN_GetKeyPress% (scan As Integer, ascii As Integer)
     Declare Sub IN_ReadControl (player As Integer, info As ControlInfo)
     Declare Function IN_MouseButtons% ()
+    Declare Sub INL_MouseService ()
+    Declare Sub INL_GetMouseDelta (x As Long, y As Long)
+    Declare Sub IN_ClearMouseDelta ()
+    Declare Sub IN_GetMousePos (x As Integer, y As Integer)
+    Declare Sub IN_SetMousePos (x As Integer, y As Integer)
     Declare Function IN_CheckAck% ()
     Declare Sub IN_StartAck ()
     Declare Sub IN_Ack ()

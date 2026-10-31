@@ -597,7 +597,7 @@ Commit da6cb69.
 
 ## 2026-10-31: Update blocks removed
 
-Not committed yet.
+Commit 4b0d229.
 
 - **What they were:** the original marked the 16x16 tiles each drawing touched (`VW_MarkUpdateBlock`). `VW_UpdateScreen` then copied only those tiles to the visible page.
 - **Why they aren't needed:** the port draws into one buffer and always shows the whole screen.
@@ -611,3 +611,29 @@ Not committed yet.
   - It compiles, with 13 warnings left (16 before).
   - `tools/ide_format.py` changes nothing.
   - The title screen and the Load Game menu (bars and box lines) draw correctly.
+
+## 2026-10-31: Mouse motion
+
+Not committed yet.
+
+- **How QB64 reports it:** `_MouseMovementX/Y` gives raw relative counts, like the DOS driver's mickeys. A test program got exactly the counts sent with `mouse_event`. They keep counting when the pointer is at or past the window edge, and `_MouseMove` adds no motion of its own.
+- **ID_IN (the DOS mouse driver counters):**
+  - **`INL_MouseService`** reads every waiting `_MouseInput` message. `IN_ClearKeysDown` and `IN_MouseButtons` now call it instead of throwing the messages away, so no motion is lost. It adds the motion to two things:
+    - the delta of `Mouse(MDelta)`
+    - the virtual cursor of `Mouse(3)` / `Mouse(4)`. It is clamped to 0-639 x 0-199, with one mickey per pixel across and two per pixel down, the driver's defaults.
+  - **`INL_GetMouseDelta`** is `Mouse(MDelta)`. While the window has focus it also puts the real pointer back in the middle of the window, so a click can't land outside it during play.
+  - **`IN_ClearMouseDelta`** ("Clear accumulated mouse movement"), **`IN_GetMousePos`** (`Mouse(3)`) and **`IN_SetMousePos`** (`Mouse(4)`).
+  - **`IN_Startup`** puts the virtual cursor in the middle (like `MReset`) and hides the pointer over the window (`_MouseHide`); the game draws no pointer.
+- **WL_PLAY.BM:**
+  - `PollMouseMove` as in C: `controlx += dx*10/(13-mouseadjustment)` and `controly += dy*20/(13-mouseadjustment)`. So the mouse sensitivity setting now works.
+  - `PollControls` calls it when the mouse is enabled. Demo playback returns before it, as in C.
+- **WL_MENU.BM:**
+  - `ReadAnyControl` reads the virtual cursor: past `CENTER ± SENSITIVE` (120 ± 60) it returns that direction and centres the cursor again, as in C.
+  - The control panel setup and the mouse enable toggle centre it too.
+- **Clearing the motion:** "Clear accumulated mouse movement" is now done in the 3 places in WL_PLAY, in the quick save/load return (WL_MENU) and in the help screens (WL_TEXT).
+- **Tested** with motion sent by `mouse_event` (the window brought to the front first):
+  - In E1M1, 300 counts right turned right, 600 left turned back past the start, and moving the mouse up walked forward.
+  - In the main menu, 150 counts down moved the cursor one item at a time. A temporary log of the virtual cursor showed the centring and the threshold working as in C. Motion left over after a step still counts, so the 150 counts up only reached 60, one short of `< 60`.
+- **Not done:**
+  - Not compared by hand with DOSBox-X (how far one mouse movement turns).
+  - The `ctrl_Mouse` control type of `IN_ReadControl` (WL6 always uses the keyboard there).

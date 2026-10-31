@@ -152,6 +152,9 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
         MousePresent = TRUE
         mouseenabled = 1 ' 0/1 like the C boolean, CP_Control toggles it with Xor 1 (ReadConfig sets it)
         joystickenabled = 0
+        ' Mouse(MReset): the cursor goes to the middle, hidden (the game draws no mouse pointer)
+        inMouseX = 320: inMouseY = 200
+        _MouseHide
 
         IN_ClearKeysDown
         inTimer = _FreeTimer
@@ -177,8 +180,7 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
         Loop
         Do While InKey$ <> ""
         Loop
-        Do While _MouseInput
-        Loop
+        INL_MouseService
         LastScan = sc_None
         LastASCII = 0
         For i = 0 To 127
@@ -209,13 +211,74 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
     Function IN_MouseButtons% ()
         Dim buttons As Integer
 
-        Do While _MouseInput
-        Loop
+        INL_MouseService
         If _MouseButton(1) Then buttons = buttons Or 1
         If _MouseButton(2) Then buttons = buttons Or 2
         If _MouseButton(3) Then buttons = buttons Or 4
         IN_MouseButtons% = buttons
     End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  INL_MouseService() - Reads the waiting mouse messages: their motion goes
+    '//      to the counters of the DOS mouse driver (see ID_IN.BI). Everything that
+    '//      reads _MouseInput goes through here, so no motion is lost
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub INL_MouseService ()
+        Dim dx As Long, dy As Long
+
+        Do While _MouseInput
+            dx = _MouseMovementX
+            dy = _MouseMovementY
+            inMouseDX = inMouseDX + dx
+            inMouseDY = inMouseDY + dy
+            inMouseX = inMouseX + dx
+            inMouseY = inMouseY + dy
+        Loop
+        If inMouseX < 0 Then inMouseX = 0
+        If inMouseX > 639 Then inMouseX = 639
+        If inMouseY < 0 Then inMouseY = 0
+        If inMouseY > 399 Then inMouseY = 399
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  INL_GetMouseDelta() - Gets the amount that the mouse has moved from the
+    '//      mouse driver (Mouse(MDelta): the motion since the last call)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub INL_GetMouseDelta (x As Long, y As Long)
+        INL_MouseService
+        x = inMouseDX
+        y = inMouseDY
+        inMouseDX = 0
+        inMouseDY = 0
+        ' The DOS game had the mouse to itself. Here the pointer is kept in the middle
+        ' of the window while the game reads the motion, so a click can't land outside
+        ' and take the focus away (the motion counts don't change with _MouseMove)
+        If _WindowHasFocus Then _MouseMove 160, 100
+    End Sub
+
+    ' Mouse(MDelta) with the result thrown away: "Clear accumulated mouse movement"
+    Sub IN_ClearMouseDelta ()
+        Dim x As Long, y As Long
+
+        INL_GetMouseDelta x, y
+    End Sub
+
+    ' Mouse(3): the position of the virtual cursor (_CX, _DX)
+    Sub IN_GetMousePos (x As Integer, y As Integer)
+        INL_MouseService
+        x = inMouseX
+        y = inMouseY \ 2
+    End Sub
+
+    ' Mouse(4): moves the virtual cursor (_CX = x, _DX = y)
+    Sub IN_SetMousePos (x As Integer, y As Integer)
+        inMouseX = x
+        inMouseY = y * 2
+    End Sub
 
     '///////////////////////////////////////////////////////////////////////////
     '//
