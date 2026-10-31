@@ -4,10 +4,10 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     $Let INCLUDE_WL_MENU_BI = 1
 
     $If SPEAR = DEFINED Then
-        Const BORDCOLOR = &H99
-        Const BORD2COLOR = &H93
-        Const DEACTIVE = &H9B
-        Const BKGDCOLOR = &H9D
+            Const BORDCOLOR = &H99
+            Const BORD2COLOR = &H93
+            Const DEACTIVE = &H9B
+            Const BKGDCOLOR = &H9D
     $Else
         Const BORDCOLOR = &H29
         Const BORD2COLOR = &H23
@@ -25,7 +25,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     $If SPEAR = UNDEFINED Then
         Const INTROSONG = 7 ' NAZI_NOR_MUS
     $Else
-        Const INTROSONG = 23 ' XTOWER2_MUS
+            Const INTROSONG = 23 ' XTOWER2_MUS
     $End If
 
     Dim Shared lastmusic_gbl As Integer
@@ -41,7 +41,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     $If SPEAR = UNDEFINED Then
         Const MENU_H = 13 * 10 + 6
     $Else
-        Const MENU_H = 13 * 9 + 6
+            Const MENU_H = 13 * 9 + 6
     $End If
 
     '
@@ -86,10 +86,10 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     ' READTHIS_ITEM: GOODTIMES and SPEAR have no "Read This!" item
     $Let READTHIS_ITEM = 1
     $If GOODTIMES = DEFINED Then
-        $Let READTHIS_ITEM = 0
+            $Let READTHIS_ITEM = 0
     $End If
     $If SPEAR = DEFINED Then
-        $Let READTHIS_ITEM = 0
+            $Let READTHIS_ITEM = 0
     $End If
     $If READTHIS_ITEM = 1 Then
         Const mi_readthis = 6
@@ -99,11 +99,11 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
         Const MAINMENU_ITEMS = 10
         Const STARTITEM = mi_readthis
     $Else
-        Const mi_viewscores = 6
-        Const mi_backtodemo = 7
-        Const mi_quit = 8
-        Const MAINMENU_ITEMS = 9
-        Const STARTITEM = mi_newgame
+            Const mi_viewscores = 6
+            Const mi_backtodemo = 7
+            Const mi_quit = 8
+            Const MAINMENU_ITEMS = 9
+            Const STARTITEM = mi_newgame
     $End If
 
     ' Menu strings (FOREIGN.H)
@@ -142,7 +142,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     MainMenu(mi_changeview).active = 1: MainMenu(mi_changeview).txt = STR_CV: MainMenu(mi_changeview).routine = RTN_CHANGEVIEW
     $If READTHIS_ITEM = 1 Then
         $If SPANISH = DEFINED Then
-            MainMenu(mi_readthis).active = 2: MainMenu(mi_readthis).txt = "Ve esto!": MainMenu(mi_readthis).routine = RTN_READTHIS
+                MainMenu(mi_readthis).active = 2: MainMenu(mi_readthis).txt = "Ve esto!": MainMenu(mi_readthis).routine = RTN_READTHIS
         $Else
             MainMenu(mi_readthis).active = 2: MainMenu(mi_readthis).txt = "Read This!": MainMenu(mi_readthis).routine = RTN_READTHIS
         $End If
@@ -162,7 +162,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
         endStrings(7) = "You are at an intersection." + Chr$(10) + "A sign says, 'Press Y to quit.'" + Chr$(10) + ">"
         endStrings(8) = "For guns and glory, press N." + Chr$(10) + "For work and worry, press Y."
     $Else
-        ' TODO: ENDSTR1..ENDSTR9 for SPEAR (FOREIGN.H)
+            ' TODO: ENDSTR1..ENDSTR9 for SPEAR (FOREIGN.H)
     $End If
 
     color_hlite(0) = DEACTIVE: color_hlite(1) = HIGHLIGHT: color_hlite(2) = READHCOLOR: color_hlite(3) = &H67
@@ -308,12 +308,12 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     CusMenu(0).active = 1: CusMenu(3).active = 1: CusMenu(6).active = 1: CusMenu(8).active = 1
 
     $If SPANISH = DEFINED Then
-        NewEmenu(0).active = 1: NewEmenu(0).txt = "Episodio 1" + Chr$(10) + "Fuga desde Wolfenstein"
-        NewEmenu(2).active = 3: NewEmenu(2).txt = "Episodio 2" + Chr$(10) + "Operacion Eisenfaust"
-        NewEmenu(4).active = 3: NewEmenu(4).txt = "Episodio 3" + Chr$(10) + "Muere, Fuhrer, Muere!"
-        NewEmenu(6).active = 3: NewEmenu(6).txt = "Episodio 4" + Chr$(10) + "Un Negro Secreto"
-        NewEmenu(8).active = 3: NewEmenu(8).txt = "Episodio 5" + Chr$(10) + "Huellas del Loco"
-        NewEmenu(10).active = 3: NewEmenu(10).txt = "Episodio 6" + Chr$(10) + "Confrontacion"
+            NewEmenu(0).active = 1: NewEmenu(0).txt = "Episodio 1" + Chr$(10) + "Fuga desde Wolfenstein"
+            NewEmenu(2).active = 3: NewEmenu(2).txt = "Episodio 2" + Chr$(10) + "Operacion Eisenfaust"
+            NewEmenu(4).active = 3: NewEmenu(4).txt = "Episodio 3" + Chr$(10) + "Muere, Fuhrer, Muere!"
+            NewEmenu(6).active = 3: NewEmenu(6).txt = "Episodio 4" + Chr$(10) + "Un Negro Secreto"
+            NewEmenu(8).active = 3: NewEmenu(8).txt = "Episodio 5" + Chr$(10) + "Huellas del Loco"
+            NewEmenu(10).active = 3: NewEmenu(10).txt = "Episodio 6" + Chr$(10) + "Confrontacion"
     $Else
         NewEmenu(0).active = 1: NewEmenu(0).txt = "Episode 1" + Chr$(10) + "Escape from Wolfenstein"
         NewEmenu(2).active = 3: NewEmenu(2).txt = "Episode 2" + Chr$(10) + "Operation: Eisenfaust"

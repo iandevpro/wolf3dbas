@@ -377,9 +377,9 @@ $If INCLUDE_WL_TEXT_BM = UNDEFINED Then
 
         If shownumber Then
             $If SPANISH = DEFINED Then
-                s = "Hoja " + LTrim$(Str$(pagenum)) + " de "
-                py = 183
-                px = 208
+                    s = "Hoja " + LTrim$(Str$(pagenum)) + " de "
+                    py = 183
+                    px = 208
             $Else
                 s = "pg " + LTrim$(Str$(pagenum)) + " of "
                 py = 183
@@ -564,4 +564,4 @@ $If INCLUDE_WL_TEXT_BM = UNDEFINED Then
         FreeMusic
     End Sub
 
-$EndIf
+$End If

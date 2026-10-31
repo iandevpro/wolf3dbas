@@ -670,35 +670,35 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
                     A_DeathScream ob
             End Select
         $Else
-            Select Case objlist(ob).obclass
+                Select Case objlist(ob).obclass
                 Case spectreobj
-                    GivePoints 200
-                    NewState ob, s_spectredie1
+                GivePoints 200
+                NewState ob, s_spectredie1
 
                 Case angelobj
-                    GivePoints 5000
-                    NewState ob, s_angeldie1
+                GivePoints 5000
+                NewState ob, s_angeldie1
 
                 Case transobj
-                    GivePoints 5000
-                    NewState ob, s_transdie0
-                    PlaceItemType bo_key1, tilex, tiley
+                GivePoints 5000
+                NewState ob, s_transdie0
+                PlaceItemType bo_key1, tilex, tiley
 
                 Case uberobj
-                    GivePoints 5000
-                    NewState ob, s_uberdie0
-                    PlaceItemType bo_key1, tilex, tiley
+                GivePoints 5000
+                NewState ob, s_uberdie0
+                PlaceItemType bo_key1, tilex, tiley
 
                 Case willobj
-                    GivePoints 5000
-                    NewState ob, s_willdie1
-                    PlaceItemType bo_key1, tilex, tiley
+                GivePoints 5000
+                NewState ob, s_willdie1
+                PlaceItemType bo_key1, tilex, tiley
 
                 Case deathobj
-                    GivePoints 5000
-                    NewState ob, s_deathdie1
-                    PlaceItemType bo_key1, tilex, tiley
-            End Select
+                GivePoints 5000
+                NewState ob, s_deathdie1
+                PlaceItemType bo_key1, tilex, tiley
+                End Select
         $End If
     End Sub
 
@@ -849,8 +849,8 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
             ltemp = Fix((CLng(delta) * 256) / deltafrac) ' C long division truncates
             If ltemp > &H7FFF& Then
                 ystep = &H7FFF
-            ElseIf ltemp < -&H7FFF& Then
-                ystep = -&H7FFF
+            ElseIf ltemp < -32767& Then ' -0x7fffl (decimal: the QB64 IDE drops a - before &H)
+                ystep = -32767
             Else
                 ystep = ltemp
             End If
@@ -885,8 +885,8 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
             ltemp = Fix((CLng(delta) * 256) / deltafrac)
             If ltemp > &H7FFF& Then
                 xstep = &H7FFF
-            ElseIf ltemp < -&H7FFF& Then
-                xstep = -&H7FFF
+            ElseIf ltemp < -32767& Then ' -0x7fffl (decimal: the QB64 IDE drops a - before &H)
+                xstep = -32767
             Else
                 xstep = ltemp
             End If
@@ -1058,36 +1058,36 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
                     objlist(ob).speed = objlist(ob).speed * 2
             End Select
         $Else
-            Select Case objlist(ob).obclass
+                Select Case objlist(ob).obclass
                 Case spectreobj
-                    played = SD_PlaySound(GHOSTSIGHTSND)
-                    NewState ob, s_spectrechase1
-                    objlist(ob).speed = 800 ' go faster when chasing player
+                played = SD_PlaySound(GHOSTSIGHTSND)
+                NewState ob, s_spectrechase1
+                objlist(ob).speed = 800 ' go faster when chasing player
 
                 Case angelobj
-                    played = SD_PlaySound(ANGELSIGHTSND)
-                    NewState ob, s_angelchase1
-                    objlist(ob).speed = 1536
+                played = SD_PlaySound(ANGELSIGHTSND)
+                NewState ob, s_angelchase1
+                objlist(ob).speed = 1536
 
                 Case transobj
-                    played = SD_PlaySound(TRANSSIGHTSND)
-                    NewState ob, s_transchase1
-                    objlist(ob).speed = 1536
+                played = SD_PlaySound(TRANSSIGHTSND)
+                NewState ob, s_transchase1
+                objlist(ob).speed = 1536
 
                 Case uberobj
-                    NewState ob, s_uberchase1
-                    objlist(ob).speed = 3000
+                NewState ob, s_uberchase1
+                objlist(ob).speed = 3000
 
                 Case willobj
-                    played = SD_PlaySound(WILHELMSIGHTSND)
-                    NewState ob, s_willchase1
-                    objlist(ob).speed = 2048
+                played = SD_PlaySound(WILHELMSIGHTSND)
+                NewState ob, s_willchase1
+                objlist(ob).speed = 2048
 
                 Case deathobj
-                    played = SD_PlaySound(KNIGHTSIGHTSND)
-                    NewState ob, s_deathchase1
-                    objlist(ob).speed = 2048
-            End Select
+                played = SD_PlaySound(KNIGHTSIGHTSND)
+                NewState ob, s_deathchase1
+                objlist(ob).speed = 2048
+                End Select
         $End If
     End Sub
 
@@ -1175,14 +1175,14 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
         SetState s_boom2, 0, SPR_BOOM_2, 6, RT_NONE, RT_NONE, s_boom3
         SetState s_boom3, 0, SPR_BOOM_3, 6, RT_NONE, RT_NONE, 0
         $If SPEAR = DEFINED Then
-            SetState s_hrocket, 1, SPR_HROCKET_1, 3, RT_T_PROJECTILE, RT_A_SMOKE, s_hrocket
-            SetState s_hsmoke1, 0, SPR_HSMOKE_1, 3, RT_NONE, RT_NONE, s_hsmoke2
-            SetState s_hsmoke2, 0, SPR_HSMOKE_2, 3, RT_NONE, RT_NONE, s_hsmoke3
-            SetState s_hsmoke3, 0, SPR_HSMOKE_3, 3, RT_NONE, RT_NONE, s_hsmoke4
-            SetState s_hsmoke4, 0, SPR_HSMOKE_4, 3, RT_NONE, RT_NONE, 0
-            SetState s_hboom1, 0, SPR_HBOOM_1, 6, RT_NONE, RT_NONE, s_hboom2
-            SetState s_hboom2, 0, SPR_HBOOM_2, 6, RT_NONE, RT_NONE, s_hboom3
-            SetState s_hboom3, 0, SPR_HBOOM_3, 6, RT_NONE, RT_NONE, 0
+                SetState s_hrocket, 1, SPR_HROCKET_1, 3, RT_T_PROJECTILE, RT_A_SMOKE, s_hrocket
+                SetState s_hsmoke1, 0, SPR_HSMOKE_1, 3, RT_NONE, RT_NONE, s_hsmoke2
+                SetState s_hsmoke2, 0, SPR_HSMOKE_2, 3, RT_NONE, RT_NONE, s_hsmoke3
+                SetState s_hsmoke3, 0, SPR_HSMOKE_3, 3, RT_NONE, RT_NONE, s_hsmoke4
+                SetState s_hsmoke4, 0, SPR_HSMOKE_4, 3, RT_NONE, RT_NONE, 0
+                SetState s_hboom1, 0, SPR_HBOOM_1, 6, RT_NONE, RT_NONE, s_hboom2
+                SetState s_hboom2, 0, SPR_HBOOM_2, 6, RT_NONE, RT_NONE, s_hboom3
+                SetState s_hboom3, 0, SPR_HBOOM_3, 6, RT_NONE, RT_NONE, 0
         $End If
         SetState s_grdstand, 1, SPR_GRD_S_1, 0, RT_T_STAND, RT_NONE, s_grdstand
         SetState s_grdpath1, 1, SPR_GRD_W1_1, 20, RT_T_PATH, RT_NONE, s_grdpath1s
@@ -1353,134 +1353,134 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
             SetState s_gretelshoot8, 0, SPR_GRETEL_SHOOT1, 10, RT_NONE, RT_NONE, s_gretelchase1
         $End If
         $If SPEAR = DEFINED Then
-            SetState s_transstand, 0, SPR_TRANS_W1, 0, RT_T_STAND, RT_NONE, s_transstand
-            SetState s_transchase1, 0, SPR_TRANS_W1, 10, RT_T_CHASE, RT_NONE, s_transchase1s
-            SetState s_transchase1s, 0, SPR_TRANS_W1, 3, RT_NONE, RT_NONE, s_transchase2
-            SetState s_transchase2, 0, SPR_TRANS_W2, 8, RT_T_CHASE, RT_NONE, s_transchase3
-            SetState s_transchase3, 0, SPR_TRANS_W3, 10, RT_T_CHASE, RT_NONE, s_transchase3s
-            SetState s_transchase3s, 0, SPR_TRANS_W3, 3, RT_NONE, RT_NONE, s_transchase4
-            SetState s_transchase4, 0, SPR_TRANS_W4, 8, RT_T_CHASE, RT_NONE, s_transchase1
-            SetState s_transdie0, 0, SPR_TRANS_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_transdie01
-            SetState s_transdie01, 0, SPR_TRANS_W1, 1, RT_NONE, RT_NONE, s_transdie1
-            SetState s_transdie1, 0, SPR_TRANS_DIE1, 15, RT_NONE, RT_NONE, s_transdie2
-            SetState s_transdie2, 0, SPR_TRANS_DIE2, 15, RT_NONE, RT_NONE, s_transdie3
-            SetState s_transdie3, 0, SPR_TRANS_DIE3, 15, RT_NONE, RT_NONE, s_transdie4
-            SetState s_transdie4, 0, SPR_TRANS_DEAD, 0, RT_NONE, RT_NONE, s_transdie4
-            SetState s_transshoot1, 0, SPR_TRANS_SHOOT1, 30, RT_NONE, RT_NONE, s_transshoot2
-            SetState s_transshoot2, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot3
-            SetState s_transshoot3, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot4
-            SetState s_transshoot4, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot5
-            SetState s_transshoot5, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot6
-            SetState s_transshoot6, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot7
-            SetState s_transshoot7, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot8
-            SetState s_transshoot8, 0, SPR_TRANS_SHOOT1, 10, RT_NONE, RT_NONE, s_transchase1
-            SetState s_uberstand, 0, SPR_UBER_W1, 0, RT_T_STAND, RT_NONE, s_uberstand
-            SetState s_uberchase1, 0, SPR_UBER_W1, 10, RT_T_CHASE, RT_NONE, s_uberchase1s
-            SetState s_uberchase1s, 0, SPR_UBER_W1, 3, RT_NONE, RT_NONE, s_uberchase2
-            SetState s_uberchase2, 0, SPR_UBER_W2, 8, RT_T_CHASE, RT_NONE, s_uberchase3
-            SetState s_uberchase3, 0, SPR_UBER_W3, 10, RT_T_CHASE, RT_NONE, s_uberchase3s
-            SetState s_uberchase3s, 0, SPR_UBER_W3, 3, RT_NONE, RT_NONE, s_uberchase4
-            SetState s_uberchase4, 0, SPR_UBER_W4, 8, RT_T_CHASE, RT_NONE, s_uberchase1
-            SetState s_uberdie0, 0, SPR_UBER_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_uberdie01
-            SetState s_uberdie01, 0, SPR_UBER_W1, 1, RT_NONE, RT_NONE, s_uberdie1
-            SetState s_uberdie1, 0, SPR_UBER_DIE1, 15, RT_NONE, RT_NONE, s_uberdie2
-            SetState s_uberdie2, 0, SPR_UBER_DIE2, 15, RT_NONE, RT_NONE, s_uberdie3
-            SetState s_uberdie3, 0, SPR_UBER_DIE3, 15, RT_NONE, RT_NONE, s_uberdie4
-            SetState s_uberdie4, 0, SPR_UBER_DIE4, 15, RT_NONE, RT_NONE, s_uberdie5
-            SetState s_uberdie5, 0, SPR_UBER_DEAD, 0, RT_NONE, RT_NONE, s_uberdie5
-            SetState s_ubershoot1, 0, SPR_UBER_SHOOT1, 30, RT_NONE, RT_NONE, s_ubershoot2
-            SetState s_ubershoot2, 0, SPR_UBER_SHOOT2, 12, RT_NONE, RT_T_USHOOT, s_ubershoot3
-            SetState s_ubershoot3, 0, SPR_UBER_SHOOT3, 12, RT_NONE, RT_T_USHOOT, s_ubershoot4
-            SetState s_ubershoot4, 0, SPR_UBER_SHOOT4, 12, RT_NONE, RT_T_USHOOT, s_ubershoot5
-            SetState s_ubershoot5, 0, SPR_UBER_SHOOT3, 12, RT_NONE, RT_T_USHOOT, s_ubershoot6
-            SetState s_ubershoot6, 0, SPR_UBER_SHOOT2, 12, RT_NONE, RT_T_USHOOT, s_ubershoot7
-            SetState s_ubershoot7, 0, SPR_UBER_SHOOT1, 12, RT_NONE, RT_NONE, s_uberchase1
-            SetState s_willstand, 0, SPR_WILL_W1, 0, RT_T_STAND, RT_NONE, s_willstand
-            SetState s_willchase1, 0, SPR_WILL_W1, 10, RT_T_WILL, RT_NONE, s_willchase1s
-            SetState s_willchase1s, 0, SPR_WILL_W1, 3, RT_NONE, RT_NONE, s_willchase2
-            SetState s_willchase2, 0, SPR_WILL_W2, 8, RT_T_WILL, RT_NONE, s_willchase3
-            SetState s_willchase3, 0, SPR_WILL_W3, 10, RT_T_WILL, RT_NONE, s_willchase3s
-            SetState s_willchase3s, 0, SPR_WILL_W3, 3, RT_NONE, RT_NONE, s_willchase4
-            SetState s_willchase4, 0, SPR_WILL_W4, 8, RT_T_WILL, RT_NONE, s_willchase1
-            SetState s_willdeathcam, 0, SPR_WILL_W1, 1, RT_NONE, RT_NONE, s_willdie1
-            SetState s_willdie1, 0, SPR_WILL_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_willdie2
-            SetState s_willdie2, 0, SPR_WILL_W1, 10, RT_NONE, RT_NONE, s_willdie3
-            SetState s_willdie3, 0, SPR_WILL_DIE1, 10, RT_NONE, RT_NONE, s_willdie4
-            SetState s_willdie4, 0, SPR_WILL_DIE2, 10, RT_NONE, RT_NONE, s_willdie5
-            SetState s_willdie5, 0, SPR_WILL_DIE3, 10, RT_NONE, RT_NONE, s_willdie6
-            SetState s_willdie6, 0, SPR_WILL_DEAD, 20, RT_NONE, RT_NONE, s_willdie6
-            SetState s_willshoot1, 0, SPR_WILL_SHOOT1, 30, RT_NONE, RT_NONE, s_willshoot2
-            SetState s_willshoot2, 0, SPR_WILL_SHOOT2, 10, RT_NONE, RT_T_LAUNCH, s_willshoot3
-            SetState s_willshoot3, 0, SPR_WILL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_willshoot4
-            SetState s_willshoot4, 0, SPR_WILL_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_willshoot5
-            SetState s_willshoot5, 0, SPR_WILL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_willshoot6
-            SetState s_willshoot6, 0, SPR_WILL_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_willchase1
-            SetState s_deathstand, 0, SPR_DEATH_W1, 0, RT_T_STAND, RT_NONE, s_deathstand
-            SetState s_deathchase1, 0, SPR_DEATH_W1, 10, RT_T_WILL, RT_NONE, s_deathchase1s
-            SetState s_deathchase1s, 0, SPR_DEATH_W1, 3, RT_NONE, RT_NONE, s_deathchase2
-            SetState s_deathchase2, 0, SPR_DEATH_W2, 8, RT_T_WILL, RT_NONE, s_deathchase3
-            SetState s_deathchase3, 0, SPR_DEATH_W3, 10, RT_T_WILL, RT_NONE, s_deathchase3s
-            SetState s_deathchase3s, 0, SPR_DEATH_W3, 3, RT_NONE, RT_NONE, s_deathchase4
-            SetState s_deathchase4, 0, SPR_DEATH_W4, 8, RT_T_WILL, RT_NONE, s_deathchase1
-            SetState s_deathdeathcam, 0, SPR_DEATH_W1, 1, RT_NONE, RT_NONE, s_deathdie1
-            SetState s_deathdie1, 0, SPR_DEATH_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_deathdie2
-            SetState s_deathdie2, 0, SPR_DEATH_W1, 10, RT_NONE, RT_NONE, s_deathdie3
-            SetState s_deathdie3, 0, SPR_DEATH_DIE1, 10, RT_NONE, RT_NONE, s_deathdie4
-            SetState s_deathdie4, 0, SPR_DEATH_DIE2, 10, RT_NONE, RT_NONE, s_deathdie5
-            SetState s_deathdie5, 0, SPR_DEATH_DIE3, 10, RT_NONE, RT_NONE, s_deathdie6
-            SetState s_deathdie6, 0, SPR_DEATH_DIE4, 10, RT_NONE, RT_NONE, s_deathdie7
-            SetState s_deathdie7, 0, SPR_DEATH_DIE5, 10, RT_NONE, RT_NONE, s_deathdie8
-            SetState s_deathdie8, 0, SPR_DEATH_DIE6, 10, RT_NONE, RT_NONE, s_deathdie9
-            SetState s_deathdie9, 0, SPR_DEATH_DEAD, 0, RT_NONE, RT_NONE, s_deathdie9
-            SetState s_deathshoot1, 0, SPR_DEATH_SHOOT1, 30, RT_NONE, RT_NONE, s_deathshoot2
-            SetState s_deathshoot2, 0, SPR_DEATH_SHOOT2, 10, RT_NONE, RT_T_LAUNCH, s_deathshoot3
-            SetState s_deathshoot3, 0, SPR_DEATH_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_deathshoot4
-            SetState s_deathshoot4, 0, SPR_DEATH_SHOOT3, 10, RT_NONE, RT_T_LAUNCH, s_deathshoot5
-            SetState s_deathshoot5, 0, SPR_DEATH_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_deathchase1
-            SetState s_angelstand, 0, SPR_ANGEL_W1, 0, RT_T_STAND, RT_NONE, s_angelstand
-            SetState s_angelchase1, 0, SPR_ANGEL_W1, 10, RT_T_WILL, RT_NONE, s_angelchase1s
-            SetState s_angelchase1s, 0, SPR_ANGEL_W1, 3, RT_NONE, RT_NONE, s_angelchase2
-            SetState s_angelchase2, 0, SPR_ANGEL_W2, 8, RT_T_WILL, RT_NONE, s_angelchase3
-            SetState s_angelchase3, 0, SPR_ANGEL_W3, 10, RT_T_WILL, RT_NONE, s_angelchase3s
-            SetState s_angelchase3s, 0, SPR_ANGEL_W3, 3, RT_NONE, RT_NONE, s_angelchase4
-            SetState s_angelchase4, 0, SPR_ANGEL_W4, 8, RT_T_WILL, RT_NONE, s_angelchase1
-            SetState s_angeldie1, 0, SPR_ANGEL_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_angeldie11
-            SetState s_angeldie11, 0, SPR_ANGEL_W1, 1, RT_NONE, RT_NONE, s_angeldie2
-            SetState s_angeldie2, 0, SPR_ANGEL_DIE1, 10, RT_NONE, RT_A_SLURPIE, s_angeldie3
-            SetState s_angeldie3, 0, SPR_ANGEL_DIE2, 10, RT_NONE, RT_NONE, s_angeldie4
-            SetState s_angeldie4, 0, SPR_ANGEL_DIE3, 10, RT_NONE, RT_NONE, s_angeldie5
-            SetState s_angeldie5, 0, SPR_ANGEL_DIE4, 10, RT_NONE, RT_NONE, s_angeldie6
-            SetState s_angeldie6, 0, SPR_ANGEL_DIE5, 10, RT_NONE, RT_NONE, s_angeldie7
-            SetState s_angeldie7, 0, SPR_ANGEL_DIE6, 10, RT_NONE, RT_NONE, s_angeldie8
-            SetState s_angeldie8, 0, SPR_ANGEL_DIE7, 10, RT_NONE, RT_NONE, s_angeldie9
-            SetState s_angeldie9, 0, SPR_ANGEL_DEAD, 130, RT_NONE, RT_A_VICTORY, s_angeldie9
-            SetState s_angelshoot1, 0, SPR_ANGEL_SHOOT1, 10, RT_NONE, RT_A_STARTATTACK, s_angelshoot2
-            SetState s_angelshoot2, 0, SPR_ANGEL_SHOOT2, 20, RT_NONE, RT_T_LAUNCH, s_angelshoot3
-            SetState s_angelshoot3, 0, SPR_ANGEL_SHOOT1, 10, RT_NONE, RT_A_RELAUNCH, s_angelshoot2
-            SetState s_angeltired, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired2
-            SetState s_angeltired2, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired3
-            SetState s_angeltired3, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired4
-            SetState s_angeltired4, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired5
-            SetState s_angeltired5, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired6
-            SetState s_angeltired6, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired7
-            SetState s_angeltired7, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angelchase1
-            SetState s_spark1, 0, SPR_SPARK1, 6, RT_T_PROJECTILE, RT_NONE, s_spark2
-            SetState s_spark2, 0, SPR_SPARK2, 6, RT_T_PROJECTILE, RT_NONE, s_spark3
-            SetState s_spark3, 0, SPR_SPARK3, 6, RT_T_PROJECTILE, RT_NONE, s_spark4
-            SetState s_spark4, 0, SPR_SPARK4, 6, RT_T_PROJECTILE, RT_NONE, s_spark1
-            SetState s_spectrewait1, 0, SPR_SPECTRE_W1, 10, RT_T_STAND, RT_NONE, s_spectrewait2
-            SetState s_spectrewait2, 0, SPR_SPECTRE_W2, 10, RT_T_STAND, RT_NONE, s_spectrewait3
-            SetState s_spectrewait3, 0, SPR_SPECTRE_W3, 10, RT_T_STAND, RT_NONE, s_spectrewait4
-            SetState s_spectrewait4, 0, SPR_SPECTRE_W4, 10, RT_T_STAND, RT_NONE, s_spectrewait1
-            SetState s_spectrechase1, 0, SPR_SPECTRE_W1, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase2
-            SetState s_spectrechase2, 0, SPR_SPECTRE_W2, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase3
-            SetState s_spectrechase3, 0, SPR_SPECTRE_W3, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase4
-            SetState s_spectrechase4, 0, SPR_SPECTRE_W4, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase1
-            SetState s_spectredie1, 0, SPR_SPECTRE_F1, 10, RT_NONE, RT_NONE, s_spectredie2
-            SetState s_spectredie2, 0, SPR_SPECTRE_F2, 10, RT_NONE, RT_NONE, s_spectredie3
-            SetState s_spectredie3, 0, SPR_SPECTRE_F3, 10, RT_NONE, RT_NONE, s_spectredie4
-            SetState s_spectredie4, 0, SPR_SPECTRE_F4, 300, RT_NONE, RT_NONE, s_spectrewake
-            SetState s_spectrewake, 0, SPR_SPECTRE_F4, 10, RT_NONE, RT_A_DORMANT, s_spectrewake
+                SetState s_transstand, 0, SPR_TRANS_W1, 0, RT_T_STAND, RT_NONE, s_transstand
+                SetState s_transchase1, 0, SPR_TRANS_W1, 10, RT_T_CHASE, RT_NONE, s_transchase1s
+                SetState s_transchase1s, 0, SPR_TRANS_W1, 3, RT_NONE, RT_NONE, s_transchase2
+                SetState s_transchase2, 0, SPR_TRANS_W2, 8, RT_T_CHASE, RT_NONE, s_transchase3
+                SetState s_transchase3, 0, SPR_TRANS_W3, 10, RT_T_CHASE, RT_NONE, s_transchase3s
+                SetState s_transchase3s, 0, SPR_TRANS_W3, 3, RT_NONE, RT_NONE, s_transchase4
+                SetState s_transchase4, 0, SPR_TRANS_W4, 8, RT_T_CHASE, RT_NONE, s_transchase1
+                SetState s_transdie0, 0, SPR_TRANS_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_transdie01
+                SetState s_transdie01, 0, SPR_TRANS_W1, 1, RT_NONE, RT_NONE, s_transdie1
+                SetState s_transdie1, 0, SPR_TRANS_DIE1, 15, RT_NONE, RT_NONE, s_transdie2
+                SetState s_transdie2, 0, SPR_TRANS_DIE2, 15, RT_NONE, RT_NONE, s_transdie3
+                SetState s_transdie3, 0, SPR_TRANS_DIE3, 15, RT_NONE, RT_NONE, s_transdie4
+                SetState s_transdie4, 0, SPR_TRANS_DEAD, 0, RT_NONE, RT_NONE, s_transdie4
+                SetState s_transshoot1, 0, SPR_TRANS_SHOOT1, 30, RT_NONE, RT_NONE, s_transshoot2
+                SetState s_transshoot2, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot3
+                SetState s_transshoot3, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot4
+                SetState s_transshoot4, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot5
+                SetState s_transshoot5, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot6
+                SetState s_transshoot6, 0, SPR_TRANS_SHOOT2, 10, RT_NONE, RT_T_SHOOT, s_transshoot7
+                SetState s_transshoot7, 0, SPR_TRANS_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_transshoot8
+                SetState s_transshoot8, 0, SPR_TRANS_SHOOT1, 10, RT_NONE, RT_NONE, s_transchase1
+                SetState s_uberstand, 0, SPR_UBER_W1, 0, RT_T_STAND, RT_NONE, s_uberstand
+                SetState s_uberchase1, 0, SPR_UBER_W1, 10, RT_T_CHASE, RT_NONE, s_uberchase1s
+                SetState s_uberchase1s, 0, SPR_UBER_W1, 3, RT_NONE, RT_NONE, s_uberchase2
+                SetState s_uberchase2, 0, SPR_UBER_W2, 8, RT_T_CHASE, RT_NONE, s_uberchase3
+                SetState s_uberchase3, 0, SPR_UBER_W3, 10, RT_T_CHASE, RT_NONE, s_uberchase3s
+                SetState s_uberchase3s, 0, SPR_UBER_W3, 3, RT_NONE, RT_NONE, s_uberchase4
+                SetState s_uberchase4, 0, SPR_UBER_W4, 8, RT_T_CHASE, RT_NONE, s_uberchase1
+                SetState s_uberdie0, 0, SPR_UBER_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_uberdie01
+                SetState s_uberdie01, 0, SPR_UBER_W1, 1, RT_NONE, RT_NONE, s_uberdie1
+                SetState s_uberdie1, 0, SPR_UBER_DIE1, 15, RT_NONE, RT_NONE, s_uberdie2
+                SetState s_uberdie2, 0, SPR_UBER_DIE2, 15, RT_NONE, RT_NONE, s_uberdie3
+                SetState s_uberdie3, 0, SPR_UBER_DIE3, 15, RT_NONE, RT_NONE, s_uberdie4
+                SetState s_uberdie4, 0, SPR_UBER_DIE4, 15, RT_NONE, RT_NONE, s_uberdie5
+                SetState s_uberdie5, 0, SPR_UBER_DEAD, 0, RT_NONE, RT_NONE, s_uberdie5
+                SetState s_ubershoot1, 0, SPR_UBER_SHOOT1, 30, RT_NONE, RT_NONE, s_ubershoot2
+                SetState s_ubershoot2, 0, SPR_UBER_SHOOT2, 12, RT_NONE, RT_T_USHOOT, s_ubershoot3
+                SetState s_ubershoot3, 0, SPR_UBER_SHOOT3, 12, RT_NONE, RT_T_USHOOT, s_ubershoot4
+                SetState s_ubershoot4, 0, SPR_UBER_SHOOT4, 12, RT_NONE, RT_T_USHOOT, s_ubershoot5
+                SetState s_ubershoot5, 0, SPR_UBER_SHOOT3, 12, RT_NONE, RT_T_USHOOT, s_ubershoot6
+                SetState s_ubershoot6, 0, SPR_UBER_SHOOT2, 12, RT_NONE, RT_T_USHOOT, s_ubershoot7
+                SetState s_ubershoot7, 0, SPR_UBER_SHOOT1, 12, RT_NONE, RT_NONE, s_uberchase1
+                SetState s_willstand, 0, SPR_WILL_W1, 0, RT_T_STAND, RT_NONE, s_willstand
+                SetState s_willchase1, 0, SPR_WILL_W1, 10, RT_T_WILL, RT_NONE, s_willchase1s
+                SetState s_willchase1s, 0, SPR_WILL_W1, 3, RT_NONE, RT_NONE, s_willchase2
+                SetState s_willchase2, 0, SPR_WILL_W2, 8, RT_T_WILL, RT_NONE, s_willchase3
+                SetState s_willchase3, 0, SPR_WILL_W3, 10, RT_T_WILL, RT_NONE, s_willchase3s
+                SetState s_willchase3s, 0, SPR_WILL_W3, 3, RT_NONE, RT_NONE, s_willchase4
+                SetState s_willchase4, 0, SPR_WILL_W4, 8, RT_T_WILL, RT_NONE, s_willchase1
+                SetState s_willdeathcam, 0, SPR_WILL_W1, 1, RT_NONE, RT_NONE, s_willdie1
+                SetState s_willdie1, 0, SPR_WILL_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_willdie2
+                SetState s_willdie2, 0, SPR_WILL_W1, 10, RT_NONE, RT_NONE, s_willdie3
+                SetState s_willdie3, 0, SPR_WILL_DIE1, 10, RT_NONE, RT_NONE, s_willdie4
+                SetState s_willdie4, 0, SPR_WILL_DIE2, 10, RT_NONE, RT_NONE, s_willdie5
+                SetState s_willdie5, 0, SPR_WILL_DIE3, 10, RT_NONE, RT_NONE, s_willdie6
+                SetState s_willdie6, 0, SPR_WILL_DEAD, 20, RT_NONE, RT_NONE, s_willdie6
+                SetState s_willshoot1, 0, SPR_WILL_SHOOT1, 30, RT_NONE, RT_NONE, s_willshoot2
+                SetState s_willshoot2, 0, SPR_WILL_SHOOT2, 10, RT_NONE, RT_T_LAUNCH, s_willshoot3
+                SetState s_willshoot3, 0, SPR_WILL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_willshoot4
+                SetState s_willshoot4, 0, SPR_WILL_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_willshoot5
+                SetState s_willshoot5, 0, SPR_WILL_SHOOT3, 10, RT_NONE, RT_T_SHOOT, s_willshoot6
+                SetState s_willshoot6, 0, SPR_WILL_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_willchase1
+                SetState s_deathstand, 0, SPR_DEATH_W1, 0, RT_T_STAND, RT_NONE, s_deathstand
+                SetState s_deathchase1, 0, SPR_DEATH_W1, 10, RT_T_WILL, RT_NONE, s_deathchase1s
+                SetState s_deathchase1s, 0, SPR_DEATH_W1, 3, RT_NONE, RT_NONE, s_deathchase2
+                SetState s_deathchase2, 0, SPR_DEATH_W2, 8, RT_T_WILL, RT_NONE, s_deathchase3
+                SetState s_deathchase3, 0, SPR_DEATH_W3, 10, RT_T_WILL, RT_NONE, s_deathchase3s
+                SetState s_deathchase3s, 0, SPR_DEATH_W3, 3, RT_NONE, RT_NONE, s_deathchase4
+                SetState s_deathchase4, 0, SPR_DEATH_W4, 8, RT_T_WILL, RT_NONE, s_deathchase1
+                SetState s_deathdeathcam, 0, SPR_DEATH_W1, 1, RT_NONE, RT_NONE, s_deathdie1
+                SetState s_deathdie1, 0, SPR_DEATH_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_deathdie2
+                SetState s_deathdie2, 0, SPR_DEATH_W1, 10, RT_NONE, RT_NONE, s_deathdie3
+                SetState s_deathdie3, 0, SPR_DEATH_DIE1, 10, RT_NONE, RT_NONE, s_deathdie4
+                SetState s_deathdie4, 0, SPR_DEATH_DIE2, 10, RT_NONE, RT_NONE, s_deathdie5
+                SetState s_deathdie5, 0, SPR_DEATH_DIE3, 10, RT_NONE, RT_NONE, s_deathdie6
+                SetState s_deathdie6, 0, SPR_DEATH_DIE4, 10, RT_NONE, RT_NONE, s_deathdie7
+                SetState s_deathdie7, 0, SPR_DEATH_DIE5, 10, RT_NONE, RT_NONE, s_deathdie8
+                SetState s_deathdie8, 0, SPR_DEATH_DIE6, 10, RT_NONE, RT_NONE, s_deathdie9
+                SetState s_deathdie9, 0, SPR_DEATH_DEAD, 0, RT_NONE, RT_NONE, s_deathdie9
+                SetState s_deathshoot1, 0, SPR_DEATH_SHOOT1, 30, RT_NONE, RT_NONE, s_deathshoot2
+                SetState s_deathshoot2, 0, SPR_DEATH_SHOOT2, 10, RT_NONE, RT_T_LAUNCH, s_deathshoot3
+                SetState s_deathshoot3, 0, SPR_DEATH_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_deathshoot4
+                SetState s_deathshoot4, 0, SPR_DEATH_SHOOT3, 10, RT_NONE, RT_T_LAUNCH, s_deathshoot5
+                SetState s_deathshoot5, 0, SPR_DEATH_SHOOT4, 10, RT_NONE, RT_T_SHOOT, s_deathchase1
+                SetState s_angelstand, 0, SPR_ANGEL_W1, 0, RT_T_STAND, RT_NONE, s_angelstand
+                SetState s_angelchase1, 0, SPR_ANGEL_W1, 10, RT_T_WILL, RT_NONE, s_angelchase1s
+                SetState s_angelchase1s, 0, SPR_ANGEL_W1, 3, RT_NONE, RT_NONE, s_angelchase2
+                SetState s_angelchase2, 0, SPR_ANGEL_W2, 8, RT_T_WILL, RT_NONE, s_angelchase3
+                SetState s_angelchase3, 0, SPR_ANGEL_W3, 10, RT_T_WILL, RT_NONE, s_angelchase3s
+                SetState s_angelchase3s, 0, SPR_ANGEL_W3, 3, RT_NONE, RT_NONE, s_angelchase4
+                SetState s_angelchase4, 0, SPR_ANGEL_W4, 8, RT_T_WILL, RT_NONE, s_angelchase1
+                SetState s_angeldie1, 0, SPR_ANGEL_W1, 1, RT_NONE, RT_A_DEATHSCREAM, s_angeldie11
+                SetState s_angeldie11, 0, SPR_ANGEL_W1, 1, RT_NONE, RT_NONE, s_angeldie2
+                SetState s_angeldie2, 0, SPR_ANGEL_DIE1, 10, RT_NONE, RT_A_SLURPIE, s_angeldie3
+                SetState s_angeldie3, 0, SPR_ANGEL_DIE2, 10, RT_NONE, RT_NONE, s_angeldie4
+                SetState s_angeldie4, 0, SPR_ANGEL_DIE3, 10, RT_NONE, RT_NONE, s_angeldie5
+                SetState s_angeldie5, 0, SPR_ANGEL_DIE4, 10, RT_NONE, RT_NONE, s_angeldie6
+                SetState s_angeldie6, 0, SPR_ANGEL_DIE5, 10, RT_NONE, RT_NONE, s_angeldie7
+                SetState s_angeldie7, 0, SPR_ANGEL_DIE6, 10, RT_NONE, RT_NONE, s_angeldie8
+                SetState s_angeldie8, 0, SPR_ANGEL_DIE7, 10, RT_NONE, RT_NONE, s_angeldie9
+                SetState s_angeldie9, 0, SPR_ANGEL_DEAD, 130, RT_NONE, RT_A_VICTORY, s_angeldie9
+                SetState s_angelshoot1, 0, SPR_ANGEL_SHOOT1, 10, RT_NONE, RT_A_STARTATTACK, s_angelshoot2
+                SetState s_angelshoot2, 0, SPR_ANGEL_SHOOT2, 20, RT_NONE, RT_T_LAUNCH, s_angelshoot3
+                SetState s_angelshoot3, 0, SPR_ANGEL_SHOOT1, 10, RT_NONE, RT_A_RELAUNCH, s_angelshoot2
+                SetState s_angeltired, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired2
+                SetState s_angeltired2, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired3
+                SetState s_angeltired3, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired4
+                SetState s_angeltired4, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired5
+                SetState s_angeltired5, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angeltired6
+                SetState s_angeltired6, 0, SPR_ANGEL_TIRED2, 40, RT_NONE, RT_NONE, s_angeltired7
+                SetState s_angeltired7, 0, SPR_ANGEL_TIRED1, 40, RT_NONE, RT_A_BREATHING, s_angelchase1
+                SetState s_spark1, 0, SPR_SPARK1, 6, RT_T_PROJECTILE, RT_NONE, s_spark2
+                SetState s_spark2, 0, SPR_SPARK2, 6, RT_T_PROJECTILE, RT_NONE, s_spark3
+                SetState s_spark3, 0, SPR_SPARK3, 6, RT_T_PROJECTILE, RT_NONE, s_spark4
+                SetState s_spark4, 0, SPR_SPARK4, 6, RT_T_PROJECTILE, RT_NONE, s_spark1
+                SetState s_spectrewait1, 0, SPR_SPECTRE_W1, 10, RT_T_STAND, RT_NONE, s_spectrewait2
+                SetState s_spectrewait2, 0, SPR_SPECTRE_W2, 10, RT_T_STAND, RT_NONE, s_spectrewait3
+                SetState s_spectrewait3, 0, SPR_SPECTRE_W3, 10, RT_T_STAND, RT_NONE, s_spectrewait4
+                SetState s_spectrewait4, 0, SPR_SPECTRE_W4, 10, RT_T_STAND, RT_NONE, s_spectrewait1
+                SetState s_spectrechase1, 0, SPR_SPECTRE_W1, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase2
+                SetState s_spectrechase2, 0, SPR_SPECTRE_W2, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase3
+                SetState s_spectrechase3, 0, SPR_SPECTRE_W3, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase4
+                SetState s_spectrechase4, 0, SPR_SPECTRE_W4, 10, RT_T_GHOSTS, RT_NONE, s_spectrechase1
+                SetState s_spectredie1, 0, SPR_SPECTRE_F1, 10, RT_NONE, RT_NONE, s_spectredie2
+                SetState s_spectredie2, 0, SPR_SPECTRE_F2, 10, RT_NONE, RT_NONE, s_spectredie3
+                SetState s_spectredie3, 0, SPR_SPECTRE_F3, 10, RT_NONE, RT_NONE, s_spectredie4
+                SetState s_spectredie4, 0, SPR_SPECTRE_F4, 300, RT_NONE, RT_NONE, s_spectrewake
+                SetState s_spectrewake, 0, SPR_SPECTRE_F4, 10, RT_NONE, RT_A_DORMANT, s_spectrewake
         $End If
         $If SPEAR = UNDEFINED Then
             SetState s_schabbstand, 0, SPR_SCHABB_W1, 0, RT_T_STAND, RT_NONE, s_schabbstand
@@ -1679,4 +1679,4 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
         End Select
     End Sub
 
-$EndIf
+$End If

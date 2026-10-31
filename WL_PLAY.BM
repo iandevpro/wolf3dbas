@@ -709,4 +709,4 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         If playstate <> ex_died Then FinishPaletteShifts
     End Sub
 
-$EndIf
+$End If

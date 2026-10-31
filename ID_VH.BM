@@ -191,5 +191,5 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
         ' #define VW_Vlin(y,z,x,c)  VL_Vlin(x,y,(z)-(y)+1,c)
         VL_Vlin x, y1, y2 - y1 + 1, color_bar
     End Sub
-'$INCLUDE:'ID_VL.BM'
+    '$INCLUDE:'ID_VL.BM'
 $End If

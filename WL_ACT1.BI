@@ -43,7 +43,7 @@ $If INCLUDE_WL_ACT1_BI = UNDEFINED Then
     $If SPEAR = UNDEFINED Then
         StatInfo SPR_STAT_15, dressing, statn ' Kitchen stuff   "
     $Else
-        StatInfo SPR_STAT_15, block, statn ' Gibs!
+            StatInfo SPR_STAT_15, block, statn ' Gibs!
     $End If
     '
     ' NEW PAGE
@@ -84,7 +84,7 @@ $If INCLUDE_WL_ACT1_BI = UNDEFINED Then
     $If SPEAR = UNDEFINED Then
         StatInfo SPR_STAT_40, block, statn ' Call Apogee          spr7v
     $Else
-        StatInfo SPR_STAT_40, dressing, statn ' Red light
+            StatInfo SPR_STAT_40, dressing, statn ' Red light
     $End If
     '
     ' NEW PAGE
@@ -95,7 +95,7 @@ $If INCLUDE_WL_ACT1_BI = UNDEFINED Then
     $If SPEAR = UNDEFINED Then
         StatInfo SPR_STAT_44, dressing, statn ' pots            "
     $Else
-        StatInfo SPR_STAT_44, block, statn ' Gibs!
+            StatInfo SPR_STAT_44, block, statn ' Gibs!
     $End If
     StatInfo SPR_STAT_45, block, statn ' stove           " (SOD:gibs)
     StatInfo SPR_STAT_46, block, statn ' spears          " (SOD:gibs)
@@ -104,10 +104,10 @@ $If INCLUDE_WL_ACT1_BI = UNDEFINED Then
     ' NEW PAGE
     '
     $If SPEAR = DEFINED Then
-        StatInfo SPR_STAT_48, block, statn ' marble pillar
-        StatInfo SPR_STAT_49, bo_25clip, statn ' bonus 25 clip
-        StatInfo SPR_STAT_50, block, statn ' truck
-        StatInfo SPR_STAT_51, bo_spear, statn ' SPEAR OF DESTINY!
+            StatInfo SPR_STAT_48, block, statn ' marble pillar
+            StatInfo SPR_STAT_49, bo_25clip, statn ' bonus 25 clip
+            StatInfo SPR_STAT_50, block, statn ' truck
+            StatInfo SPR_STAT_51, bo_spear, statn ' SPEAR OF DESTINY!
     $End If
 
     StatInfo SPR_STAT_26, bo_clip2, statn ' Clip            "

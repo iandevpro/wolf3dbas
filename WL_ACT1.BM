@@ -568,4 +568,4 @@ $If INCLUDE_WL_ACT1_BM = UNDEFINED Then
         pwallpos = (pwallstate \ 2) And 63
     End Sub
 
-$EndIf
+$End If

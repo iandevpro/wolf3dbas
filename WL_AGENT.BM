@@ -231,10 +231,10 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         ' MAKE BJ'S EYES BUG IF MAJOR DAMAGE!
         '
         $If SPEAR = DEFINED Then
-            If pts > 30 And gamestate.health <> 0 And Not godmode Then
+                If pts > 30 And gamestate.health <> 0 And Not godmode Then
                 StatusDrawPic 17, 4, BJOUCHPIC
                 facecount = 0
-            End If
+                End If
         $End If
     End Sub
 
@@ -615,15 +615,15 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
     Function GetAmmoBox% ()
         GetAmmoBox% = TRUE
         $If SPEAR = DEFINED Then
-            Dim played As Integer
+                Dim played As Integer
 
-            If gamestate.ammo = 99 Then
+                If gamestate.ammo = 99 Then
                 GetAmmoBox% = FALSE
                 Exit Function
-            End If
+                End If
 
-            played = SD_PlaySound(GETAMMOBOXSND)
-            GiveAmmo 25
+                played = SD_PlaySound(GETAMMOBOXSND)
+                GiveAmmo 25
         $End If
     End Function
 
@@ -976,4 +976,4 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         InitAreas
     End Sub
 
-$EndIf
+$End If

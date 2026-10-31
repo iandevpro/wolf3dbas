@@ -514,7 +514,7 @@ Commit 26f9f95.
   - Not compared on screen with DOSBox-X. The end-of-data deaths are strong evidence; the end scores above can be checked there.
 
 ## 2026-10-30: Step 6k, config and save games
-Not committed yet.
+Commit 4a7657f.
 
 - **What works:** settings and high scores survive a restart through CONFIG.WL6. The Save / Load Game menus save and load real games, F8 / F9 quick save and load work, and a save game from the DOS version is refused with a message. That completes step 6: the WL6 game is fully playable.
 - **`ReadConfig` / `WriteConfig` (WOLF3D.BAS):**
@@ -539,3 +539,21 @@ Not committed yet.
   - The WL_DEBUG keys (Tab + letter with the "goobers" parameter) are not ported.
   - The ORDERSCREEN / ERRORSCREEN text screens on exit are not ported.
   - Note that the original config in the source tree turns all sound off. Delete CONFIG.WL6, or turn sound on in the Sound menu, to hear the game.
+
+## 2026-10-31: Formatting with the QB64 IDE (tools/ide_format.py)
+
+Not committed yet.
+
+- **Why:** the IDE formats only code it can parse. A .BI / .BM opened alone isn't a complete program, so the IDE stops at the first name from another file (red lines) and leaves the rest of the file unformatted.
+- **`tools/ide_format.py`:**
+  - `merge` builds one complete program in `%TEMP%\wolf3d-ide-format\WOLF3D_ALL.BAS`: WOLF3D.BAS with every include inlined once, at its first active occurrence, between `'@@IDEFMT` marker comments. It evaluates `$Let` / `$If` to know which includes are active.
+  - `ide` runs `tools/ide_roundtrip.ps1`: it opens the program in the IDE, presses Ctrl+End, then saves (Alt, F, S) and exits (Alt, F, X).
+  - `split` cuts the formatted program back into its files and writes only the ones that changed.
+  - `python tools/ide_format.py` runs all three steps (about 70 s).
+- **Result:** 22 files were reformatted. The changes:
+  - `$EndIf` became `$End If`, and the inactive `$If` branches (mostly Spear of Destiny) were re-indented. The IDE also flattens the `Case` bodies in those branches.
+  - Keyword and identifier case: `as` became `As`, `_CONTINUE` became `_Continue`, and `True`/`False` became `TRUE`/`FALSE`.
+  - The `()` was dropped from `Dim x() As ...` (these arrays are ReDim'd later).
+  - A second pass changed nothing, so the formatting is stable.
+- **IDE bug:** the formatter drops a unary minus before a hex literal (`-&H7FFF&` becomes `&H7FFF&`). It hit `CheckLine` in WL_STATE.BM, which now uses decimal `-32767`.
+- **Tested:** merge and split with no IDE pass reproduce all 47 files unchanged, and the merged program passes `qb64 -z`. After formatting, the game compiles and plays into E1M1.

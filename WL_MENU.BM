@@ -108,7 +108,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $If SPEAR = UNDEFINED Then
             VL_FadeOut 0, 255, 43, 0, 0, 10
         $Else
-            VL_FadeOut 0, 255, 0, 0, 51, 10
+                VL_FadeOut 0, 255, 0, 0, 51, 10
         $End If
     End Sub
 
@@ -182,7 +182,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                         $If SPEAR = UNDEFINED Then
                             HelpScreens ' TODO: BossKey for GOODTIMES
                         $Else
-                            ' TODO: BossKey
+                                ' TODO: BossKey
                         $End If
                     Case sc_F2
                         result = CP_SaveGame(0)
@@ -265,7 +265,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         VWB_DrawPic 84, 0, C_OPTIONSPIC
 
         $If SPANISH = DEFINED Then
-            DrawWindow MENU_X - 8, MENU_Y - 3, MENU_W + 8, MENU_H, BKGDCOLOR
+                DrawWindow MENU_X - 8, MENU_Y - 3, MENU_W + 8, MENU_H, BKGDCOLOR
         $Else
             DrawWindow MENU_X - 8, MENU_Y - 3, MENU_W, MENU_H, BKGDCOLOR
         $End If
@@ -275,14 +275,14 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         '
         If ingame Then
             $If SPANISH = DEFINED Then
-                MainMenu(mi_backtodemo).txt = STR_GAME
+                    MainMenu(mi_backtodemo).txt = STR_GAME
             $Else
                 MainMenu(mi_backtodemo).txt = Left$(STR_BD, 8) + STR_GAME
             $End If
             MainMenu(mi_backtodemo).active = 2
         Else
             $If SPANISH = DEFINED Then
-                MainMenu(mi_backtodemo).txt = STR_BD
+                    MainMenu(mi_backtodemo).txt = STR_BD
             $Else
                 MainMenu(mi_backtodemo).txt = Left$(STR_BD, 8) + STR_DEMO
             $End If
@@ -444,7 +444,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Dim r1 As Integer, r2 As Integer
 
         $If SPANISH = DEFINED Then
-            CP_ConfirmQuit% = Confirm(ENDGAMESTR)
+                CP_ConfirmQuit% = Confirm(ENDGAMESTR)
         $Else
             ' endStrings[US_RndT()&0x7+(US_RndT()&1)] - & binds weaker than +
             r1 = US_RndT
@@ -501,8 +501,8 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         fontnumber = 0
 
         $If SPEAR = DEFINED Then
-            ' TODO: UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
-            StartCPMusic XAWARD_MUS
+                ' TODO: UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+                StartCPMusic XAWARD_MUS
         $Else
             StartCPMusic ROSTER_MUS
         $End If
@@ -577,8 +577,8 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 MenuFadeOut ' goto firstpart
             Loop
         $Else
-            ' TODO: SPEAR new game (NEWGAME lumps, no episode selection)
-            Exit Sub
+                ' TODO: SPEAR new game (NEWGAME lumps, no episode selection)
+                Exit Sub
         $End If
 
         CP_ShootSnd
@@ -611,7 +611,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         PrintY = 2
         WindowX = 0
         $If SPANISH = DEFINED Then
-            US_CPrint "Cual episodio jugar?"
+                US_CPrint "Cual episodio jugar?"
         $Else
             US_CPrint "Which episode to play?"
         $End If
@@ -641,7 +641,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         PrintY = NM_Y - 32
 
         $If SPANISH = DEFINED Then
-            US_Print "Eres macho?"
+                US_Print "Eres macho?"
         $Else
             US_Print "How tough are you?"
         $End If
@@ -881,7 +881,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         ClearMScreen
         VWB_DrawPic 112, 184, C_MOUSELBACKPIC
         $If SPANISH = DEFINED Then
-            DrawWindow 10, 80, 300, 43, BKGDCOLOR
+                DrawWindow 10, 80, 300, 43, BKGDCOLOR
         $Else
             DrawWindow 10, 80, 300, 30, BKGDCOLOR
         $End If
@@ -894,11 +894,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
         SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
         $If SPANISH = DEFINED Then
-            PrintX = 14
-            PrintY = 95 + 13
-            US_Print STR_SLOW
-            PrintX = 252
-            US_Print STR_FAST
+                PrintX = 14
+                PrintY = 95 + 13
+                US_Print STR_SLOW
+                PrintX = 252
+                US_Print STR_FAST
         $Else
             PrintX = 14
             PrintY = 95
@@ -1408,22 +1408,22 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             VWB_Hlin 7, 32, y - 2, BORDCOLOR
             VWB_Hlin 7, 32, y + 13, BORDCOLOR
         $Else
-            VWB_Hlin 7, 32, y - 2, BORD2COLOR
-            VWB_Hlin 7, 32, y + 13, BORD2COLOR
+                VWB_Hlin 7, 32, y - 2, BORD2COLOR
+                VWB_Hlin 7, 32, y + 13, BORD2COLOR
         $End If
     End Sub
 
     ' Column headings of the customize screen (repeated 3 times in the original)
     Sub PrintCustHeadings ()
         $If SPANISH = DEFINED Then
-            PrintX = CST_START - 16
-            US_Print STR_CRUN
-            PrintX = CST_START - 16 + CST_SPC * 1
-            US_Print STR_COPEN
-            PrintX = CST_START - 16 + CST_SPC * 2
-            US_Print STR_CFIRE
-            PrintX = CST_START - 16 + CST_SPC * 3
-            US_Print STR_CSTRAFE + Chr$(10)
+                PrintX = CST_START - 16
+                US_Print STR_CRUN
+                PrintX = CST_START - 16 + CST_SPC * 1
+                US_Print STR_COPEN
+                PrintX = CST_START - 16 + CST_SPC * 2
+                US_Print STR_CFIRE
+                PrintX = CST_START - 16 + CST_SPC * 3
+                US_Print STR_CSTRAFE + Chr$(10)
         $Else
             PrintX = CST_START
             US_Print STR_CRUN
@@ -1498,14 +1498,14 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         '
         SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
         $If SPANISH = DEFINED Then
-            PrintX = 4
-            US_Print STR_LEFT
-            US_Print "/"
-            US_Print STR_RIGHT
-            US_Print "/"
-            US_Print STR_FRWD
-            US_Print "/"
-            US_Print STR_BKWD + Chr$(10)
+                PrintX = 4
+                US_Print STR_LEFT
+                US_Print "/"
+                US_Print STR_RIGHT
+                US_Print "/"
+                US_Print STR_FRWD
+                US_Print "/"
+                US_Print STR_BKWD + Chr$(10)
         $Else
             PrintX = CST_START
             US_Print STR_LEFT
@@ -2090,7 +2090,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Dim i As Integer, r1 As Integer, r2 As Integer, sure As Integer
 
         $If SPANISH = DEFINED Then
-            sure = Confirm(ENDGAMESTR)
+                sure = Confirm(ENDGAMESTR)
         $Else
             ' endStrings[US_RndT()&0x7+(US_RndT()&1)] - & binds weaker than +
             r1 = US_RndT
@@ -2166,7 +2166,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $If SPEAR = UNDEFINED Then
             CacheLump CONTROLS_LUMP_START, CONTROLS_LUMP_END
         $Else
-            ' TODO: CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+                ' TODO: CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
         $End If
 
         SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
@@ -2196,7 +2196,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $If SPEAR = UNDEFINED Then
             UnCacheLump CONTROLS_LUMP_START, CONTROLS_LUMP_END
         $Else
-            ' TODO: UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+                ' TODO: UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
         $End If
 
         fontnumber = 0
@@ -2342,9 +2342,9 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                     '
                     TicDelay 20
 
-                '
-                ' MOVE DOWN
-                '
+                    '
+                    ' MOVE DOWN
+                    '
                 Case dir_South
                     EraseGun item_i, items(), x, y, which
                     '
@@ -2576,7 +2576,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Dim yesKey As Integer
 
         $If SPANISH = DEFINED Then
-            yesKey = sc_S
+                yesKey = sc_S
         $Else
             yesKey = sc_Y
         $End If
@@ -2702,5 +2702,5 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         played = SD_PlaySound(SHOOTSND)
     End Sub
 
-'$INCLUDE: 'ID_VH.BM'
+    '$INCLUDE: 'ID_VH.BM'
 $End If

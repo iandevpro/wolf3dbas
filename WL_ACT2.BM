@@ -13,11 +13,11 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
     Sub A_Smoke (ob As Integer)
         GetNewActor
         $If SPEAR = DEFINED Then
-            If objlist(ob).obclass = hrocketobj Then
+                If objlist(ob).obclass = hrocketobj Then
                 objlist(newobj).state = s_hsmoke1
-            Else
+                Else
                 objlist(newobj).state = s_smoke1
-            End If
+                End If
         $Else
             objlist(newobj).state = s_smoke1
         $End If
@@ -96,8 +96,8 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
                 objlist(ob).state = s_boom1
             ElseIf objlist(ob).obclass = hrocketobj Then
                 $If SPEAR = DEFINED Then
-                    PlaySoundLocActor MISSILEHITSND, ob
-                    objlist(ob).state = s_hboom1
+                        PlaySoundLocActor MISSILEHITSND, ob
+                        objlist(ob).state = s_hboom1
                 $Else
                     objlist(ob).state = 0 ' mark for removal
                 $End If
@@ -251,7 +251,7 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
             $If SPEAR = UNDEFINED Then
                 secretmap = (mapon = 9)
             $Else
-                secretmap = (mapon = 18 Or mapon = 19)
+                    secretmap = (mapon = 18 Or mapon = 19)
             $End If
             If secretmap Then
                 If US_RndT = 0 Then
@@ -272,7 +272,7 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
                 $If UPLOAD = UNDEFINED Then
                     PlaySoundLocActor deathscreams(US_RndT Mod 8), ob
                 $Else
-                    PlaySoundLocActor deathscreams(US_RndT Mod 2), ob
+                        PlaySoundLocActor deathscreams(US_RndT Mod 2), ob
                 $End If
             Case officerobj
                 PlaySoundLocActor NEINSOVASSND, ob
@@ -309,20 +309,20 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
                     played = SD_PlaySound(ROSESND)
             End Select
         $Else
-            Select Case objlist(ob).obclass
+                Select Case objlist(ob).obclass
                 Case spectreobj
-                    played = SD_PlaySound(GHOSTFADESND)
+                played = SD_PlaySound(GHOSTFADESND)
                 Case angelobj
-                    played = SD_PlaySound(ANGELDEATHSND)
+                played = SD_PlaySound(ANGELDEATHSND)
                 Case transobj
-                    played = SD_PlaySound(TRANSDEATHSND)
+                played = SD_PlaySound(TRANSDEATHSND)
                 Case uberobj
-                    played = SD_PlaySound(UBERDEATHSND)
+                played = SD_PlaySound(UBERDEATHSND)
                 Case willobj
-                    played = SD_PlaySound(WILHELMDEATHSND)
+                played = SD_PlaySound(WILHELMDEATHSND)
                 Case deathobj
-                    played = SD_PlaySound(KNIGHTDEATHSND)
-            End Select
+                played = SD_PlaySound(KNIGHTDEATHSND)
+                End Select
         $End If
     End Sub
 
@@ -884,38 +884,38 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
             End Select
         End Sub
     $Else
-        ' TODO: the Spear of Destiny actors (trans, uber, will, death knight, angel, spectre);
-        ' the WL6 routines of the state dispatcher do nothing in Spear
-        Sub T_Schabb (ob As Integer)
-        End Sub
-        Sub T_SchabbThrow (ob As Integer)
-        End Sub
-        Sub T_Gift (ob As Integer)
-        End Sub
-        Sub T_GiftThrow (ob As Integer)
-        End Sub
-        Sub T_Fat (ob As Integer)
-        End Sub
-        Sub T_Fake (ob As Integer)
-        End Sub
-        Sub T_FakeFire (ob As Integer)
-        End Sub
-        Sub A_MechaSound (ob As Integer)
-        End Sub
-        Sub A_HitlerMorph (ob As Integer)
-        End Sub
-        Sub A_Slurpie (ob As Integer)
-        End Sub
-        Sub A_StartDeathCam (ob As Integer)
-        End Sub
-        Sub T_BJRun (ob As Integer)
-        End Sub
-        Sub T_BJJump (ob As Integer)
-        End Sub
-        Sub T_BJYell (ob As Integer)
-        End Sub
-        Sub T_BJDone (ob As Integer)
-        End Sub
+            ' TODO: the Spear of Destiny actors (trans, uber, will, death knight, angel, spectre);
+            ' the WL6 routines of the state dispatcher do nothing in Spear
+            Sub T_Schabb (ob As Integer)
+            End Sub
+            Sub T_SchabbThrow (ob As Integer)
+            End Sub
+            Sub T_Gift (ob As Integer)
+            End Sub
+            Sub T_GiftThrow (ob As Integer)
+            End Sub
+            Sub T_Fat (ob As Integer)
+            End Sub
+            Sub T_Fake (ob As Integer)
+            End Sub
+            Sub T_FakeFire (ob As Integer)
+            End Sub
+            Sub A_MechaSound (ob As Integer)
+            End Sub
+            Sub A_HitlerMorph (ob As Integer)
+            End Sub
+            Sub A_Slurpie (ob As Integer)
+            End Sub
+            Sub A_StartDeathCam (ob As Integer)
+            End Sub
+            Sub T_BJRun (ob As Integer)
+            End Sub
+            Sub T_BJJump (ob As Integer)
+            End Sub
+            Sub T_BJYell (ob As Integer)
+            End Sub
+            Sub T_BJDone (ob As Integer)
+            End Sub
     $End If
 
     '
@@ -1067,18 +1067,18 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
                     NewState ob, s_hitlershoot1
             End Select
         $Else
-            Select Case objlist(ob).obclass
+                Select Case objlist(ob).obclass
                 Case angelobj
-                    NewState ob, s_angelshoot1
+                NewState ob, s_angelshoot1
                 Case transobj
-                    NewState ob, s_transshoot1
+                NewState ob, s_transshoot1
                 Case uberobj
-                    NewState ob, s_ubershoot1
+                NewState ob, s_ubershoot1
                 Case willobj
-                    NewState ob, s_willshoot1
+                NewState ob, s_willshoot1
                 Case deathobj
-                    NewState ob, s_deathshoot1
-            End Select
+                NewState ob, s_deathshoot1
+                End Select
         $End If
     End Sub
 
@@ -1293,7 +1293,7 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
                     PlaySoundLocActor FLAMETHROWERSND, ob
             End Select
         $Else
-            PlaySoundLocActor NAZIFIRESND, ob
+                PlaySoundLocActor NAZIFIRESND, ob
         $End If
     End Sub
 
@@ -1323,4 +1323,4 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
         End If
     End Sub
 
-$EndIf
+$End If

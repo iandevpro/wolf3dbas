@@ -38,15 +38,15 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Dim Shared grhuffman(0 To 254) As huffnode ' Huffman table for graphics
     Dim Shared grstarts As _MEM ' Array of offsets in graphics file
     Dim Shared grhandle As Long ' Handle to graphics file
-    Dim Shared pictable(NUMPICS - 1) As pictabletype  ' Picture table
+    Dim Shared pictable(NUMPICS - 1) As pictabletype ' Picture table
     Dim Shared grsegs(0 To NUMCHUNKS - 1) As _Offset ' Pointers to cached graphics chunks
     ' _MEM blocks backing grsegs(), needed for size info and _MemFree (MM_GetPtr equivalent)
     Dim Shared grsegsMem(0 To NUMCHUNKS - 1) As _MEM
-    Dim Shared chunkcomplen As Long  ' Compressed chunk length
-    Dim Shared chunkexplen As Long  ' Expanded chunk length
+    Dim Shared chunkcomplen As Long ' Compressed chunk length
+    Dim Shared chunkexplen As Long ' Expanded chunk length
 
     ' Audio related variables
-    Dim Shared audiostarts As _MEM  ' Array of offsets in audio file
+    Dim Shared audiostarts As _MEM ' Array of offsets in audio file
     Dim Shared audiosegs(0 To NUMSNDCHUNKS - 1) As _Offset ' Array of pointers to audio segments
     ' _MEM blocks backing audiosegs(), needed for size info and _MemFree (MM_GetPtr equivalent)
     Dim Shared audiosegMem(0 To NUMSNDCHUNKS - 1) As _MEM
@@ -58,11 +58,11 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Dim Shared ca_levelnum As Integer
 
     ' Map related variables
-    Dim Shared tinf As _MEM  ' Pointer to tile info
+    Dim Shared tinf As _MEM ' Pointer to tile info
     ' unsigned _seg *mapsegs[MAPPLANES]: the expanded 64x64 planes, index y * 64 + x (farmapylookup[y] + x)
     Dim Shared mapsegs(0 To MAPPLANES - 1, 0 To 64 * 64 - 1) As _Unsigned Integer
     ' mapheaderseg is no longer needed as a pointer array
-    Dim Shared maphandle As Long  ' Handle to map file
+    Dim Shared maphandle As Long ' Handle to map file
 
     ' File name variables
     ' Declare AND initialize them here. In the original sources they were initialized in ID_CA.C
@@ -70,15 +70,15 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     '' gheadname[10]=GREXT"HEAD.",
     '' gfilename[10]=GREXT"GRAPH.",
     '' gdictname[10]=GREXT"DICT.",
-    Const mheadname="MAPHEAD."
-    Const mfilename="MAPTEMP."
-    Const aheadname="AUDIOHED."
-    Const afilename="AUDIOT."
-    Const gheadname="VGAHEAD."
-    Const gfilename="VGAGRAPH."
-    Const gdictname="VGADICT."
+    Const mheadname = "MAPHEAD."
+    Const mfilename = "MAPTEMP."
+    Const aheadname = "AUDIOHED."
+    Const afilename = "AUDIOT."
+    Const gheadname = "VGAHEAD."
+    Const gfilename = "VGAGRAPH."
+    Const gdictname = "VGADICT."
 
     ' Local variable in ID_CA.C, but global due to Shared here and unability to declare variable on top of ID_CA.BM
-    Dim Shared audiohandle as Long
+    Dim Shared audiohandle As Long
 
 $End If

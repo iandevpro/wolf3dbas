@@ -412,52 +412,52 @@ Sub InitDigiMap
             DigiMap(ROSESND) = 45 ' EPISODE 5 BOSS DIE
         $End If
     $Else
-        '
-        ' SPEAR OF DESTINY DIGISOUNDS
-        '
-        DigiMap(HALTSND) = 0
-        DigiMap(CLOSEDOORSND) = 2
-        DigiMap(OPENDOORSND) = 3
-        DigiMap(ATKMACHINEGUNSND) = 4
-        DigiMap(ATKPISTOLSND) = 5
-        DigiMap(ATKGATLINGSND) = 6
-        DigiMap(SCHUTZADSND) = 7
-        DigiMap(BOSSFIRESND) = 8
-        DigiMap(SSFIRESND) = 9
-        DigiMap(DEATHSCREAM1SND) = 10
-        DigiMap(DEATHSCREAM2SND) = 11
-        DigiMap(TAKEDAMAGESND) = 12
-        DigiMap(PUSHWALLSND) = 13
-        DigiMap(AHHHGSND) = 15
-        DigiMap(LEBENSND) = 16
-        DigiMap(NAZIFIRESND) = 17
-        DigiMap(SLURPIESND) = 18
-        DigiMap(LEVELDONESND) = 22
-        DigiMap(DEATHSCREAM4SND) = 23 ' AIIEEE
-        DigiMap(DEATHSCREAM3SND) = 23 ' DOUBLY-MAPPED!!!
-        DigiMap(DEATHSCREAM5SND) = 24 ' DEE-DEE
-        DigiMap(DEATHSCREAM6SND) = 25 ' FART
-        DigiMap(DEATHSCREAM7SND) = 26 ' GASP
-        DigiMap(DEATHSCREAM8SND) = 27 ' GUH-BOY!
-        DigiMap(DEATHSCREAM9SND) = 28 ' AH GEEZ!
-        DigiMap(GETGATLINGSND) = 38 ' Got Gat replacement
+            '
+            ' SPEAR OF DESTINY DIGISOUNDS
+            '
+            DigiMap(HALTSND) = 0
+            DigiMap(CLOSEDOORSND) = 2
+            DigiMap(OPENDOORSND) = 3
+            DigiMap(ATKMACHINEGUNSND) = 4
+            DigiMap(ATKPISTOLSND) = 5
+            DigiMap(ATKGATLINGSND) = 6
+            DigiMap(SCHUTZADSND) = 7
+            DigiMap(BOSSFIRESND) = 8
+            DigiMap(SSFIRESND) = 9
+            DigiMap(DEATHSCREAM1SND) = 10
+            DigiMap(DEATHSCREAM2SND) = 11
+            DigiMap(TAKEDAMAGESND) = 12
+            DigiMap(PUSHWALLSND) = 13
+            DigiMap(AHHHGSND) = 15
+            DigiMap(LEBENSND) = 16
+            DigiMap(NAZIFIRESND) = 17
+            DigiMap(SLURPIESND) = 18
+            DigiMap(LEVELDONESND) = 22
+            DigiMap(DEATHSCREAM4SND) = 23 ' AIIEEE
+            DigiMap(DEATHSCREAM3SND) = 23 ' DOUBLY-MAPPED!!!
+            DigiMap(DEATHSCREAM5SND) = 24 ' DEE-DEE
+            DigiMap(DEATHSCREAM6SND) = 25 ' FART
+            DigiMap(DEATHSCREAM7SND) = 26 ' GASP
+            DigiMap(DEATHSCREAM8SND) = 27 ' GUH-BOY!
+            DigiMap(DEATHSCREAM9SND) = 28 ' AH GEEZ!
+            DigiMap(GETGATLINGSND) = 38 ' Got Gat replacement
 
         $If SPEARDEMO = UNDEFINED Then
-            DigiMap(DOGBARKSND) = 1
-            DigiMap(DOGDEATHSND) = 14
-            DigiMap(SPIONSND) = 19
-            DigiMap(NEINSOVASSND) = 20
-            DigiMap(DOGATTACKSND) = 21
-            DigiMap(TRANSSIGHTSND) = 29 ' Trans Sight
-            DigiMap(TRANSDEATHSND) = 30 ' Trans Death
-            DigiMap(WILHELMSIGHTSND) = 31 ' Wilhelm Sight
-            DigiMap(WILHELMDEATHSND) = 32 ' Wilhelm Death
-            DigiMap(UBERDEATHSND) = 33 ' Uber Death
-            DigiMap(KNIGHTSIGHTSND) = 34 ' Death Knight Sight
-            DigiMap(KNIGHTDEATHSND) = 35 ' Death Knight Death
-            DigiMap(ANGELSIGHTSND) = 36 ' Angel Sight
-            DigiMap(ANGELDEATHSND) = 37 ' Angel Death
-            DigiMap(GETSPEARSND) = 39 ' Got Spear replacement
+                DigiMap(DOGBARKSND) = 1
+                DigiMap(DOGDEATHSND) = 14
+                DigiMap(SPIONSND) = 19
+                DigiMap(NEINSOVASSND) = 20
+                DigiMap(DOGATTACKSND) = 21
+                DigiMap(TRANSSIGHTSND) = 29 ' Trans Sight
+                DigiMap(TRANSDEATHSND) = 30 ' Trans Death
+                DigiMap(WILHELMSIGHTSND) = 31 ' Wilhelm Sight
+                DigiMap(WILHELMDEATHSND) = 32 ' Wilhelm Death
+                DigiMap(UBERDEATHSND) = 33 ' Uber Death
+                DigiMap(KNIGHTSIGHTSND) = 34 ' Death Knight Sight
+                DigiMap(KNIGHTDEATHSND) = 35 ' Death Knight Death
+                DigiMap(ANGELSIGHTSND) = 36 ' Angel Sight
+                DigiMap(ANGELDEATHSND) = 37 ' Angel Death
+                DigiMap(GETSPEARSND) = 39 ' Got Spear replacement
         $End If
     $End If
 End Sub
@@ -1093,7 +1093,7 @@ Sub DemoLoop
                     VW_UpdateScreen
                     VW_FadeIn
                 $Else
-                    ' TODO: SPEAR title (TITLEPALETTE, TITLE1PIC, TITLE2PIC)
+                        ' TODO: SPEAR title (TITLEPALETTE, TITLE1PIC, TITLE2PIC)
                 $End If
                 If IN_UserInput(TickBase * 15) Then Exit Do
                 VW_FadeOut
@@ -1121,7 +1121,7 @@ Sub DemoLoop
                 PlayDemo LastDemo Mod 4
                 LastDemo = LastDemo + 1
             $Else
-                PlayDemo 0
+                    PlayDemo 0
             $End If
 
             If playstate = ex_abort Then Exit Do

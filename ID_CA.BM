@@ -43,23 +43,23 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             Close #handle
             RLEWtag = _MemGet(tinf, tinf.OFFSET, _Unsigned Integer) ' ((mapfiletype _seg *)tinf)->RLEWtag
         $Else
-            ' Linked map header code would go here
-            ' For now, we'll just set up a basic structure
+                ' Linked map header code would go here
+                ' For now, we'll just set up a basic structure
 
-            ' TODO: probably need to remove this code, in the original
-            ' there was only 1 line
-            ' tinf = (byte _seg *)FP_SEG(&maphead);
-            tinf = _MemNew(4096) ' Arbitrary size for placeholder
-            If tinf.SIZE = 0 Then
+                ' TODO: probably need to remove this code, in the original
+                ' there was only 1 line
+                ' tinf = (byte _seg *)FP_SEG(&maphead);
+                tinf = _MemNew(4096) ' Arbitrary size for placeholder
+                If tinf.SIZE = 0 Then
                 CA_CannotOpen "Memory allocation failed"
-            End If
+                End If
         $End If
 
         ' Open the data file
         $If CARMACIZED = DEFINED Then
             fname = "GAMEMAPS." + extension
         $Else
-            fname = mfilename + extension
+                fname = mfilename + extension
         $End If
 
         maphandle = FreeFile
@@ -74,12 +74,12 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             ' +2 bytes: unsigned int RLEWtag on the start of maptypeinfo C struct
             ' *4: maptypeinfo->long headeroffset[100]
             position = _MemGet(tinf, tinf.OFFSET + 2 + i * 4, Long)
-            If position < 0 Then  ' -1 indicates sparse map
-                _CONTINUE
+            If position < 0 Then ' -1 indicates sparse map
+                _Continue
             End If
 
             ' Seek to map header and read fields into arrays
-            Seek #maphandle, position + 1  ' QB64 uses 1-based file positions
+            Seek #maphandle, position + 1 ' QB64 uses 1-based file positions
             Get #maphandle, , tempplanestart(0)
             Get #maphandle, , tempplanestart(1)
             Get #maphandle, , tempplanestart(2)
@@ -231,8 +231,8 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     Sub CA_CacheMap (mapnum As Integer)
         Dim position As Long, compressed As Long, expanded As Long
         Dim plane As Integer
-        Dim source() As _Unsigned _Byte
-        Dim buffer2seg() As _Unsigned Integer
+        Dim source As _Unsigned _Byte
+        Dim buffer2seg As _Unsigned Integer
         Dim size As Long
 
         mapon = mapnum
@@ -262,10 +262,10 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
                 CAL_CarmackExpand source(), 2, buffer2seg(), expanded
                 CA_RLEWexpand buffer2seg(), 1, plane, size, RLEWtag
             $Else
-                '
-                ' unRLEW, skipping expanded length
-                '
-                ' TODO: map files that are not carmackized (MAPTEMP)
+                    '
+                    ' unRLEW, skipping expanded length
+                    '
+                    ' TODO: map files that are not carmackized (MAPTEMP)
             $End If
         Next plane
     End Sub
@@ -281,18 +281,18 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim handle As Integer
         Dim compseg As _MEM, picseg As _MEM
         Dim i As Integer
-        Dim fileBytes() As _Unsigned _Byte
+        Dim fileBytes As _Unsigned _Byte
 
         ' GRHEADERLINKED - is not defined in the original C source code
         $If GRHEADERLINKED = DEFINED Then
-            ' GRHEADERLINKED - is not defined in the original C source code
-            ' can comment out the following section
-            ' ' Linked graphics header code would go here
-            ' ' For now, we'll just set up a basic structure
-            ' grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
-            ' If grstarts.SIZE = 0 Then
-            '     CA_CannotOpen "Memory allocation failed for graphics starts"
-            ' End If
+                ' GRHEADERLINKED - is not defined in the original C source code
+                ' can comment out the following section
+                ' ' Linked graphics header code would go here
+                ' ' For now, we'll just set up a basic structure
+                ' grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
+                ' If grstarts.SIZE = 0 Then
+                '     CA_CannotOpen "Memory allocation failed for graphics starts"
+                ' End If
         $Else
             ' Load ???dict.ext (huffman dictionary for graphics files)
             fname = gdictname + extension
@@ -339,7 +339,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         End If
 
         ' Load the pic and sprite headers into the arrays in the data segment
-        CAL_GetGrChunkLength STRUCTPIC  ' Position file pointer
+        CAL_GetGrChunkLength STRUCTPIC ' Position file pointer
         ' Print "chunkcomplen"; chunkcomplen
         compseg = _MemNew(chunkcomplen)
         If compseg.SIZE = 0 Then
@@ -353,7 +353,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
 
         ' Expand the data into pictable (NUMPICS pairs of width, height words)
         picseg = _MemNew(NUMPICS * Len(pictable(0)))
-        CAL_HuffExpand compseg, picseg, NUMPICS * Len(pictable(0)), grhuffman(), False
+        CAL_HuffExpand compseg, picseg, NUMPICS * Len(pictable(0)), grhuffman(), FALSE
         For i = 0 To NUMPICS - 1
             pictable(i).width = _MemGet(picseg, picseg.OFFSET + i * 4, Integer)
             pictable(i).height = _MemGet(picseg, picseg.OFFSET + i * 4 + 2, Integer)
@@ -393,20 +393,20 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
                 chunkPosition = -1
             End If
         $Else
-            ' 4-byte file positions
-            chunkPosition = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
+                ' 4-byte file positions
+                chunkPosition = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
         $End If
 
         ' Check if position is valid
         If chunkPosition < 0 Then
             Print "Error: Invalid chunk position for chunk"; chunk; "position:"; chunkPosition
-            chunkcomplen = 8192  ' Default size
-            chunkexplen = 8192   ' Default size
+            chunkcomplen = 8192 ' Default size
+            chunkexplen = 8192 ' Default size
             Return
         End If
 
         ' Seek to the chunk position
-        Seek #grhandle, chunkPosition + 1  ' QB64 uses 1-based file positions
+        Seek #grhandle, chunkPosition + 1 ' QB64 uses 1-based file positions
 
         ' Read the expanded length (first 4 bytes)
         Get #grhandle, , chunkexplen
@@ -432,8 +432,8 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
                     nextChunkPosition = -1
                 End If
             $Else
-                ' 4-byte file positions
-                nextChunkPosition = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 4, Long)
+                    ' 4-byte file positions
+                    nextChunkPosition = _MemGet(grstarts, grstarts.OFFSET + (chunk + 1) * 4, Long)
             $End If
 
             ' Check if next position is valid
@@ -506,7 +506,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             value = value + _MemGet(grstarts, grstarts.OFFSET + chunk * 3 + 2, _Unsigned _Byte) * 65536
             If value = &HFFFFFF Then value = -1
         $Else
-            value = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
+                value = _MemGet(grstarts, grstarts.OFFSET + chunk * 4, Long)
         $End If
         GRFILEPOS& = value
     End Function
@@ -522,7 +522,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim position As Long, compressed As Long, expanded As Long
         Dim nextChunk As Integer
         Dim source As _MEM
-        Dim fileBytes() As _Unsigned _Byte
+        Dim fileBytes As _Unsigned _Byte
 
         If grsegs(chunk) <> 0 Then
             Exit Sub ' allready in memory
@@ -556,7 +556,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
 
         ' MM_GetPtr equivalent
         grsegsMem(chunk) = _MemNew(expanded)
-        CAL_HuffExpand source, grsegsMem(chunk), expanded, grhuffman(), False
+        CAL_HuffExpand source, grsegsMem(chunk), expanded, grhuffman(), FALSE
         grsegs(chunk) = grsegsMem(chunk).OFFSET
         _MemFree source
     End Sub
@@ -572,7 +572,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim position As Long, compressed As Long, expanded As Long
         Dim nextChunk As Integer
         Dim source As _MEM, screenseg As _MEM
-        Dim fileBytes() As _Unsigned _Byte
+        Dim fileBytes As _Unsigned _Byte
 
         ' load the chunk into a buffer
         position = GRFILEPOS(chunk)
@@ -594,7 +594,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ' The original decompressed straight into the four VGA planes (screenhack),
         ' here it is expanded to a buffer and drawn as a 320x200 planar picture
         screenseg = _MemNew(expanded)
-        CAL_HuffExpand source, screenseg, expanded, grhuffman(), True
+        CAL_HuffExpand source, screenseg, expanded, grhuffman(), TRUE
         VL_PlanarMemToScreen screenseg, 320, 200, 0, 0
         ' TODO - port VW_MarkUpdateBlock (0, 0, 319, 199)
         _MemFree screenseg
@@ -612,7 +612,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ' Implementation of CAL_SetupAudioFile in QB64 Basic
 
         Dim handle As Long, length As Long, fname As String * 13
-        Dim fileBytes() As _Unsigned _Byte
+        Dim fileBytes As _Unsigned _Byte
 
         ' Load maphead.ext (offsets and tileinfo for map file)
         ' AUDIOHEADERLINKED - is not defined in the original C sources
@@ -640,11 +640,11 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             Close #handle
 
         $Else
-            ' Linked audio header code
-            ' TODO: Implement linked audio header handling
-            ' audiohuffman = (huffnode)&audiodict
-            ' CAL_OptimizeNodes(audiohuffman)
-            ' audiostarts = (long _seg *)FP_SEG(&audiohead)
+                ' Linked audio header code
+                ' TODO: Implement linked audio header handling
+                ' audiohuffman = (huffnode)&audiodict
+                ' CAL_OptimizeNodes(audiohuffman)
+                ' audiostarts = (long _seg *)FP_SEG(&audiohead)
         $End If
 
         ' Open the data file
@@ -658,20 +658,20 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
                 CA_CannotOpen fname
             End If
         $Else
-            ' TODO: Implement linked audio file handling
-            ' audiohandle = FreeFile
-            ' Open "AUDIO." + extension For Binary As #audiohandle
-            ' If Err Then
-            '     Print "Can't open AUDIO." + extension + "!"
-            '     End
-            ' End If
+                ' TODO: Implement linked audio file handling
+                ' audiohandle = FreeFile
+                ' Open "AUDIO." + extension For Binary As #audiohandle
+                ' If Err Then
+                '     Print "Can't open AUDIO." + extension + "!"
+                '     End
+                ' End If
         $End If
 
     End Sub
 
     Sub CA_CacheAudioChunk (chunk As Integer)
         Dim position As Long, compressed As Long
-        Dim fileBytes() As _Unsigned _Byte
+        Dim fileBytes As _Unsigned _Byte
 
         If audiosegs(chunk) <> 0 Then
             Exit Sub ' allready in memory
@@ -694,7 +694,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             _MemPut audiosegMem(chunk), audiosegMem(chunk).OFFSET, fileBytes()
             audiosegs(chunk) = audiosegMem(chunk).OFFSET
         $Else
-            ' TODO: Implement linked (huffman compressed) audio chunks
+                ' TODO: Implement linked (huffman compressed) audio chunks
         $End If
     End Sub
 
@@ -769,7 +769,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         End
     End Sub
 
-'$INCLUDE: 'ID_HEADS.BI'
+    '$INCLUDE: 'ID_HEADS.BI'
 
-$EndIf
+$End If
 
