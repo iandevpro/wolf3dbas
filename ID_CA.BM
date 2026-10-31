@@ -596,7 +596,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         screenseg = _MemNew(expanded)
         CAL_HuffExpand source, screenseg, expanded, grhuffman(), TRUE
         VL_PlanarMemToScreen screenseg, 320, 200, 0, 0
-        ' TODO - port VW_MarkUpdateBlock (0, 0, 319, 199)
+        ' C: VW_MarkUpdateBlock (0, 0, 319, 199) (no update blocks in the port, see ID_HEADS.BI)
         _MemFree screenseg
         _MemFree source
     End Sub

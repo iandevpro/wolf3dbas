@@ -579,7 +579,7 @@ Commit a0dad74.
 
 ## 2026-10-31: Compiler warnings
 
-Not committed yet.
+Commit da6cb69.
 
 - **What reports them:** the IDE's warnings window (on the merged program of `tools/ide_format.py`), and `qb64 -x -w WOLF3D.BAS`, which prints them with the real file names and lines.
 - **Fixed (9):**
@@ -594,3 +594,20 @@ Not committed yet.
     - `profilehandle`: the PROFILE build.
     - `singlestep`: the debug keys.
 - **Tested:** it compiles.
+
+## 2026-10-31: Update blocks removed
+
+Not committed yet.
+
+- **What they were:** the original marked the 16x16 tiles each drawing touched (`VW_MarkUpdateBlock`). `VW_UpdateScreen` then copied only those tiles to the visible page.
+- **Why they aren't needed:** the port draws into one buffer and always shows the whole screen.
+- **Removed from ID_HEADS.BI** (a comment there explains why):
+  - the constants `PORTTILESWIDE`, `PORTTILESHIGH`, `UPDATEWIDE`, `UPDATEHIGH` and `UPDATETERMINATE`
+  - the variables `updateptr`, `uwidthtable` and `blockstarts`
+- **ID_VH.BM / ID_CA.BM:**
+  - The `If TRUE Then` in `VWB_Bar` and `VWB_Hlin` (in place of `If VW_MarkUpdateBlock(...)`) is removed.
+  - The `TODO - port VW_MarkUpdateBlock` comments now quote the C call and say why it isn't needed.
+- **Tested:**
+  - It compiles, with 13 warnings left (16 before).
+  - `tools/ide_format.py` changes nothing.
+  - The title screen and the Load Game menu (bars and box lines) draw correctly.

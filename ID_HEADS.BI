@@ -50,23 +50,16 @@ $If INCLUDE_ID_HEADS_BI = UNDEFINED Then
     End Type
 
     ' Engine constants
-    Const PORTTILESWIDE = 20 ' all drawing takes place inside a
-    Const PORTTILESHIGH = 13 ' non displayed port of this size
-
-    Const UPDATEWIDE = PORTTILESWIDE
-    Const UPDATEHIGH = PORTTILESHIGH
-
+    ' The update blocks are not ported: PORTTILESWIDE, PORTTILESHIGH, UPDATEWIDE, UPDATEHIGH,
+    ' UPDATETERMINATE, updateptr, uwidthtable and blockstarts. The original marked the 16x16
+    ' tiles each drawing touched (VW_MarkUpdateBlock) and VW_UpdateScreen copied only those
+    ' to the visible page. The port draws into one buffer and always shows the whole screen.
     Const MAXTICS = 10
     Const DEMOTICS = 4
-
-    Const UPDATETERMINATE = &H0301
 
     ' Shared variables from ID_HEADS.H
     Dim Shared mapwidth As Integer, mapheight As Integer, tics As Integer
     Dim Shared compatability As Integer ' boolean equivalent
-    Dim Shared updateptr As _Offset
-    Dim Shared uwidthtable(UPDATEHIGH - 1) As Integer
-    Dim Shared blockstarts(UPDATEWIDE * UPDATEHIGH - 1) As Integer
     Dim Shared fontcolor As Integer, backcolor As Integer
 
     ' Function declarations (these will be implemented in other modules)
