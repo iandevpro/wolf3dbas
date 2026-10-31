@@ -97,7 +97,11 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
     ' counts the clock instead (SDL_TimeCountService, from the same ON TIMER event)
     Dim Shared sdClockLast As Double ' Timer(.001) of the last TimeCount update
     Dim Shared sdClockAcc As Double ' tics not yet added to TimeCount
-    Dim Shared sdCountFx As Integer ' count_fx in ID_SD_A.ASM: effects run every 5th 700Hz tick (140Hz)
+    ' count_fx in ID_SD_A.ASM: the effects ran every 5th 700Hz tick (140Hz), 2 per TimeCount tic.
+    ' They run with TimeCount here (game logic checks SD_SoundPlaying, e.g. UpdateFace, and demos
+    ' only play back the same when the sounds advance with the game clock); effect ticks wait
+    ' here while sdLock is set
+    Dim Shared sdFxPending As Integer
 
     ' Music playback state variables (IMF format)
     ' MusicGroup structure in memory:

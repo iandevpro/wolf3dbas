@@ -92,7 +92,7 @@ Each sub-step below ends with something visible to test against the original in 
 - Enable the digitized sound rows in the Sound menu (Sound Blaster).
 - **Test:** guard shouts, doors and guns sound like DOSBox-X with a Sound Blaster.
 
-### 6j. Demos
+### 6j. Demos — DONE 2026-10-30 (RecordDemo not ported)
 - The original 256-entry random table for `US_RndT` (ID_US_A.ASM). `PlayDemo` with the `T_DEMO0..3` chunks, demo input in `IN_ReadControl`; `RecordDemo` is optional.
 - Remove the temporary `VW_FadeOut` from the attract loop.
 - **Test:** the attract loop plays the 4 demos, and each one plays out the same as in DOSBox-X (a wrong integer result makes the demo drift).

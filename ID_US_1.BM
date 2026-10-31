@@ -10,14 +10,32 @@ $If INCLUDE_ID_US_1_BM = UNDEFINED Then
 
     '$INCLUDE: 'ID_US.BI'
 
-    ' US_InitRndT / US_RndT - the original used a 256 entry random table (ID_US_A.ASM).
-    ' TODO: port rndtable for demo playback, which needs the exact sequence
+    '=================================================
+    '
+    ' void US_InitRndT (boolean randomize)
+    ' Init table based RND generator
+    ' if randomize is false, the counter is set to 0
+    '
+    ' (with randomize the original took the hundredths of the DOS time, int 21h ah=2ch: dl)
+    '
+    '=================================================
     Sub US_InitRndT (doRandomize As Integer)
-        If doRandomize Then Randomize Timer
+        If doRandomize Then
+            rndindex = Int(Timer(.01) * 100) Mod 100 ' if randomize is true, really random
+        Else
+            rndindex = 0 ' set to a definite value
+        End If
     End Sub
 
+    '=================================================
+    '
+    ' int US_RndT (void)
+    ' Return a random # between 0-255
+    '
+    '=================================================
     Function US_RndT% ()
-        US_RndT% = Int(Rnd * 256)
+        rndindex = (rndindex + 1) And &HFF
+        US_RndT% = rndtable(rndindex)
     End Function
 
     ' Returns a C string kept in a fixed length String (e.g. HighScore.name) up to its zero terminator

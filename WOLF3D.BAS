@@ -792,14 +792,20 @@ Sub DemoLoop
             '
             ' demo
             '
-            ' TODO: PlayDemo (LastDemo++ Mod 4), If playstate = ex_abort Then Exit Do
-            ' StartCPMusic INTROSONG
-            VW_FadeOut ' Temporary: stands in for the fade out done by PlayDemo
+            $If SPEARDEMO = UNDEFINED Then
+                PlayDemo LastDemo Mod 4
+                LastDemo = LastDemo + 1
+            $Else
+                PlayDemo 0
+            $End If
+
+            If playstate = ex_abort Then Exit Do
+            StartCPMusic INTROSONG
         Loop
 
         VW_FadeOut
 
-        ' TODO: RecordDemo (Tab + "goobers" parameter)
+        ' TODO: RecordDemo (Tab with the "goobers" parameter)
         US_ControlPanel 0
 
         If startgame Or loadedgame Then

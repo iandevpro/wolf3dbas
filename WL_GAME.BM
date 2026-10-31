@@ -367,6 +367,61 @@ Sub DrawPlayScreen ()
     DrawScore
 End Sub
 
+'==================
+'=
+'= PlayDemo
+'=
+'= Fades the screen out, then starts a demo.  Exits with the screen faded
+'=
+'= (DEMOSEXTERN: the demos are the T_DEMO graphics chunks)
+'=
+'==================
+Sub PlayDemo (demonumber As Integer)
+    Dim length As Long
+
+    $If SPEARDEMO = UNDEFINED Then
+        demochunk = T_DEMO0 + demonumber ' dems[4]={T_DEMO0,T_DEMO1,T_DEMO2,T_DEMO3}
+    $Else
+        demochunk = T_DEMO0
+    $End If
+
+    CA_CacheGrChunk demochunk
+    demoptr = 0
+
+    NewGame 1, 0
+    gamestate.mapon = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Unsigned _Byte)
+    demoptr = demoptr + 1
+    gamestate.difficulty = gd_hard
+    length = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Unsigned Integer)
+    demoptr = demoptr + 2
+    demoptr = demoptr + 1
+    lastdemoptr = demoptr - 4 + length
+
+    VW_FadeOut
+
+    SETFONTCOLOR 0, 15
+    DrawPlayScreen
+    VW_FadeIn
+
+    startgame = FALSE
+    demoplayback = TRUE
+
+    SetupGameLevel
+    StartLevelMusic
+    ' PM_CheckMainMem - memory management, not needed in QB64
+    fizzlein = TRUE
+
+    PlayLoop
+
+    UNCACHEGRCHUNK demochunk
+
+    demoplayback = FALSE
+
+    StopMusic
+    VW_FadeOut
+    ClearMemory
+End Sub
+
 '===================
 '=
 '= GameLoop
@@ -410,7 +465,7 @@ Sub GameLoop ()
             StopMusic
             ingame = FALSE
 
-            ' TODO 6j: If demorecord And playstate <> ex_warped Then FinishDemoRecord
+            ' TODO: If demorecord And playstate <> ex_warped Then FinishDemoRecord (demo recording)
 
             If startgame Or loadedgame Then Exit Do ' goto restartgame
 

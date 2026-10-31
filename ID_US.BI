@@ -37,4 +37,31 @@ $If INCLUDE_ID_US_BI = UNDEFINED Then
     Declare Sub US_CPrint (s As String)
     Declare Function US_LineInput% (x As Integer, y As Integer, buf As String, defaultstr As String, escok As Integer, maxchars As Integer, maxwidth As Integer)
 
+    '
+    ' ID_US_A.ASM: the table based random number generator (US_InitRndT / US_RndT)
+    '
+    Dim Shared rndindex As Integer
+    Dim Shared rndtable(0 To 255) As Integer
+    Dim rndsrc As String, rndi As Integer, rndp As Integer
+    rndsrc = ""
+    rndsrc = rndsrc + "000008109220222241149107075248254140016066074021"
+    rndsrc = rndsrc + "211047080242154027205128161089077036095110085048"
+    rndsrc = rndsrc + "212140211249022079200050028188052140202120068145"
+    rndsrc = rndsrc + "062070184190091197152224149104025178252182202182"
+    rndsrc = rndsrc + "141197004081181242145042039227156198225193219093"
+    rndsrc = rndsrc + "122175249000175143070239046246163053163109168135"
+    rndsrc = rndsrc + "002235025092020145138077069166078176173212166113"
+    rndsrc = rndsrc + "094161041050239049111164070060002037171075136156"
+    rndsrc = rndsrc + "011056042146138229073146077061098196135106063197"
+    rndsrc = rndsrc + "195086096203113101170247181113080250108007255237"
+    rndsrc = rndsrc + "129226079107112166103241024223239120198058060082"
+    rndsrc = rndsrc + "128003184066143224145224081206163045063090168114"
+    rndsrc = rndsrc + "059033159095028139123098125196015070194253054014"
+    rndsrc = rndsrc + "109226071017161093186087244138020052123251026036"
+    rndsrc = rndsrc + "017046052231232076031221084037216165212106197242"
+    rndsrc = rndsrc + "098043039175254145190084118222187136120163236249"
+    For rndi = 0 To 255
+        rndtable(rndi) = Val(Mid$(rndsrc, rndi * 3 + 1, 3))
+    Next rndi
+
 $End If

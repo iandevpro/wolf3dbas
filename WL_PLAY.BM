@@ -209,11 +209,23 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
     Sub PollControls ()
         Dim maxv As Integer, minv As Integer, i As Integer
 
+        Dim buttonbits As Integer
+
         '
         ' get timing info for last frame
         '
-        ' TODO 6j: demo playback / recording (DEMOTICS per frame)
-        CalcTics
+        If demoplayback Or demorecord Then
+            ' demo recording and playback needs to be constant:
+            ' take DEMOTICS or more tics, and modify Timecount to reflect time taken
+            Do While TimeCount < lasttimecount + DEMOTICS
+                _Limit 1000 ' (the original spun here)
+            Loop
+            TimeCount = lasttimecount + DEMOTICS
+            lasttimecount = lasttimecount + DEMOTICS
+            tics = DEMOTICS
+        Else
+            CalcTics
+        End If
 
         controlx = 0
         controly = 0
@@ -222,7 +234,30 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             buttonstate(i) = FALSE ' memset (buttonstate,0,sizeof(buttonstate))
         Next i
 
-        ' TODO 6j: read commands from demo buffer
+        If demoplayback Then
+            '
+            ' read commands from demo buffer
+            '
+            buttonbits = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Unsigned _Byte)
+            demoptr = demoptr + 1
+            For i = 0 To NUMBUTTONS - 1
+                If buttonbits And 1 Then buttonstate(i) = TRUE Else buttonstate(i) = FALSE
+                buttonbits = buttonbits \ 2
+            Next i
+
+            ' (signed chars)
+            controlx = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Byte)
+            demoptr = demoptr + 1
+            controly = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Byte)
+            demoptr = demoptr + 1
+
+            If demoptr = lastdemoptr Then playstate = ex_completed ' demo is done
+
+            controlx = controlx * tics
+            controly = controly * tics
+
+            Exit Sub
+        End If
 
         '
         ' get button states
@@ -258,7 +293,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             controly = minv
         End If
 
-        ' TODO 6j: save info out to demo buffer (demorecord)
+        ' TODO: save info out to demo buffer (demorecord: RecordDemo with Tab and the "goobers" parameter)
     End Sub
 
     '=====================

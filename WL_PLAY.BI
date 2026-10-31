@@ -12,6 +12,8 @@ $If INCLUDE_WL_PLAY_BI = UNDEFINED Then
     Dim Shared anglefrac As Integer
     Dim Shared funnyticount As Long
     Dim Shared demorecord As Integer, demoplayback As Integer
+    ' char far *demoptr, *lastdemoptr: offsets in the demo chunk (grsegsMem(demochunk))
+    Dim Shared demoptr As Long, lastdemoptr As Long, demochunk As Integer
     Dim Shared singlestep As Integer, godmode As Integer, noclip As Integer
     Dim Shared buttonheld(0 To NUMBUTTONS - 1) As Integer
     Dim Shared controlx As Integer, controly As Integer ' range from -100 to 100 per tic

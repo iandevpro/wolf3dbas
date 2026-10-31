@@ -455,7 +455,7 @@ Commit b0d89a3.
   - `US_RndT` still uses QB64's `Rnd`; the original's random table comes in 6j.
 
 ## 2026-10-30: Step 6i, digitized sounds
-Not committed yet.
+Commit 7f29afe.
 
 - **What works:**
   - **The digitized sounds** (guard shouts, doors, guns, death screams, boss voices) play from the VSWAP sound pages, the way a Sound Blaster Pro played them. They are mixed with the OPL2 music and the AdLib effects in the same `_SndRaw` stream.
@@ -481,3 +481,34 @@ Not committed yet.
   - Not compared by ear with DOSBox-X; the recording (rec.wav) was made for that.
   - The SB Pro mixer volume steps are an approximation.
   - PC speaker sounds (`sdm_PC`, `sds_PC`) are still not ported.
+
+## 2026-10-30: Step 6j, demos
+Not committed yet.
+
+- **What works:** the attract loop plays the four demos after the title, credits and high scores, in turn. A key press during a demo goes to the menu ("Back to Demo"). The demos play back exactly: the original demos were recorded until the player died, and each one ends with BJ dying on its very last input frame. The results are identical run after run:
+
+  | Demo | Floor | Ends at frame | Score | Kills |
+  |---|---|---|---|---|
+  | 0 | 38 | 2077 / 2077 | 3900 | 15 |
+  | 1 | 44 | 5701 / 5701 | 13600 | 51 |
+  | 2 | 57 | 3424 / 3424 | 7100 | 27 |
+  | 3 | 32 | 4972 / 4972 | 5600 | 21 |
+
+- **`ID_US.BI` / `ID_US_1.BM`:**
+  - The original 256-entry random table from ID_US_A.ASM, with `US_RndT` stepping through it.
+  - `US_InitRndT FALSE` (demos) starts at index 0. With randomize it takes the hundredths of the clock, like the DOS time call.
+- **`WL_PLAY.BM` `PollControls`:**
+  - During demo playback (and recording) each frame takes exactly `DEMOTICS` (4) tics.
+  - The commands are read from the demo chunk: a button byte, then the x and y moves as signed bytes. When the data ends, `playstate = ex_completed`.
+- **`WL_GAME.BM`:** `PlayDemo`, using the T_DEMO0..3 graphics chunks (DEMOSEXTERN). It takes the map from the demo's first byte, plays hard difficulty, and ends at the demo's length.
+- **`WOLF3D.BAS` `DemoLoop`:** plays `LastDemo Mod 4`, leaves for the menu on `ex_abort`, and restarts the intro music otherwise. The temporary fade from 5b is gone.
+- **Fix found while testing: demo 1 played differently from run to run.**
+  - `UpdateFace` skips its `US_RndT` call while `GETGATLINGSND` plays. The AdLib effects advanced with the audio generation, which runs up to 0.1 s ahead in bursts, so whether the sound was still playing on a given frame varied, and the random sequence drifted.
+  - The effects now run with `TimeCount`, two steps per tic, as in the original timer interrupt (`SDL_TimeCountService`; ticks wait while `sdLock` is set). After that, demo 1 gave the same result 3 times in a row.
+- **Tested:**
+  - The attract loop with no input, with screenshots: demo 0 and demo 1 play.
+  - With a temporary switch that played one demo and logged its end state (removed): all four demos, at least twice each, with the results in the table above.
+  - A key during a demo opens the menu.
+- **Not done yet:**
+  - `RecordDemo` / `FinishDemoRecord` (Tab with the "goobers" parameter) are not ported.
+  - Not compared on screen with DOSBox-X. The end-of-data deaths are strong evidence; the end scores above can be checked there.

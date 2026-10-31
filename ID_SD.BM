@@ -124,8 +124,16 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         sdClockLast = now
         Do While sdClockAcc >= 1
             TimeCount = TimeCount + 1
+            sdFxPending = sdFxPending + 2 ' PC/AdLib effects at 140Hz (DOFX in SDL_t0FastAsmService)
             sdClockAcc = sdClockAcc - 1
         Loop
+
+        If sdLock = 0 Then
+            Do While sdFxPending > 0
+                SDL_ALSoundService
+                sdFxPending = sdFxPending - 1
+            Loop
+        End If
     End Sub
 
     ' Generates audio until SD_BUFFERSECS seconds are queued, called by ON TIMER
@@ -143,12 +151,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
                 sdImfAcc = sdImfAcc + IMF_RATE
                 If sdImfAcc >= sdRate Then
                     sdImfAcc = sdImfAcc - sdRate
-                    ' PC/AdLib effects every 5th tick (DOFX in SDL_t0FastAsmService)
-                    sdCountFx = sdCountFx + 1
-                    If sdCountFx >= 5 Then
-                        sdCountFx = 0
-                        SDL_ALSoundService
-                    End If
+                    ' (the PC/AdLib effects run with TimeCount, see SDL_TimeCountService)
                     If sqActive Then SDL_ServiceMusicTick
                 End If
 
