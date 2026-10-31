@@ -176,7 +176,7 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
     Sub VWB_Hlin (x1 As Integer, x2 As Integer, y As Integer, color_bar As Integer)
         ' If VW_MarkUpdateBlock(x1, y, x2, y) Then
         If TRUE Then
-            ' #define VW_Hlin(x,z,y,c)	VL_Hlin(x,y,(z)-(x)+1,c)
+            ' #define VW_Hlin(x,z,y,c)  VL_Hlin(x,y,(z)-(x)+1,c)
             VL_Hlin x1, y, x2 - x1 + 1, color_bar
         End If
     End Sub
@@ -188,7 +188,7 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
     '=================
     Sub VWB_Vlin (y1 As Integer, y2 As Integer, x As Integer, color_bar As Integer)
         ' TODO - port VW_MarkUpdateBlock (x, y1, x, y2)
-        ' #define VW_Vlin(y,z,x,c)	VL_Vlin(x,y,(z)-(y)+1,c)
+        ' #define VW_Vlin(y,z,x,c)  VL_Vlin(x,y,(z)-(y)+1,c)
         VL_Vlin x, y1, y2 - y1 + 1, color_bar
     End Sub
 '$INCLUDE:'ID_VL.BM'

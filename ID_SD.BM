@@ -1,4 +1,4 @@
-'	ID_SD.c - Sound Manager for Wolfenstein 3D
+'   ID_SD.c - Sound Manager for Wolfenstein 3D
 '
 ' The original drove an AdLib card from a 700Hz timer interrupt (SDL_t0FastAsmService).
 ' In QB64:

@@ -1,4 +1,4 @@
-CONST SPANISH = 0
+Const SPANISH = 0
 
 ' WL_INTER.C - intermission (LevelCompleted)
 $If INCLUDE_WL_INTER_BI = UNDEFINED Then
@@ -15,7 +15,7 @@ $If INCLUDE_WL_INTER_BI = UNDEFINED Then
     $If SPEAR = UNDEFINED Then
         Dim Shared LevelRatios(0 To 7) As LRstruct
     $Else
-        Dim Shared LevelRatios(0 To 19) As LRstruct
+            Dim Shared LevelRatios(0 To 19) As LRstruct
     $End If
 
     Const VBLWAIT = 30
@@ -61,9 +61,9 @@ $If INCLUDE_WL_INTER_BI = UNDEFINED Then
         partimesrc = partimesrc + "02:30 01:30 02:30 02:30 04:00 03:00 04:30 03:30 ??:?? ??:?? "
         partimesrc = partimesrc + "06:30 04:00 04:30 06:00 05:00 05:30 05:30 08:30 ??:?? ??:?? "
     $Else
-        ' Spear of Destiny: bosses at 4, 9, 15, 17, secret levels 18, 19
-        partimesrc = "01:30 03:30 02:45 03:30 ??:?? 04:30 03:15 02:45 04:45 ??:?? "
-        partimesrc = partimesrc + "06:30 04:30 02:45 04:30 06:00 ??:?? 06:00 ??:?? ??:?? ??:?? "
+            ' Spear of Destiny: bosses at 4, 9, 15, 17, secret levels 18, 19
+            partimesrc = "01:30 03:30 02:45 03:30 ??:?? 04:30 03:15 02:45 04:45 ??:?? "
+            partimesrc = partimesrc + "06:30 04:30 02:45 04:30 06:00 ??:?? 06:00 ??:?? ??:?? ??:?? "
     $End If
     For writei = 0 To Len(partimesrc) \ 6 - 1
         partimestr(writei) = Mid$(partimesrc, writei * 6 + 1, 5)

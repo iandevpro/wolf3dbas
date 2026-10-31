@@ -191,5 +191,5 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     Const STARTTILE32M = 136
     Const STARTEXTERNS = 136
 
-$EndIf
+$End If
 ' --- End of GFXV_WL6.BI ---

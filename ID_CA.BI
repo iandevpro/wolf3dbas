@@ -8,17 +8,17 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     Const MAPPLANES = 2
     $Let THREEBYTEGRSTARTS = 1
     $If THREEBYTEGRSTARTS = DEFINED Then
-        Const FILEPOSSIZE = 3   ' Size of file position entries
+        Const FILEPOSSIZE = 3 ' Size of file position entries
     $Else
-        ' THREEBYTEGRSTARTS is defined in the original C sources
-        ' can comment out the following section
-        'Const FILEPOSSIZE = 4   ' Size of file position entries
-    $EndIf
+            ' THREEBYTEGRSTARTS is defined in the original C sources
+            ' can comment out the following section
+            'Const FILEPOSSIZE = 4   ' Size of file position entries
+    $End If
 
     ' Huffman node type for graphics compression
     Type huffnode
-        bit0 As Integer  ' 0-255 is a character, > is a pointer to a node
-        bit1 As Integer  ' 0-255 is a character, > is a pointer to a node
+        bit0 As Integer ' 0-255 is a character, > is a pointer to a node
+        bit1 As Integer ' 0-255 is a character, > is a pointer to a node
     End Type
 
     ' Map header fields as separate arrays (was maptype)
@@ -35,9 +35,9 @@ $If INCLUDE_ID_CA_BI = UNDEFINED Then
     ' Dim Shared tileinfo() As Byte
 
     ' Graphics related variables
-    Dim Shared grhuffman(0 To 254) As huffnode  ' Huffman table for graphics
-    Dim Shared grstarts As _MEM  ' Array of offsets in graphics file
-    Dim Shared grhandle As Long  ' Handle to graphics file
+    Dim Shared grhuffman(0 To 254) As huffnode ' Huffman table for graphics
+    Dim Shared grstarts As _MEM ' Array of offsets in graphics file
+    Dim Shared grhandle As Long ' Handle to graphics file
     Dim Shared pictable(NUMPICS - 1) As pictabletype  ' Picture table
     Dim Shared grsegs(0 To NUMCHUNKS - 1) As _Offset ' Pointers to cached graphics chunks
     ' _MEM blocks backing grsegs(), needed for size info and _MemFree (MM_GetPtr equivalent)

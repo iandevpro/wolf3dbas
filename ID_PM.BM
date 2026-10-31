@@ -20,7 +20,7 @@ $If INCLUDE_ID_PM_BM = UNDEFINED Then
     Sub PML_OpenPageFile ()
         Dim handle As Long, i As Long, length As Long
         Dim w As _Unsigned Integer, l As _Unsigned Long
-        Dim fileBytes() As _Unsigned _Byte
+        Dim fileBytes As _Unsigned _Byte
         Dim fname As String
 
         fname = RTrim$(PageFileName)

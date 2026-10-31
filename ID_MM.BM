@@ -19,4 +19,4 @@ $If INCLUDE_ID_MM_BM = UNDEFINED Then
         ' For now, stub does nothing
     End Sub
 
-$EndIf
+$End If

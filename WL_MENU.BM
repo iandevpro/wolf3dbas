@@ -103,7 +103,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     End Sub
 
 
-    ' #define MenuFadeOut()	VL_FadeOut(0,255,43,0,0,10)
+    ' #define MenuFadeOut() VL_FadeOut(0,255,43,0,0,10)
     Sub MenuFadeOut ()
         $If SPEAR = UNDEFINED Then
             VL_FadeOut 0, 255, 43, 0, 0, 10
@@ -112,7 +112,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $End If
     End Sub
 
-    ' #define MenuFadeIn()	VL_FadeIn(0,255,&gamepal,10)
+    ' #define MenuFadeIn()  VL_FadeIn(0,255,&gamepal,10)
     Sub MenuFadeIn ()
         VL_FadeIn 0, 255, gamepal(), 10
     End Sub
