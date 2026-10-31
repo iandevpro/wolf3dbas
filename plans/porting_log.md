@@ -560,7 +560,7 @@ Commit 606996a.
 
 ## 2026-10-31: Naming fixes from the code review
 
-Not committed yet.
+Commit a0dad74.
 
 - **Renamed names that differ from another name only by case** (QB64 names are case-insensitive, so one hid the other). The C name stays in a comment:
   - In WL_TEXT.BI, the `LEFTMARGIN` / `RIGHTMARGIN` constants became `TEXTLEFTMARGIN` / `TEXTRIGHTMARGIN`, because of the `leftmargin()` / `rightmargin()` arrays. This follows `TEXTBACKCOLOR`.
@@ -576,3 +576,21 @@ Not committed yet.
   - `CTRL_MOUSE` etc. (C: `MOUSE`, `JOYSTICK`): the prefix avoids clashes.
 - **`tools/ide_format.py`:** its work folder is now `tempfile.gettempdir()`. When `TEMP` was not set (Git Bash), it fell back to the source tree.
 - **Tested:** it compiles; `tools/ide_format.py` leaves the edits as they are; E1M1 plays, and the F1 help text is laid out within its margins.
+
+## 2026-10-31: Compiler warnings
+
+Not committed yet.
+
+- **What reports them:** the IDE's warnings window (on the merged program of `tools/ide_format.py`), and `qb64 -x -w WOLF3D.BAS`, which prints them with the real file names and lines.
+- **Fixed (9):**
+  - `MAXTICS` / `DEMOTICS` were defined both in ID_HEADS.BI (where C has them, in ID_HEADS.H) and in WL_DRAW.BI; I removed the WL_DRAW.BI copy.
+  - Unused locals were removed: `rndp` (ID_US.BI), `i` (`DrawCtlScreen`), `played` (`A_DeathScream`; the boss part has its own), `w` / `h` (`FizzleFade`), and `done` / `skipLoop` (`DemoLoop`).
+- **Kept (16), on purpose:**
+  - Parameters that keep the C signatures: `CAL_OptimizeNodes` huffTable, `CAL_HuffExpand` screenhack, the `MM_` stubs, `IN_ReadControl` player, `A_Slurpie` / `T_BJDone` ob.
+  - C globals of parts that aren't ported:
+    - `compatability`: the US_Startup parameters.
+    - `updateptr`, `uwidthtable` and `blockstarts`: the update blocks.
+    - `headeroffsets`.
+    - `profilehandle`: the PROFILE build.
+    - `singlestep`: the debug keys.
+- **Tested:** it compiles.

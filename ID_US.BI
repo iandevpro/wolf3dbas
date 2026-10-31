@@ -42,7 +42,7 @@ $If INCLUDE_ID_US_BI = UNDEFINED Then
     '
     Dim Shared rndindex As Integer
     Dim Shared rndtable(0 To 255) As Integer
-    Dim rndsrc As String, rndi As Integer, rndp As Integer
+    Dim rndsrc As String, rndi As Integer
     rndsrc = ""
     rndsrc = rndsrc + "000008109220222241149107075248254140016066074021"
     rndsrc = rndsrc + "211047080242154027205128161089077036095110085048"

@@ -72,9 +72,6 @@ $If INCLUDE_WL_DRAW_BI = UNDEFINED Then
     Dim Shared drawscreen As _MEM
     Dim Shared viewscreenx As Integer, viewscreeny As Integer ' top left of the view on the screen
 
-    Const MAXTICS = 10
-    Const DEMOTICS = 4
-
     ' unsigned vgaCeiling[] - ceiling color of each map (WL6), generated from origsrc/WL_DRAW.C
     ' (the color byte doubled in a word)
     Dim Shared vgaCeiling(0 To 59) As Long

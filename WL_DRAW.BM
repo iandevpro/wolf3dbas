@@ -1067,7 +1067,7 @@ $If INCLUDE_WL_DRAW_BM = UNDEFINED Then
     '===================
     Function FizzleFade% (oldview() As _Unsigned _Byte, x0 As Integer, y0 As Integer, width As Integer, height As Integer, frames As Integer, abortable As Integer)
         Dim pixperframe As Long, x As Long, y As Long, p As Long, frame As Long
-        Dim rndval As Long, w As Long, h As Long, ofs As Long
+        Dim rndval As Long, ofs As Long
         Dim source(0 To 319, 0 To 199) As _Unsigned _Byte
         Dim scr As _MEM
 

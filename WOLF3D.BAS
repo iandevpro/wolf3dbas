@@ -1046,8 +1046,6 @@ End Sub
 ' DemoLoop - Main menu and demo attract loop
 Sub DemoLoop
     Static LastDemo As Integer
-    Dim done As Integer
-    Dim skipLoop As Integer
 
     ' TEDLEVEL: Launch directly into a specific level (stubbed)
     If tedlevel Then

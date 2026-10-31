@@ -984,7 +984,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '// DRAW CONTROL MENU SCREEN
     '//
     Sub DrawCtlScreen ()
-        Dim i As Integer, x As Integer, y As Integer
+        Dim x As Integer, y As Integer
 
         ClearMScreen
         DrawStripes 10
