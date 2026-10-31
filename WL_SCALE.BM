@@ -11,10 +11,10 @@ $If INCLUDE_WL_SCALE_BM = UNDEFINED Then
     '= SetupScaling
     '=
     '==========================
-    Sub SetupScaling (maxscaleheight As Integer)
+    Sub SetupScaling (scaleheight As Integer) ' C: maxscaleheight, renamed: it clashes with MAXSCALEHEIGHT
         Dim i As Integer, msh As Integer
 
-        msh = maxscaleheight \ 2 ' one scaler every two pixels
+        msh = scaleheight \ 2 ' one scaler every two pixels
 
         maxscale = msh - 1
         maxscaleshl2 = maxscale * 4

@@ -542,7 +542,7 @@ Commit 4a7657f.
 
 ## 2026-10-31: Formatting with the QB64 IDE (tools/ide_format.py)
 
-Not committed yet.
+Commit 606996a.
 
 - **Why:** the IDE formats only code it can parse. A .BI / .BM opened alone isn't a complete program, so the IDE stops at the first name from another file (red lines) and leaves the rest of the file unformatted.
 - **`tools/ide_format.py`:**
@@ -557,3 +557,22 @@ Not committed yet.
   - A second pass changed nothing, so the formatting is stable.
 - **IDE bug:** the formatter drops a unary minus before a hex literal (`-&H7FFF&` becomes `&H7FFF&`). It hit `CheckLine` in WL_STATE.BM, which now uses decimal `-32767`.
 - **Tested:** merge and split with no IDE pass reproduce all 47 files unchanged, and the merged program passes `qb64 -z`. After formatting, the game compiles and plays into E1M1.
+
+## 2026-10-31: Naming fixes from the code review
+
+Not committed yet.
+
+- **Renamed names that differ from another name only by case** (QB64 names are case-insensitive, so one hid the other). The C name stays in a comment:
+  - In WL_TEXT.BI, the `LEFTMARGIN` / `RIGHTMARGIN` constants became `TEXTLEFTMARGIN` / `TEXTRIGHTMARGIN`, because of the `leftmargin()` / `rightmargin()` arrays. This follows `TEXTBACKCOLOR`.
+  - In WL_SCALE.BM, the `SetupScaling` parameter `maxscaleheight` became `scaleheight` (`MAXSCALEHEIGHT`).
+  - In ID_CA.BM, the `CA_RLEWexpand` parameter `rlewtag` became `tag` (the `RLEWtag` global).
+  - In WL_MENU, `lastmusic_gbl` became `menulastmusic` (C: `static int lastmusic`, which clashes with `LASTMUSIC`).
+- **`VW_Bar`** (ID_VH.BM): its parameters were untyped (Single); they are now `As Integer`, like `VL_Bar`.
+- **Removed** the stray `Const SPANISH = 0` from WL_INTER.BI. The `$If SPANISH` checks test a `$Let`, not this constant.
+- **The `PROFILE` block in `CA_Startup`** (inactive) still had C code; it is now QB64 (`Open ... For Output`).
+- **Kept as they are:**
+  - `_MEM` and `_UNSIGNED _BYTE` (in `_MemPut ... As`) are the IDE's own case; it changes `_Mem` back.
+  - Fields named like keywords (`kill`, `name`, `width`) compile and match C.
+  - `CTRL_MOUSE` etc. (C: `MOUSE`, `JOYSTICK`): the prefix avoids clashes.
+- **`tools/ide_format.py`:** its work folder is now `tempfile.gettempdir()`. When `TEMP` was not set (Git Bash), it fell back to the source tree.
+- **Tested:** it compiles; `tools/ide_format.py` leaves the edits as they are; E1M1 plays, and the F1 help text is laid out within its margins.

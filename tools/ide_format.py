@@ -16,9 +16,10 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-WORK = os.path.join(os.environ.get('TEMP', ROOT), 'wolf3d-ide-format')
+WORK = os.path.join(tempfile.gettempdir(), 'wolf3d-ide-format')
 MERGED = os.path.join(WORK, 'WOLF3D_ALL.BAS')
 MAIN = 'WOLF3D.BAS'
 MARK = "'@@IDEFMT "

@@ -185,7 +185,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     '= only the map planes use it)
     '=
     '======================
-    Sub CA_RLEWexpand (source() As _Unsigned Integer, srcpos As Long, plane As Integer, length As Long, rlewtag As Long)
+    Sub CA_RLEWexpand (source() As _Unsigned Integer, srcpos As Long, plane As Integer, length As Long, tag As Long) ' C: rlewtag, renamed: it clashes with the RLEWtag global
         Dim value As Long, count As Long, i As Long
         Dim si As Long, di As Long, dend As Long
 
@@ -199,7 +199,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Do While di < dend
             value = source(si)
             si = si + 1
-            If value <> rlewtag Then
+            If value <> tag Then
                 '
                 ' uncompressed
                 '
@@ -751,8 +751,9 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
 
     Sub CA_Startup ()
         $If PROFILE = DEFINED Then
-                CLOSE "PROFILE.TXT"
-                profilehandle = open("PROFILE.TXT", O_CREAT OR O_WRONLY OR O_TEXT)
+                ' unlink ("PROFILE.TXT"); profilehandle = open("PROFILE.TXT", O_CREAT | O_WRONLY | O_TEXT);
+                profilehandle = FreeFile
+                Open "PROFILE.TXT" For Output As #profilehandle
         $End If
 
         CAL_SetupMapFile

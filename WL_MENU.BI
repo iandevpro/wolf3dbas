@@ -28,7 +28,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
             Const INTROSONG = 23 ' XTOWER2_MUS
     $End If
 
-    Dim Shared lastmusic_gbl As Integer
+    Dim Shared menulastmusic As Integer ' static int lastmusic in WL_MENU.C, renamed: it clashes with LASTMUSIC
 
     Const MENUSONG = WONDERIN_MUS
 

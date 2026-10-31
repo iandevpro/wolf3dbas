@@ -333,11 +333,11 @@ $If INCLUDE_WL_TEXT_BM = UNDEFINED Then
         VWB_DrawPic 8, 176, H_BOTTOMINFOPIC
 
         For i = 0 To TEXTROWS - 1
-            leftmargin(i) = LEFTMARGIN
-            rightmargin(i) = SCREENPIXWIDTH - RIGHTMARGIN
+            leftmargin(i) = TEXTLEFTMARGIN
+            rightmargin(i) = SCREENPIXWIDTH - TEXTRIGHTMARGIN
         Next i
 
-        px = LEFTMARGIN
+        px = TEXTLEFTMARGIN
         py = TOPMARGIN
         rowon = 0
         layoutdone = FALSE

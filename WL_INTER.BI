@@ -1,5 +1,3 @@
-Const SPANISH = 0
-
 ' WL_INTER.C - intermission (LevelCompleted)
 $If INCLUDE_WL_INTER_BI = UNDEFINED Then
     $Let INCLUDE_WL_INTER_BI = 1

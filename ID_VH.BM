@@ -158,7 +158,7 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
         End If
     End Sub
 
-    Sub VW_Bar (x, y, width, height, color_bar)
+    Sub VW_Bar (x As Integer, y As Integer, width As Integer, height As Integer, color_bar As Integer)
         ' TODO - research if it is possible to do - #define VW_Bar          VL_Bar'
         VL_Bar x, y, width, height, color_bar
     End Sub

@@ -87,8 +87,8 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         SD_MusicOff
 
         ' Free previous music if it exists
-        CA_FreeAudioChunk STARTMUSIC + lastmusic_gbl
-        lastmusic_gbl = song
+        CA_FreeAudioChunk STARTMUSIC + menulastmusic
+        menulastmusic = song
 
         chunk = song
 
@@ -2078,7 +2078,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     ' here the music is stopped first, so the sequencer never reads freed memory
     Sub FreeMusic ()
         SD_MusicOff
-        CA_FreeAudioChunk STARTMUSIC + lastmusic_gbl
+        CA_FreeAudioChunk STARTMUSIC + menulastmusic
     End Sub
 
     '////////////////////////////////////////////////////////////////////
