@@ -415,7 +415,7 @@ Commit ddbca98.
   - The death cam and the bosses are 6h.
 
 ## 2026-10-29: Step 6h, bosses, the death cam and the episode end
-Not committed yet.
+Commit b0d89a3.
 
 - **What works:**
   - **The WL6 bosses:**
@@ -453,3 +453,31 @@ Not committed yet.
   - Gretel, Otto and the ghosts are untested in play (same code paths as the tested bosses).
   - The Spear actors and `EndSpear` are not ported.
   - `US_RndT` still uses QB64's `Rnd`; the original's random table comes in 6j.
+
+## 2026-10-30: Step 6i, digitized sounds
+Not committed yet.
+
+- **What works:**
+  - **The digitized sounds** (guard shouts, doors, guns, death screams, boss voices) play from the VSWAP sound pages, the way a Sound Blaster Pro played them. They are mixed with the OPL2 music and the AdLib effects in the same `_SndRaw` stream.
+  - **Positioning:** positioned sounds get their left / right volume from where they are relative to the player, and the volumes follow the player while the sound plays (`UpdateSoundLoc`).
+  - **The Sound menu** offers "Sound Blaster" for digitized sound, and a new game selects it, like the original's default with a Sound Blaster and no config file.
+- **`ID_SD.BI` / `ID_SD.BM`:**
+  - **Setup:** `SDL_SetupDigi` reads the sound list (page, length) from the last VSWAP page. That gives 46 sounds in WL6.
+  - **Playback:** `SD_PlayDigitized`, `SD_StopDigitized`, `SDL_DigitizedDone`, `SD_SetPosition`, `SD_PositionSound`, `SD_SetDigiDevice` (Sound Blaster present, Sound Source not), and `SD_Poll` (empty: `SD_PumpAudio` feeds the segments).
+  - **`SD_PlaySound`** now plays the digitized version first when `DigiMap` has one, with the position and priority logic of the C code. As in the original, `SD_SoundPlaying` only reports AdLib sounds.
+  - **The sample rate** is the Sound Blaster DAC rate, 1000000 / (256 − 114) = 7042 Hz.
+  - **Resampling:** `SD_PumpAudio` resamples by sample-and-hold, like the DAC, and mixes with gain `SD_DIGIGAIN`. The output is stereo now.
+  - **The SB Pro mixer volume** (15 − position per channel) is approximated as 8 steps of 4 dB.
+- **`WL_GAME.BI` (new):** the `lefttable` / `righttable` position tables, generated from WL_GAME.C, plus `globalsoundx`, `globalsoundy`, `leftchannel` and `rightchannel`.
+- **`WL_GAME.BM`:**
+  - `SetSoundLoc`, the real `PlaySoundLocGlobal`, and `UpdateSoundLoc`, which `PlayLoop` calls each frame.
+  - `ClearMemory` stops the digitized sound.
+- **`WOLF3D.BAS`:** `InitDigiMap` (the WL6 and Spear `wolfdigimap[]` tables). `InitGame` selects the Sound Blaster.
+- **Tested** with temporary code (removed) that recorded the exact mixed output to a WAV file and logged digitized starts and stops. Then I compared the recording with the VSWAP samples in Python:
+  - **The door opening sound (digi 3)** matches over its whole 1.4 s with gain 0.69 on both channels, i.e. full volume. That's correct, since the door was straight ahead and close (position 0 / 0). The match holds to the end, so the 7042 Hz rate is right.
+  - **The pistol (digi 5)** starts at full volume. 13 tics later a guard who heard the shot shouts "Halt!" (digi 0, at position 8 / 8, far away), which replaces it, as in the original.
+  - **The Sound menu** shows the Sound Blaster row selected, and the Sound Source row greyed out.
+- **Not done yet:**
+  - Not compared by ear with DOSBox-X; the recording (rec.wav) was made for that.
+  - The SB Pro mixer volume steps are an approximation.
+  - PC speaker sounds (`sdm_PC`, `sds_PC`) are still not ported.

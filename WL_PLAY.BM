@@ -655,7 +655,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             gamestate.TimeCount = gamestate.TimeCount + tics
 
             ' SD_Poll - the audio pump runs on its own timer
-            ' TODO 6i: UpdateSoundLoc
+            UpdateSoundLoc
 
             If screenfaded Then VW_FadeIn
 

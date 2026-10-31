@@ -87,7 +87,7 @@ Each sub-step below ends with something visible to test against the original in 
 - `Victory` and `EndText` (end articles, already ported in 5c) after the episode boss.
 - **Test:** boss levels of each episode (using save games or a debug warp).
 
-### 6i. Digitized sounds
+### 6i. Digitized sounds — DONE 2026-10-30
 - `InitDigiMap` / `DigiMap` (WL_MAIN.C), sounds from the VSWAP sound pages, `SD_PlayDigitized` mixed into `SD_PumpAudio` (8-bit samples at about 7 kHz, resampled), positional left/right volume (`PlaySoundLocTile`, `UpdateSoundLoc`).
 - Enable the digitized sound rows in the Sound menu (Sound Blaster).
 - **Test:** guard shouts, doors and guns sound like DOSBox-X with a Sound Blaster.

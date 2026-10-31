@@ -26,6 +26,7 @@ Const TRUE = -1
 '$INCLUDE: 'WL_DRAW.BI'
 '$INCLUDE: 'WL_SCALE.BI'
 '$INCLUDE: 'WL_STATE.BI'
+'$INCLUDE: 'WL_GAME.BI'
 
 Const tedlevel = 0 ' Stub, not implemented
 ' Const DEMOTEST = 0 'FALSE
@@ -342,6 +343,122 @@ Sub VL_MemToScreen (buffer() As _Unsigned _Byte, width As Integer, height As Int
 End Sub
 
 ' Subroutines
+'=====================
+'=
+'= InitDigiMap
+'=
+'= wolfdigimap[]: the digitized sound of each sound (WL_MAIN.C)
+'=
+'=====================
+Sub InitDigiMap
+    $If SPEAR = UNDEFINED Then
+        ' These first sounds are in the upload version
+        DigiMap(HALTSND) = 0
+        DigiMap(DOGBARKSND) = 1
+        DigiMap(CLOSEDOORSND) = 2
+        DigiMap(OPENDOORSND) = 3
+        DigiMap(ATKMACHINEGUNSND) = 4
+        DigiMap(ATKPISTOLSND) = 5
+        DigiMap(ATKGATLINGSND) = 6
+        DigiMap(SCHUTZADSND) = 7
+        DigiMap(GUTENTAGSND) = 8
+        DigiMap(MUTTISND) = 9
+        DigiMap(BOSSFIRESND) = 10
+        DigiMap(SSFIRESND) = 11
+        DigiMap(DEATHSCREAM1SND) = 12
+        DigiMap(DEATHSCREAM2SND) = 13
+        DigiMap(DEATHSCREAM3SND) = 13
+        DigiMap(TAKEDAMAGESND) = 14
+        DigiMap(PUSHWALLSND) = 15
+
+        DigiMap(LEBENSND) = 20
+        DigiMap(NAZIFIRESND) = 21
+        DigiMap(SLURPIESND) = 22
+
+        DigiMap(YEAHSND) = 32
+
+        $If UPLOAD = UNDEFINED Then
+            ' These are in all other episodes
+            DigiMap(DOGDEATHSND) = 16
+            DigiMap(AHHHGSND) = 17
+            DigiMap(DIESND) = 18
+            DigiMap(EVASND) = 19
+
+            DigiMap(TOT_HUNDSND) = 23
+            DigiMap(MEINGOTTSND) = 24
+            DigiMap(SCHABBSHASND) = 25
+            DigiMap(HITLERHASND) = 26
+            DigiMap(SPIONSND) = 27
+            DigiMap(NEINSOVASSND) = 28
+            DigiMap(DOGATTACKSND) = 29
+            DigiMap(LEVELDONESND) = 30
+            DigiMap(MECHSTEPSND) = 31
+
+            DigiMap(SCHEISTSND) = 33
+            DigiMap(DEATHSCREAM4SND) = 34 ' AIIEEE
+            DigiMap(DEATHSCREAM5SND) = 35 ' DEE-DEE
+            DigiMap(DONNERSND) = 36 ' EPISODE 4 BOSS DIE
+            DigiMap(EINESND) = 37 ' EPISODE 4 BOSS SIGHTING
+            DigiMap(ERLAUBENSND) = 38 ' EPISODE 6 BOSS SIGHTING
+            DigiMap(DEATHSCREAM6SND) = 39 ' FART
+            DigiMap(DEATHSCREAM7SND) = 40 ' GASP
+            DigiMap(DEATHSCREAM8SND) = 41 ' GUH-BOY!
+            DigiMap(DEATHSCREAM9SND) = 42 ' AH GEEZ!
+            DigiMap(KEINSND) = 43 ' EPISODE 5 BOSS SIGHTING
+            DigiMap(MEINSND) = 44 ' EPISODE 6 BOSS DIE
+            DigiMap(ROSESND) = 45 ' EPISODE 5 BOSS DIE
+        $End If
+    $Else
+        '
+        ' SPEAR OF DESTINY DIGISOUNDS
+        '
+        DigiMap(HALTSND) = 0
+        DigiMap(CLOSEDOORSND) = 2
+        DigiMap(OPENDOORSND) = 3
+        DigiMap(ATKMACHINEGUNSND) = 4
+        DigiMap(ATKPISTOLSND) = 5
+        DigiMap(ATKGATLINGSND) = 6
+        DigiMap(SCHUTZADSND) = 7
+        DigiMap(BOSSFIRESND) = 8
+        DigiMap(SSFIRESND) = 9
+        DigiMap(DEATHSCREAM1SND) = 10
+        DigiMap(DEATHSCREAM2SND) = 11
+        DigiMap(TAKEDAMAGESND) = 12
+        DigiMap(PUSHWALLSND) = 13
+        DigiMap(AHHHGSND) = 15
+        DigiMap(LEBENSND) = 16
+        DigiMap(NAZIFIRESND) = 17
+        DigiMap(SLURPIESND) = 18
+        DigiMap(LEVELDONESND) = 22
+        DigiMap(DEATHSCREAM4SND) = 23 ' AIIEEE
+        DigiMap(DEATHSCREAM3SND) = 23 ' DOUBLY-MAPPED!!!
+        DigiMap(DEATHSCREAM5SND) = 24 ' DEE-DEE
+        DigiMap(DEATHSCREAM6SND) = 25 ' FART
+        DigiMap(DEATHSCREAM7SND) = 26 ' GASP
+        DigiMap(DEATHSCREAM8SND) = 27 ' GUH-BOY!
+        DigiMap(DEATHSCREAM9SND) = 28 ' AH GEEZ!
+        DigiMap(GETGATLINGSND) = 38 ' Got Gat replacement
+
+        $If SPEARDEMO = UNDEFINED Then
+            DigiMap(DOGBARKSND) = 1
+            DigiMap(DOGDEATHSND) = 14
+            DigiMap(SPIONSND) = 19
+            DigiMap(NEINSOVASSND) = 20
+            DigiMap(DOGATTACKSND) = 21
+            DigiMap(TRANSSIGHTSND) = 29 ' Trans Sight
+            DigiMap(TRANSDEATHSND) = 30 ' Trans Death
+            DigiMap(WILHELMSIGHTSND) = 31 ' Wilhelm Sight
+            DigiMap(WILHELMDEATHSND) = 32 ' Wilhelm Death
+            DigiMap(UBERDEATHSND) = 33 ' Uber Death
+            DigiMap(KNIGHTSIGHTSND) = 34 ' Death Knight Sight
+            DigiMap(KNIGHTDEATHSND) = 35 ' Death Knight Death
+            DigiMap(ANGELSIGHTSND) = 36 ' Angel Sight
+            DigiMap(ANGELDEATHSND) = 37 ' Angel Death
+            DigiMap(GETSPEARSND) = 39 ' Got Spear replacement
+        $End If
+    $End If
+End Sub
+
 Sub InitGame
     ' Initialize game systems
     InitStates ' the statetype initializers of the C files
@@ -372,6 +489,7 @@ Sub InitGame
     ' TODO: ReadConfig - with no config the sound effects default to the AdLib
     If SD_SetSoundMode(sdm_AdLib) Then CA_LoadAllSounds
     If SD_SetMusicMode(smm_AdLib) Then MusicMode = smm_AdLib
+    If SoundBlasterPresent Then SD_SetDigiDevice sds_SoundBlaster ' (ReadConfig default)
 
     '
     ' load in and lock down some basic chunks
@@ -379,6 +497,8 @@ Sub InitGame
     CA_CacheGrChunk STARTFONT
 
     LoadLatchMem
+
+    InitDigiMap
 
     '
     ' initialize variables

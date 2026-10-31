@@ -65,7 +65,7 @@ End Sub
 '==========================
 Sub ClearMemory ()
     ' PM_UnlockMainMem, MM_SortMem - memory management, not needed in QB64
-    ' TODO 6i: SD_StopDigitized
+    SD_StopDigitized
 End Sub
 
 '==========================
@@ -641,9 +641,56 @@ End Sub
 
 '==========================
 '=
-'= PlaySoundLocTile / PlaySoundLocActor / PlaySoundLocGlobal
+'= SetSoundLoc - Given the location of an object (in terms of global
+'=       coordinates, held in globalsoundx and globalsoundy), munges the values
+'=       for an approximate distance from the left and right ear, and puts
+'=       those values into leftchannel and rightchannel.
 '=
-'= TODO 6i: the left / right volumes (SetSoundLoc, SD_PositionSound) for digitized sounds
+'= JAB
+'=
+'==========================
+Sub SetSoundLoc (gx As Long, gy As Long)
+    Dim xt As Long, yt As Long, x As Long, y As Long, dx As Long, dy As Long
+
+    '
+    ' translate point to view centered coordinates
+    '
+    dx = gx - viewx
+    dy = gy - viewy
+
+    '
+    ' calculate newx
+    '
+    xt = FixedByFrac(dx, viewcos)
+    yt = FixedByFrac(dy, viewsin)
+    x = Wrap16%(SarL(xt - yt, TILESHIFT))
+
+    '
+    ' calculate newy
+    '
+    xt = FixedByFrac(dx, viewsin)
+    yt = FixedByFrac(dy, viewcos)
+    y = Wrap16%(SarL(yt + xt, TILESHIFT))
+
+    If y >= ATABLEMAX Then
+        y = ATABLEMAX - 1
+    ElseIf y <= -ATABLEMAX Then
+        y = -ATABLEMAX
+    End If
+    If x < 0 Then x = -x
+    If x >= ATABLEMAX Then x = ATABLEMAX - 1
+    leftchannel = lefttable(x, y + ATABLEMAX)
+    rightchannel = righttable(x, y + ATABLEMAX)
+End Sub
+
+'==========================
+'=
+'= SetSoundLocGlobal - Sets up globalsoundx & globalsoundy and then calls
+'=       UpdateSoundLoc() to transform that into relative channel volumes. Those
+'=       values are then passed to the Sound Manager so that they'll be used for
+'=       the next sound played (if possible).
+'=
+'= JAB
 '=
 '==========================
 Sub PlaySoundLocTile (s As Integer, tx As Integer, ty As Integer)
@@ -655,9 +702,19 @@ Sub PlaySoundLocActor (s As Integer, ob As Integer)
 End Sub
 
 Sub PlaySoundLocGlobal (s As Integer, gx As Long, gy As Long)
-    Dim played As Integer
+    SetSoundLoc gx, gy
+    SD_PositionSound leftchannel, rightchannel
+    If SD_PlaySound(s) Then
+        globalsoundx = gx
+        globalsoundy = gy
+    End If
+End Sub
 
-    played = SD_PlaySound(s)
+Sub UpdateSoundLoc ()
+    If SoundPositioned Then
+        SetSoundLoc globalsoundx, globalsoundy
+        SD_SetPosition leftchannel, rightchannel
+    End If
 End Sub
 
 ' The end of a game in GameLoop: restore "View Scores" in the main menu

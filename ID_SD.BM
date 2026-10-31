@@ -34,6 +34,10 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         sdClockLast = Timer(.001)
         sdClockAcc = 0
 
+        sdDigiVolL = 1
+        sdDigiVolR = 1
+        SDL_SetupDigi
+
         sdPipe = _SndOpenRaw
         sdTimer = _FreeTimer
         On Timer(sdTimer, SD_TIMERSECS) SD_PumpAudio
@@ -127,7 +131,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
     ' Generates audio until SD_BUFFERSECS seconds are queued, called by ON TIMER
     Sub SD_PumpAudio ()
         Dim i As Long
-        Dim s As Single
+        Dim s As Single, l As Single, r As Single
 
         If sdPipe <> 0 Then SDL_TimeCountService
 
@@ -156,8 +160,26 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
                     sdCurSample = OPL2_Generate&
                 Loop
                 s = (sdPrevSample + (sdCurSample - sdPrevSample) * (sdOplAcc / 65536!)) * SD_MUSICGAIN / 32768!
-                If s > 1 Then s = 1 Else If s < -1 Then s = -1
-                _SndRaw s, s, sdPipe
+
+                ' The digitized sound at SD_DIGIRATE (sample and hold, like the DAC)
+                l = s
+                r = s
+                If DigiPlaying Then
+                    sdDigiAcc = sdDigiAcc + SD_DIGIRATE
+                    Do While sdDigiAcc >= sdRate And DigiPlaying
+                        sdDigiAcc = sdDigiAcc - sdRate
+                        sdDigiSample = (_MemGet(PMData, PMData.OFFSET + sdDigiPtr, _Unsigned _Byte) - 128) / 128!
+                        sdDigiPtr = sdDigiPtr + 1
+                        sdDigiSegLeft = sdDigiSegLeft - 1
+                        If sdDigiSegLeft <= 0 Then SDL_DigitizedDone
+                    Loop
+                    l = l + sdDigiSample * sdDigiVolL * SD_DIGIGAIN
+                    r = r + sdDigiSample * sdDigiVolR * SD_DIGIGAIN
+                End If
+
+                If l > 1 Then l = 1 Else If l < -1 Then l = -1
+                If r > 1 Then r = 1 Else If r < -1 Then r = -1
+                _SndRaw l, r, sdPipe
             Next i
         Loop
 
@@ -166,9 +188,154 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
 
     '///////////////////////////////////////////////////////////////////////////
     '//
+    '//  Stuff for digitized sounds
+    '//
+    '//  The sounds are 8-bit unsigned samples in the VSWAP sound pages (PMData). The
+    '//  Sound Blaster played them at 1000000 / (256 - timevalue) Hz; SD_PumpAudio
+    '//  resamples them into the output stream and mixes them with the OPL2.
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+
+    ' The next segment (one VSWAP page, at most PMPageSize bytes) of the playing sound
+    ' (SDL_LoadDigiSegment + SDL_PlayDigiSegment)
+    Sub SDL_NextDigiSegment ()
+        Dim length As Long
+
+        If DigiLeft >= PMPageSize Then length = PMPageSize Else length = DigiLeft Mod PMPageSize
+        sdDigiPtr = PM_GetSoundPage(DigiPage)
+        DigiPage = DigiPage + 1
+        sdDigiSegLeft = length
+        DigiLeft = DigiLeft - length
+    End Sub
+
+    ' SDL_DigitizedDone: the end of a segment, called from SD_PumpAudio
+    Sub SDL_DigitizedDone ()
+        If DigiLeft Then
+            SDL_NextDigiSegment
+        Else
+            DigiPlaying = FALSE
+            DigiNumber = 0
+            DigiPriority = 0
+            SoundPositioned = FALSE
+            sdDigiSample = 0
+        End If
+    End Sub
+
+    Sub SD_StopDigitized ()
+        sdLock = -1 ' asm cli
+
+        DigiLeft = 0
+        sdDigiSegLeft = 0
+        DigiPlaying = FALSE
+        DigiNumber = 0
+        DigiPriority = 0
+        SoundPositioned = FALSE
+        sdDigiSample = 0
+
+        sdLock = 0 ' asm popf
+    End Sub
+
+    ' SD_Poll: the segments are fed by SD_PumpAudio (SDL_DigitizedDone), nothing to do here
+    Sub SD_Poll ()
+    End Sub
+
+    ' SDL_PositionSBP: the SB Pro mixer voice volume, (15 - pos) per channel. The mixer
+    ' used the top 3 bits of each nibble, in steps of about 4 dB
+    Sub SDL_PositionSBP (leftpos As Integer, rightpos As Integer)
+        sdDigiVolL = 10 ^ (-(7 - (15 - leftpos) \ 2) * 4 / 20)
+        sdDigiVolR = 10 ^ (-(7 - (15 - rightpos) \ 2) * 4 / 20)
+    End Sub
+
+    Sub SD_SetPosition (leftpos As Integer, rightpos As Integer)
+        If leftpos < 0 Or leftpos > 15 Or rightpos < 0 Or rightpos > 15 Or (leftpos = 15 And rightpos = 15) Then Quit "SD_SetPosition: Illegal position"
+
+        Select Case DigiMode
+            Case sds_SoundBlaster
+                SDL_PositionSBP leftpos, rightpos
+        End Select
+    End Sub
+
+    Sub SD_PlayDigitized (which As Integer, leftpos As Integer, rightpos As Integer)
+        If DigiMode = sds_Off Then Exit Sub
+
+        SD_StopDigitized
+        If which >= NumDigi Then Quit "SD_PlayDigitized: bad sound number"
+
+        SD_SetPosition leftpos, rightpos
+
+        sdLock = -1 ' asm cli
+        DigiPage = DigiListPage(which)
+        DigiLeft = DigiListLen(which)
+
+        SDL_NextDigiSegment
+        sdDigiAcc = 0
+        sdDigiSample = 0
+        DigiPlaying = TRUE
+        sdLock = 0 ' asm popf
+    End Sub
+
+    Sub SD_SetDigiDevice (mode As Integer)
+        Dim devicenotpresent As Integer, m As Integer
+
+        If mode = DigiMode Then Exit Sub
+
+        SD_StopDigitized
+
+        m = mode
+        devicenotpresent = FALSE
+        Select Case m
+            Case sds_SoundBlaster
+                If Not SoundBlasterPresent Then
+                    If SoundSourcePresent Then
+                        m = sds_SoundSource
+                    Else
+                        devicenotpresent = TRUE
+                    End If
+                End If
+            Case sds_SoundSource
+                If Not SoundSourcePresent Then devicenotpresent = TRUE
+        End Select
+
+        If Not devicenotpresent Then DigiMode = m
+    End Sub
+
+    ' SDL_SetupDigi: the list of digitized sounds is the last VSWAP page, (page, length)
+    ' word pairs with the page relative to PMSoundStart
+    Sub SDL_SetupDigi ()
+        Dim p As Long, pg As Long, i As Integer
+
+        p = PM_GetPage(ChunksInFile - 1)
+        pg = PMSoundStart
+        For i = 0 To PMPageSize \ 4 - 1
+            If pg >= ChunksInFile - 1 Then Exit For
+            DigiListPage(i) = _MemGet(PMData, PMData.OFFSET + p + i * 4, _Unsigned Integer)
+            DigiListLen(i) = _MemGet(PMData, PMData.OFFSET + p + i * 4 + 2, _Unsigned Integer)
+            pg = pg + (DigiListLen(i) + (PMPageSize - 1)) \ PMPageSize
+        Next i
+        NumDigi = i
+
+        For i = 0 To LASTSOUND - 1
+            DigiMap(i) = -1
+        Next i
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SD_PositionSound() - Sets up a stereo imaging location for the next
+    '//      sound to be played. Each channel ranges from 0 to 15.
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub SD_PositionSound (leftvol As Integer, rightvol As Integer)
+        LeftPosition = leftvol
+        RightPosition = rightvol
+        nextsoundpos = TRUE
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
     '//  Sound effects
-    '//  Only the AdLib device is ported. PC speaker (sdm_PC) and digitized
-    '//  sounds (DigiMap, SD_PlayDigitized) are TODO.
+    '//  The AdLib device and the digitized sounds are ported. PC speaker sounds
+    '//  (sdm_PC, sds_PC) are TODO.
     '//
     '///////////////////////////////////////////////////////////////////////////
 
@@ -330,22 +497,47 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
     '//
     '///////////////////////////////////////////////////////////////////////////
     Function SD_PlaySound% (snd As Integer)
-        Dim chunk As Integer
+        Dim chunk As Integer, ispos As Integer, lp As Integer, rp As Integer
         Dim priority As Long
 
         SD_PlaySound% = FALSE
-        ' TODO: positioned digitized sounds (nextsoundpos, LeftPosition, RightPosition)
+
+        lp = LeftPosition
+        rp = RightPosition
+        LeftPosition = 0
+        RightPosition = 0
+
+        ispos = nextsoundpos
+        nextsoundpos = FALSE
 
         If snd = -1 Then Exit Function
-        If SoundMode = sdm_Off Then Exit Function
 
         chunk = SoundTableStart + snd
-        If audiosegs(chunk) = 0 Then
+        If SoundMode <> sdm_Off And audiosegs(chunk) = 0 Then
             Print "SD_PlaySound() - Uncached sound"
             End
         End If
 
-        ' TODO: digitized sounds (DigiMode, DigiMap) are played here first when available
+        If DigiMode <> sds_Off And DigiMap(snd) <> -1 Then
+            ' (the sds_PC with sdm_PC case is not ported)
+            ' s->priority (C read it even with the sounds off; here such a sound has priority 0)
+            priority = 0
+            If audiosegs(chunk) <> 0 Then priority = _MemGet(audiosegMem(chunk), audiosegMem(chunk).OFFSET + SOUND_PRIORITY, _Unsigned Integer)
+
+            If DigiPriority <> 0 And DigiNumber = 0 Then Quit "SD_PlaySound: Priority without a sound"
+
+            If priority < DigiPriority Then Exit Function
+
+            SD_PlayDigitized DigiMap(snd), lp, rp
+            SoundPositioned = ispos
+            DigiNumber = snd
+            DigiPriority = priority
+
+            SD_PlaySound% = TRUE
+            Exit Function
+        End If
+
+        If SoundMode = sdm_Off Then Exit Function
 
         If _MemGet(audiosegMem(chunk), audiosegMem(chunk).OFFSET, Long) = 0 Then
             Print "SD_PlaySound() - Zero length sound"
@@ -388,6 +580,8 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
     '//
     '///////////////////////////////////////////////////////////////////////////
     Sub SD_StopSound ()
+        If DigiPlaying Then SD_StopDigitized
+
         Select Case SoundMode
             Case sdm_AdLib
                 SDL_ALStopSound
@@ -419,16 +613,6 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         If result Then MusicMode = mode
         SD_SetMusicMode% = result
     End Function
-
-    '///////////////////////////////////////////////////////////////////////////
-    '//
-    '//  SD_SetDigiDevice() - sets the digitized sound device
-    '//  TODO: digitized sounds (VSWAP), only sds_Off is available
-    '//
-    '///////////////////////////////////////////////////////////////////////////
-    Sub SD_SetDigiDevice (mode As Integer)
-        If mode = sds_Off Then DigiMode = sds_Off
-    End Sub
 
     '///////////////////////////////////////////////////////////////////////////
     '//

@@ -28,20 +28,25 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
     Const SD_TIMERSECS = 0.01
     ' Output gain applied to the OPL2 mix
     Const SD_MUSICGAIN = 6
+    ' Output gain of the digitized sounds (8-bit samples scaled to -1..1)
+    Const SD_DIGIGAIN = 0.7
+    ' Sound Blaster DAC rate: time constant 256 - (1000000 / 7000) = 114, 1000000 / (256 - 114) Hz
+    Const SD_DIGIRATE = 7042
 
     ' SMMode - music device
     Const smm_Off = 0
     Const smm_AdLib = 1
 
-    ' SDSMode - digitized sound device (digitized sounds are not ported)
+    ' SDSMode - digitized sound device
     Const sds_Off = 0
     Const sds_PC = 1
     Const sds_SoundSource = 2
     Const sds_SoundBlaster = 3
 
-    ' Hardware present: the AdLib is emulated, digitized sound devices are not ported
+    ' Hardware present: an AdLib and a Sound Blaster Pro are emulated, the Sound Source is not
     Const AdLibPresent = TRUE
-    Const SoundBlasterPresent = FALSE
+    Const SoundBlasterPresent = TRUE
+    Const SBProPresent = TRUE
     Const SoundSourcePresent = FALSE
 
     Dim Shared MusicMode As Integer
@@ -67,6 +72,21 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
     Dim Shared SoundNumber As Integer
     Dim Shared SoundPriority As Integer
     Dim Shared SoundPositioned As Integer
+    Dim Shared LeftPosition As Integer, RightPosition As Integer
+    Dim Shared nextsoundpos As Integer
+
+    ' Digitized sounds
+    Dim Shared DigiMap(0 To LASTSOUND - 1) As Integer
+    Dim Shared DigiListPage(0 To 1023) As Long ' word _seg *DigiList: page, length pairs
+    Dim Shared DigiListLen(0 To 1023) As Long ' (PMPageSize \ 4 pairs)
+    Dim Shared NumDigi As Integer, DigiLeft As Long, DigiPage As Long
+    Dim Shared DigiPlaying As Integer
+    Dim Shared DigiNumber As Integer, DigiPriority As Integer
+    Dim Shared sdDigiPtr As Long ' offset of the next sample in PMData
+    Dim Shared sdDigiSegLeft As Long ' samples left in the segment (page)
+    Dim Shared sdDigiAcc As Long ' SD_DIGIRATE clock accumulator, in output samples
+    Dim Shared sdDigiSample As Single ' the current sample, -1..1
+    Dim Shared sdDigiVolL As Single, sdDigiVolR As Single ' SB Pro mixer voice volume
     Dim Shared alSoundMem As _MEM ' Chunk of the AdLib sound being played
     Dim Shared alSoundOffset As Long ' Offset of the next data byte in alSoundMem, 0 = no sound
     Dim Shared alLengthLeft As Long
@@ -116,5 +136,8 @@ $If INCLUDE_ID_SD_BI = UNDEFINED Then
     Declare Sub SD_WaitSoundDone ()
     Declare Function SD_SetMusicMode% (mode As Integer)
     Declare Sub SD_SetDigiDevice (mode As Integer)
+    Declare Sub SD_StopDigitized ()
+    Declare Sub SD_PositionSound (leftvol As Integer, rightvol As Integer)
+    Declare Sub SD_SetPosition (leftpos As Integer, rightpos As Integer)
 
 $End If
