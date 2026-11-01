@@ -5,12 +5,15 @@
 # misc editor
 tags
 
-# game files
+# Wolfenstein game files
 *.WL1
 *.WL3
 *.WL6
 *.WJ1
 *.WJ6
+# Spear of Destiny game files
+*.SOD
+*.SDM
 
-# fabien book
+# Fabien's book
 fabien-wolf-book-doc
