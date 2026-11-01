@@ -28,7 +28,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             Const TIMEY = 8
             Dim sec As Long
             Dim i As Integer, min As Integer, kr As Integer, sr As Integer, tr As Integer, x As Integer
-            Dim tempstr As String, c0 As Integer, c1 As Integer
+            Dim tempstr As String
 
             $If SPEAR = DEFINED Then
                     StartCPMusic XTHEEND_MUS
@@ -66,7 +66,10 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             CA_CacheGrChunk STARTFONT
 
             $If SPEAR = UNDEFINED Then
-                CA_CacheGrChunk C_TIMECODEPIC
+                ' (not in the v1.0 data)
+                $If APOGEE_1_0 = UNDEFINED Then
+                    CA_CacheGrChunk C_TIMECODEPIC
+                $End If
             $End If
 
             VWB_Bar 0, 0, 320, 200 - STATUSLINES, 127
@@ -138,6 +141,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
                         '
                         ' TOTAL TIME VERIFICATION CODE
                         '
+                        Dim c0 As Integer, c1 As Integer
                         If gamestate.difficulty >= gd_medium Then
                             VWB_DrawPic 30 * 8, TIMEY * 8, C_TIMECODEPIC
                             fontnumber = 0
@@ -165,7 +169,9 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             VW_FadeOut
 
             $If SPEAR = UNDEFINED Then
-                UNCACHEGRCHUNK C_TIMECODEPIC
+                $If APOGEE_1_0 = UNDEFINED Then
+                    UNCACHEGRCHUNK C_TIMECODEPIC
+                $End If
             $End If
             UnCacheLump LEVELEND_LUMP_START, LEVELEND_LUMP_END
 
@@ -204,7 +210,10 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
                         _Continue
 
                     Case 39 ' '\''
-                        VWB_DrawPic nx, ny, L_APOSTROPHEPIC
+                        ' (the v1.0 data has no L_APOSTROPHEPIC)
+                        $If APOGEE_1_0 = UNDEFINED Then
+                            VWB_DrawPic nx, ny, L_APOSTROPHEPIC
+                        $End If
                         nx = nx + 8
                         _Continue
 
@@ -673,9 +682,11 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         $If SPEAR = UNDEFINED Then
             CA_CacheGrChunk HIGHSCORESPIC
             CA_CacheGrChunk STARTFONT
-            CA_CacheGrChunk C_LEVELPIC
-            CA_CacheGrChunk C_SCOREPIC
-            CA_CacheGrChunk C_NAMEPIC
+            $If APOGEE_1_0 = UNDEFINED Then
+                CA_CacheGrChunk C_LEVELPIC
+                CA_CacheGrChunk C_SCOREPIC
+                CA_CacheGrChunk C_NAMEPIC
+            $End If
 
             ClearMScreen
             DrawStripes 10
@@ -683,9 +694,12 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             VWB_DrawPic 48, 0, HIGHSCORESPIC
             UNCACHEGRCHUNK HIGHSCORESPIC
 
-            VWB_DrawPic 4 * 8, 68, C_NAMEPIC
-            VWB_DrawPic 20 * 8, 68, C_LEVELPIC
-            VWB_DrawPic 28 * 8, 68, C_SCOREPIC
+            ' (the v1.0 data has no column headings)
+            $If APOGEE_1_0 = UNDEFINED Then
+                VWB_DrawPic 4 * 8, 68, C_NAMEPIC
+                VWB_DrawPic 20 * 8, 68, C_LEVELPIC
+                VWB_DrawPic 28 * 8, 68, C_SCOREPIC
+            $End If
             fontnumber = 0
 
             SETFONTCOLOR 15, &H29

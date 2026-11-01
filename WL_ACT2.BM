@@ -245,9 +245,8 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
     '=
     '==================
     Sub A_DeathScream (ob As Integer)
-        Dim secretmap As Integer
-
         $If UPLOAD = UNDEFINED Then
+            Dim secretmap As Integer
             $If SPEAR = UNDEFINED Then
                 secretmap = (mapon = 9)
             $Else

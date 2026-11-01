@@ -34,34 +34,36 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     End Sub
 
     Sub CheckForEpisodes
-        Dim fileExists As Integer
-        Dim i As Integer
-        Dim testFile As String
-
-        ' Check for full version (WL6)
-        fileExists = 0
-        testFile = "VSWAP.WL6"
-        If _FileExists(testFile) Then fileExists = 1
-
         EpisodeSelect(0) = 1 ' int EpisodeSelect[6]={1}; episode 1 is always there
 
-        If fileExists Then
-            extension = "WL6"
-            ' Enable all episodes
-            For i = 1 To 5
-                EpisodeSelect(i) = 1
-            Next i
-        Else
-            ' Check for shareware version (WL1)
-            testFile = "VSWAP.WL1"
-            If _FileExists(testFile) Then
-                extension = "WL1"
+        ' Each build only reads its own data: the chunk numbers of the graphics, sounds
+        ' and sprites are constants (the C code also needed a build per version).
+        ' The C code also looked for *.WL3 (episodes 1-3), there is no such data here
+        $If UPLOAD = UNDEFINED Then
+            Dim i As Integer
+            If _FileExists("VSWAP.WL6") Then
+                extension = "WL6"
+                For i = 2 To 10 Step 2
+                    NewEmenu(i).active = 1
+                Next i
+                For i = 1 To 5
+                    EpisodeSelect(i) = 1
+                Next i
             Else
                 Print "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
-                Print "Please ensure VSWAP.WL1 or VSWAP.WL6 is in the current directory."
+                Print "This build needs VSWAP.WL6 (the full version) in the current directory."
+                Print "For the shareware files (*.WL1) build WOLF1.BAS."
                 End
             End If
-        End If
+        $Else
+                If _FileExists("VSWAP.WL1") Then
+                extension = "WL1"
+                Else
+                Print "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
+                Print "This shareware build needs VSWAP.WL1 in the current directory."
+                End
+                End If
+        $End If
 
         ' Append extension to all file names
         ' RTrim$: the names are fixed length strings padded with spaces

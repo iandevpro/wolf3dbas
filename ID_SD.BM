@@ -514,6 +514,8 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         nextsoundpos = FALSE
 
         If snd = -1 Then Exit Function
+        ' (the v1.0 shareware data has fewer sounds than the list in AUDIOWL6.BI)
+        If snd >= NUMSOUNDS Then Exit Function
 
         chunk = SoundTableStart + snd
         If SoundMode <> sdm_Off And audiosegs(chunk) = 0 Then

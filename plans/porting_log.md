@@ -614,7 +614,7 @@ Commit 4b0d229.
 
 ## 2026-10-31: Mouse motion
 
-Not committed yet.
+Commit 8d040d2.
 
 - **How QB64 reports it:** `_MouseMovementX/Y` gives raw relative counts, like the DOS driver's mickeys. A test program got exactly the counts sent with `mouse_event`. They keep counting when the pointer is at or past the window edge, and `_MouseMove` adds no motion of its own.
 - **ID_IN (the DOS mouse driver counters):**
@@ -637,3 +637,59 @@ Not committed yet.
 - **Not done:**
   - Not compared by hand with DOSBox-X (how far one mouse movement turns).
   - The `ctrl_Mouse` control type of `IN_ReadControl` (WL6 always uses the keyboard there).
+
+## 2026-10-31: Shareware support (*.WL1, v1.0 data)
+
+Not committed yet.
+
+- **The data is v1.0 shareware** (May 5, 1992), older than this v1.4 source:
+  - There is no GAMEMAPS.WL1: the maps are in MAPTEMP.WL1, not Carmack-compressed.
+  - `GFXV_WL1.H` (made May 3, 1992) fits the 136 pictures, but not the chunks after them.
+  - `AUDIOWL1.H` (April 28, 1992, 69 sounds) does not fit the audio at all.
+  - The sprites and the demos differ from v1.4 too.
+
+  Everything below was worked out by comparing the files with the WL6 ones.
+- **The build:** `qb64 -x WOLF1.BAS` builds the shareware version (WOLF1.exe). WOLF1.BAS sets `UPLOAD` (the shareware game, as in WOLF1VER.H) and `APOGEE_1_0` (the v1.0 data), then includes WOLF3D.BAS. WOLF3D.BAS still builds the full version.
+  - The chunk numbers are constants, so each build reads only its own files: the WL6 build no longer falls back to *.WL1, and its message points to WOLF1.BAS. The C code also needed one build per version.
+  - VERSION.BI defines `CARMACIZED` only without `APOGEE_1_0`.
+- **Maps** (ID_CA.BM): the path without `CARMACIZED` (the old TODO) is RLEW only, starting after the length word, as in C.
+- **Graphics:** `GFXV_WL1.BI` is generated from GFXV_WL1.H for the pictures 3-138.
+  - The chunks after the pictures, as they are in VGAHEAD.WL1 (148 chunks): the 8x8 tiles (139), ORDERSCREEN and ERRORSCREEN (140, 141), T_HELPART (142), one T_ENDART1 (143), and T_DEMO0-3 (144-147).
+  - ID_HEADS.BI includes it with `APOGEE_1_0`.
+  - **Pictures v1.0 lacks:**
+    - `C_TIMECODEPIC`: not cached. The time code that uses it is already left out with `UPLOAD`, as in C.
+    - `L_APOSTROPHEPIC`: skipped in `Write`, but the space is kept.
+    - `C_NAMEPIC`, `C_LEVELPIC`, `C_SCOREPIC`: the high-score headings are left out.
+    - The joystick pictures are not used.
+- **Sounds** (AUDIOWL6.BI):
+  - AUDIOT.WL1 has the first 73 sounds of the WL6 list, with the same numbers and sizes, and the same 27 music slots. So `NUMSOUNDS` is 73 and `NUMSNDCHUNKS` is 246.
+  - The `START*` constants are now computed from `NUMSOUNDS`.
+  - `SD_PlaySound` ignores sounds from `NUMSOUNDS` up.
+- **Digitized sounds:** VSWAP.WL1 has WL6's digitized sounds 0-33. So the v1.0 build maps the "other episodes" entries up to 33 as well as the UPLOAD ones.
+- **Sprites** (WL_SPR.BI): VSWAP.WL1 has the WL6 sprite list in the same order (matched by content), with these differences:
+  - `SPR_DEATHCAM` is missing; the death cam came later and is only used by the episode 2-6 bosses.
+  - The 47 sprites before `SPR_BJ_W1` are missing (Giftmacher, rockets, Gretel, Fat Face).
+  - The other episodes' monsters are empty pages.
+
+  So the constants subtract `SPRV10SHIFT1` (1, from `SPR_STAT_0` on) and `SPRV10SHIFT2` (48, from `SPR_BJ_W1` on), which are 0 in the WL6 build.
+- **Demos** (PollControls):
+  - The v1.0 demos are 4 bytes a frame: buttons, x, y (per tic), and that frame's tics as recorded (1-10). Each demo's length is exactly 4 + 4n, and keyboard values (±35, ±70) occur at 3-4 tics.
+  - So a frame takes its own tics instead of `DEMOTICS`.
+  - The end check is `>=`.
+- **CheckForEpisodes** (WL_MENU.BM): in the WL6 build it now also sets `NewEmenu(2..10).active = 1`, as C does. Before, episodes 2-6 were drawn in the "not available" colour.
+- **Variables used by only one build** (`expanded`, `i`, `c0`/`c1`, `secretmap`) are declared inside their `$If` blocks, so neither build warns about them. Both builds have the same 13 warnings.
+- **Tested with WOLF1.exe:**
+  - The sign-on, title, credits, high scores (no headings, plain level numbers as with UPLOAD) and main menu all work.
+  - "Read This!" shows the v1.0 help, 35 pages with its pictures.
+  - In the episode menu, episodes 2-6 are greyed out and give the "order this episode from Apogee" message.
+  - E1M1 plays with v1.0's textures and "LEVEL" status bar. The statics, guards and pistol sprites are right, and firing works.
+  - The demos play (map 4, the "Demo" sprite, guards) but **don't stay in sync**. A per-frame log of demo 0 showed the movement in sync (the door at (7,3) is reached and used on frame 18) until the first fight; then the player takes much more damage than the recording expects and dies.
+    - The difficulty is not the cause: none of the four difficulties keeps any demo in sync.
+    - v1.0's combat or random number use differs from v1.4, and its code is not available.
+- **WL6 unchanged:**
+  - Demos 0, 2 and 3 end as in the 6j table (3900/15, 7100/27, 5600/21), played with fast-forward.
+  - Demo 1 (13600/51, frame 5701) has to be played in real time: `UpdateFace` skips its `US_RndT` calls while `GETGATLINGSND` is playing, so playing faster than the sound changes the random sequence.
+- **Not done:**
+  - The demo sync for v1.0.
+  - The end of the shareware episode was not played through.
+  - The level-end screen was not seen.

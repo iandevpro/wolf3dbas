@@ -380,7 +380,28 @@ Sub InitDigiMap
 
         DigiMap(YEAHSND) = 32
 
-        $If UPLOAD = UNDEFINED Then
+        $If UPLOAD = DEFINED Then
+            $If APOGEE_1_0 = DEFINED Then
+                    ' The v1.0 shareware data has the digitized sounds 0-33 (the same as in
+                    ' WL6), so the ones of the other episodes up to 33 play too
+                    DigiMap(DOGDEATHSND) = 16
+                    DigiMap(AHHHGSND) = 17
+                    DigiMap(DIESND) = 18
+                    DigiMap(EVASND) = 19
+
+                    DigiMap(TOT_HUNDSND) = 23
+                    DigiMap(MEINGOTTSND) = 24
+                    DigiMap(SCHABBSHASND) = 25
+                    DigiMap(HITLERHASND) = 26
+                    DigiMap(SPIONSND) = 27
+                    DigiMap(NEINSOVASSND) = 28
+                    DigiMap(DOGATTACKSND) = 29
+                    DigiMap(LEVELDONESND) = 30
+                    DigiMap(MECHSTEPSND) = 31
+
+                    DigiMap(SCHEISTSND) = 33
+            $End If
+        $Else
             ' These are in all other episodes
             DigiMap(DOGDEATHSND) = 16
             DigiMap(AHHHGSND) = 17

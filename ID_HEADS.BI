@@ -16,7 +16,11 @@ $If INCLUDE_ID_HEADS_BI = UNDEFINED Then
     $Else
         $If SPEAR = UNDEFINED Then
             ' IAN: This should be included for Wolf 3D
-            '$INCLUDE:'GFXV_WL6.BI'
+            $If APOGEE_1_0 = DEFINED Then
+                    '$INCLUDE:'GFXV_WL1.BI'
+            $Else
+                '$INCLUDE:'GFXV_WL6.BI'
+            $End If
             '$INCLUDE:'AUDIOWL6.BI'
             '$INCLUDE:'MAPSWL6.BI'
         $Else

@@ -229,7 +229,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     '=
     '======================
     Sub CA_CacheMap (mapnum As Integer)
-        Dim position As Long, compressed As Long, expanded As Long
+        Dim position As Long, compressed As Long
         Dim plane As Integer
         Dim source As _Unsigned _Byte
         Dim buffer2seg As _Unsigned Integer
@@ -251,6 +251,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
             Get #maphandle, , source() ' CA_FarRead
 
             $If CARMACIZED = DEFINED Then
+                Dim expanded As Long
                 '
                 ' unhuffman, then unRLEW
                 ' The huffman chunk has a two byte expanded length first
@@ -263,9 +264,12 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
                 CA_RLEWexpand buffer2seg(), 1, plane, size, RLEWtag
             $Else
                     '
-                    ' unRLEW, skipping expanded length
+                    ' unRLEW, skipping expanded length (the plane as words)
                     '
-                    ' TODO: map files that are not carmackized (MAPTEMP)
+                    Dim i As Long
+                    ReDim buffer2seg(0 To compressed \ 2) As _Unsigned Integer
+                    For i = 0 To compressed \ 2 - 1: buffer2seg(i) = source(i * 2) + source(i * 2 + 1) * 256&: Next i
+                    CA_RLEWexpand buffer2seg(), 1, plane, size, RLEWtag
             $End If
         Next plane
     End Sub
