@@ -774,7 +774,7 @@ Commit 0bf4d63. Plan: `plans/step7_spear.plan.md` (decisions 1, 3 and 4 done her
 
 ## 2026-11-01: Step 7b, Spear start-up and screens
 
-Not committed yet.
+Commit a5f4051.
 
 - **`VL_ChunkToPalette`** (ID_VL.BM): converts a palette stored in a graphics chunk (768 bytes of 6-bit values: TITLEPALETTE, IDGUYSPALETTE, END1-9PALETTE) into a palette array for `VL_FadeIn`. The C code passed the cached chunk itself, as in `VL_FadeIn(0,255,grsegs[TITLEPALETTE],30)`.
 - **The Spear title** (DemoLoop): TITLE1PIC and TITLE2PIC (two half screens), faded in with TITLEPALETTE, as in WL_MAIN.C.
@@ -793,3 +793,38 @@ Not committed yet.
   - **Easter egg:** three times in a row, with I+D held while leaving the Sound menu.
   - **WL6:** the sign-on, the NonShareware notice and the title as before.
   - Warnings: 12 / 12 / 38 / 40 (WOLF3D / WOLF1 / SPEAR / SPEARDEMO). The formatter changes nothing.
+
+## 2026-11-02: Step 7d, Spear levels with the existing enemies
+
+Not committed yet.
+
+- **Already ported** (the C Spear blocks of WL_GAME, WL_AGENT, WL_ACT1, WL_PLAY, WL_DRAW and WL_STATE were checked one by one):
+  - ScanInfoPlane's statics 23-74, with the truck and the spear;
+  - the statinfo entries;
+  - the bo_25clip and bo_spear pickups;
+  - the "ouch" face and the god mode face;
+  - the Spear songs, ceilings and par times;
+  - the secret floors (NextLevelMap: map 3 to 18 and map 11 to 19, then back to 4 and 12);
+  - the boss and secret level end screens;
+  - the victory fade.
+- **Now ported:**
+  - **DrawLevel:** the Angel of Death's map 20 shows as floor 18.
+  - **GameLoop:**
+    - the key of map 20 ("give them the key allways");
+    - after taking the spear (spearflag): GETSPEARSND (with digitized sound, about 2 seconds), then map 20, with the player where the spear was, and PlayLoop again. In C this was a `goto startplayloop`; here it is a loop while spearflag. As in C, that path does not redraw the floor number or the keys.
+    - SPEARDEMO ends after its map 1, with the high scores.
+  - **LevelCompleted:** SPEARDEMO's "This concludes your demo of Spear of Destiny!..." message.
+  - **Thrust:** moving zeroes funnyticount.
+  - **PlayLoop:** after 30 seconds without moving, BJ's waiting face (BJWAITING1PIC + US_RndT And 1).
+  - **CheckKeys:** the Tab-G-F10 god mode cheat ("God mode ON" / "OFF").
+- **Left for 7e:** the cases of the Spear enemies in KillActor, FirstSighting, the spawns and the death screams.
+- **Tested** with a temporary `/testexit N` hook (it ended the level after 2 seconds with playstate N; 99 = the spear taken; removed):
+  - **The spear on map 16:** the map changes to the Angel of Death's arena.
+  - **TEDLEVEL 20:** floor 18 with the gold key.
+  - **The secret exit of map 3:** "floor 4 completed", a time bonus of 104000 ((210 - 2 s) * 500), then map 18 (floor 19).
+  - **Ending map 18:** "secret tunnel area completed!" with 15000, then map 4 (floor 5).
+  - **SPEARDEMO, ending map 1:** the end-of-demo message, then the high score entry.
+  - **The waiting face** appeared about 30 s into play, sampled every 0.3 s; a temporary log showed funnyticount counting 70 a second.
+  - **Tab-G-F10:** "God mode ON". The test held the keys briefly: held with auto-repeat, each repeat acknowledges the message and toggles god mode again, which is the same in C.
+  - **Demos:** the SOD demos and the WL6 demos end exactly as before.
+  - **Builds:** 12 / 12 / 38 / 40 warnings. The formatter changes nothing.

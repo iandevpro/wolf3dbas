@@ -98,7 +98,7 @@ About 20 WL6-only sound names and 13 picture names are used in shared code. The 
 - Spear music, and save/load to `SAVEGAM?.SOD`.
 - **Test:** every menu screen in both Spear builds.
 
-### 7d. Levels with the existing enemies
+### 7d. Levels with the existing enemies — DONE 2026-11-02
 - `ScanInfoPlane` with the Spear objects and statics (the spear `bo_spear`, the new statics).
 - The Spear ceilings and songs.
 - `LevelCompleted` for Spear: floor names, and the secret floors 18 and 19 reached from maps 4 and 9 (WL_GAME.C 1388-1414).

@@ -92,6 +92,12 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
     '=
     '===============
     Sub DrawLevel ()
+        $If SPEAR = DEFINED Then
+            If gamestate.mapon = 20 Then
+                LatchNumber 2, 16, 2, 18
+                Exit Sub
+            End If
+        $End If
         LatchNumber 2, 16, 2, gamestate.mapon + 1
     End Sub
 
@@ -845,6 +851,14 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         Dim offset As Long
 
         spd = speed
+
+        '
+        ' ZERO FUNNY COUNTER IF MOVED!
+        '
+        $If SPEAR = DEFINED Then
+            If spd Then funnyticount = 0
+        $End If
+
         thrustspeed = thrustspeed + spd
 
         '

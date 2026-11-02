@@ -509,7 +509,18 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         '
         ' done
         '
-        ' TODO 6j: SPEARDEMO / JAPDEMO end of demo message
+        $If SPEARDEMO = DEFINED Then
+            If gamestate.mapon = 1 Then
+                played = SD_PlaySound(BONUS1UPSND)
+
+                CA_CacheGrChunk STARTFONT + 1
+                Message "This concludes your demo" + Chr$(10) + "of Spear of Destiny! Now," + Chr$(10) + "go to your local software" + Chr$(10) + "store and buy it!"
+                UNCACHEGRCHUNK STARTFONT + 1
+
+                IN_ClearKeysDown
+                IN_Ack
+            End If
+        $End If
         ' TODO: PicturePause (Keyboard[sc_P] with the "goobers" parameter)
 
         VW_FadeOut

@@ -329,10 +329,35 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
     '=====================
     Sub CheckKeys ()
         Dim scan As Integer
+        $If SPEAR = DEFINED Then
+            Dim played As Integer
+        $End If
 
         If screenfaded Or demoplayback Then Exit Sub ' don't do anything with a faded screen
 
         scan = LastScan
+
+        $If SPEAR = DEFINED Then
+            '
+            ' SECRET CHEAT CODE: TAB-G-F10
+            '
+            If Keyboard(sc_Tab) And Keyboard(sc_G) And Keyboard(sc_F10) Then
+                WindowH = 160
+                If godmode Then
+                    Message "God mode OFF"
+                    played = SD_PlaySound(NOBONUSSND)
+                Else
+                    Message "God mode ON"
+                    played = SD_PlaySound(ENDBONUS2SND)
+                End If
+
+                IN_Ack
+                godmode = godmode Xor 1
+                DrawAllPlayBorderSides
+                IN_ClearKeysDown
+                Exit Sub
+            End If
+        $End If
 
         '
         ' SECRET CHEAT CODE: 'MLI'
@@ -712,6 +737,18 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             UpdatePaletteShifts
 
             ThreeDRefresh
+
+            '
+            ' MAKE FUNNY FACE IF BJ DOESN'T MOVE FOR AWHILE
+            '
+            $If SPEAR = DEFINED Then
+                funnyticount = funnyticount + tics
+                If funnyticount > 30& * 70 Then
+                    funnyticount = 0
+                    StatusDrawPic 17, 4, BJWAITING1PIC + (US_RndT And 1)
+                    facecount = 0
+                End If
+            $End If
 
             gamestate.TimeCount = gamestate.TimeCount + tics
 

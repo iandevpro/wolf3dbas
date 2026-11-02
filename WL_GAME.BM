@@ -429,6 +429,9 @@ End Sub
 '===================
 Sub GameLoop ()
     Dim diedflag As Integer ' C: died (DIED is the Died sub here)
+    $If SPEAR = DEFINED Then
+        Dim played As Integer, lasttime As Long
+    $End If
 
     Do ' restartgame:
         ClearMemory
@@ -447,6 +450,13 @@ Sub GameLoop ()
                 SetupGameLevel
             End If
 
+            $If SPEAR = DEFINED Then
+                If gamestate.mapon = 20 Then ' give them the key allways
+                    gamestate.keys = gamestate.keys Or 1
+                    DrawKeys
+                End If
+            $End If
+
             ingame = TRUE
             StartLevelMusic
             ' PM_CheckMainMem - memory management, not needed in QB64
@@ -461,6 +471,35 @@ Sub GameLoop ()
 
             ' startplayloop:
             PlayLoop
+
+            $If SPEAR = DEFINED Then
+                ' The spear was taken (GetBonus): on to the Angel of Death's map, where the
+                ' player stands where the spear was (C: goto startplayloop)
+                Do While spearflag
+                    SD_StopSound
+                    played = SD_PlaySound(GETSPEARSND)
+                    If DigiMode <> sds_Off Then
+                        lasttime = TimeCount
+                        Do While TimeCount < lasttime + 150
+                            _Limit 140
+                        Loop
+                    Else
+                        SD_WaitSoundDone
+                    End If
+
+                    ClearMemory
+                    gamestate.oldscore = gamestate.score
+                    gamestate.mapon = 20
+                    SetupGameLevel
+                    StartLevelMusic
+                    objlist(player).x = spearx
+                    objlist(player).y = speary
+                    objlist(player).angle = spearangle
+                    spearflag = FALSE
+                    Thrust 0, 0
+                    PlayLoop
+                Loop
+            $End If
 
             StopMusic
             ingame = FALSE
@@ -478,7 +517,20 @@ Sub GameLoop ()
                     ClearMemory
 
                     LevelCompleted ' do the intermission
-                    ' TODO 6j: SPEARDEMO / JAPDEMO end after the demo levels
+                    $If SPEARDEMO = DEFINED Then
+                        If gamestate.mapon = 1 Then
+                            diedflag = TRUE ' don't "get psyched!"
+
+                            VW_FadeOut
+
+                            ClearMemory
+
+                            CheckHighScore gamestate.score, gamestate.mapon + 1
+
+                            GameLoopEnd
+                            Exit Sub
+                        End If
+                    $End If
 
                     gamestate.oldscore = gamestate.score
 
