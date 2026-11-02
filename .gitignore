@@ -17,3 +17,10 @@ tags
 
 # Fabien's book
 fabien-wolf-book-doc
+
+# port test output (PORTDEBUG.BM)
+DEMOTEST.TXT
+MAPCHECK.TXT
+
+# python
+__pycache__/

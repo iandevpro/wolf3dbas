@@ -232,10 +232,10 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             ' demo recording and playback needs to be constant:
             ' take DEMOTICS or more tics, and modify Timecount to reflect time taken
             $If APOGEE_1_0 = DEFINED Then
-                    ' The v1.0 demos are 4 bytes a frame: buttons, x, y (per tic, like the
-                    ' later demos) and the tics of that frame as recorded (1-10). So a frame
-                    ' takes its recorded tics (the 4th byte) instead of DEMOTICS
-                    tics = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr + 3, _Unsigned _Byte)
+                ' The v1.0 demos are 4 bytes a frame: buttons, x, y (per tic, like the
+                ' later demos) and the tics of that frame as recorded (1-10). So a frame
+                ' takes its recorded tics (the 4th byte) instead of DEMOTICS
+                tics = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr + 3, _Unsigned _Byte)
             $Else
                 tics = DEMOTICS
             $End If
@@ -272,7 +272,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             controly = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Byte)
             demoptr = demoptr + 1
             $If APOGEE_1_0 = DEFINED Then
-                    demoptr = demoptr + 1 ' the tics, read above
+                demoptr = demoptr + 1 ' the tics, read above
             $End If
 
             If demoptr >= lastdemoptr Then playstate = ex_completed ' demo is done

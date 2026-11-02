@@ -59,7 +59,7 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         $If CARMACIZED = DEFINED Then
             fname = "GAMEMAPS." + extension
         $Else
-                fname = mfilename + extension
+            fname = mfilename + extension
         $End If
 
         maphandle = FreeFile
@@ -263,13 +263,13 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
                 CAL_CarmackExpand source(), 2, buffer2seg(), expanded
                 CA_RLEWexpand buffer2seg(), 1, plane, size, RLEWtag
             $Else
-                    '
-                    ' unRLEW, skipping expanded length (the plane as words)
-                    '
-                    Dim i As Long
-                    ReDim buffer2seg(0 To compressed \ 2) As _Unsigned Integer
-                    For i = 0 To compressed \ 2 - 1: buffer2seg(i) = source(i * 2) + source(i * 2 + 1) * 256&: Next i
-                    CA_RLEWexpand buffer2seg(), 1, plane, size, RLEWtag
+                '
+                ' unRLEW, skipping expanded length (the plane as words)
+                '
+                Dim i As Long
+                ReDim buffer2seg(0 To compressed \ 2) As _Unsigned Integer
+                For i = 0 To compressed \ 2 - 1: buffer2seg(i) = source(i * 2) + source(i * 2 + 1) * 256&: Next i
+                CA_RLEWexpand buffer2seg(), 1, plane, size, RLEWtag
             $End If
         Next plane
     End Sub

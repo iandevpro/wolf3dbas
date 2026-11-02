@@ -43,6 +43,21 @@ The order follows the original `DemoLoop` (origsrc/WL_MAIN.C:1411), so each step
 ### 6. The game (largest) — DONE 2026-10-30 (WL6; the Spear actors, demo recording, PC speaker sounds and the debug keys are not ported)
 Planned in sub-steps 6a-6k in `step6_game.plan.md`: groundwork, map and VSWAP data, play screen and level setup, raycaster and movement, sprites and items, doors and level exit, enemies, bosses, digitized sounds, demos, config and save/load.
 
+### After step 6 — DONE 2026-10-31
+- The IDE formatting tool (`tools/ide_format.py`).
+- Naming fixes, warnings, and removing the update blocks.
+- Mouse motion.
+- The shareware build for the v1.0 `*.WL1` data (`WOLF1.BAS`).
+
+### 7. Spear of Destiny — PLANNED 2026-10-31
+Planned in sub-steps 7a-7h in `step7_spear.plan.md`:
+- 7a (DONE 2026-11-01): one build per version (`SPEAR.BAS`, `SPEARDEMO.BAS`), with generated headers and sprite numbers, TEDLEVEL, and the formatter for all builds.
+- 7b-7d: screens, menus, and levels with the existing enemies.
+- 7e: the Spear enemies and bosses.
+- 7f: the ending.
+- 7g: copy protection.
+- 7h: the demo version.
+
 ## Cross-cutting decisions
 - **Back buffer:** before the menu or the game, draw into an offscreen 8-bit image and have `VW_UpdateScreen` copy it to the screen with `_PutImage` + `_Display`. That avoids tearing and gives `VW_UpdateScreen` its real job; it becomes required once the renderer exists.
 - **`$Debug` in WOLF3D.BAS:** it makes the OPL2 emulator about 5x slower (2.7x realtime instead of 13.8x). Turn it off once the renderer starts.

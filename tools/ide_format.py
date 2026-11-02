@@ -3,14 +3,20 @@
 The QB64 IDE only formats the code it can parse. A .BM / .BI file opened on its own is not a
 complete program, so the IDE stops at the first use of something defined in another file. So:
 
-  merge  builds one complete program (WOLF3D.BAS with every include inlined once, at its first
-         active occurrence, like the include guards do), with marker comments around each file
-  ide    opens the merged program in the QB64 IDE, jumps to the end, saves and exits
+  merge  builds one complete program per build (the entry files WOLF3D.BAS, WOLF1.BAS, SPEAR.BAS,
+         SPEARDEMO.BAS, with every include inlined once, at its first active occurrence, like
+         the include guards do), with marker comments around each file
+  ide    opens each merged program in the QB64 IDE, jumps to the end, saves and exits
          (tools/ide_roundtrip.ps1)
-  split  cuts the formatted program back into the files (each one without the indentation of
+  split  cuts the formatted programs back into the files (each one without the indentation of
          the place it was included at) and writes the files that changed
 
-python tools/ide_format.py          does all three; "merge" / "split" do one step
+The IDE fully formats only the lines that are compiled; in the inactive $If blocks it only
+re-indents, and flattens the loop and Case bodies. So split takes each line from a build in
+which that line is compiled (lines no build compiles come from the first build). The IDE keeps
+one line per line, and split checks that the builds give the same lines of each file.
+
+python tools/ide_format.py          does all three; "merge" / "ide" / "split" do one step
 """
 import os
 import re
@@ -20,8 +26,7 @@ import tempfile
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 WORK = os.path.join(tempfile.gettempdir(), 'wolf3d-ide-format')
-MERGED = os.path.join(WORK, 'WOLF3D_ALL.BAS')
-MAIN = 'WOLF3D.BAS'
+ENTRIES = ['WOLF3D.BAS', 'WOLF1.BAS', 'SPEAR.BAS', 'SPEARDEMO.BAS']  # one per build
 MARK = "'@@IDEFMT "
 
 INCLUDE_RE = re.compile(r"^\s*'\$INCLUDE\s*:\s*'([^']+)'", re.I)
@@ -43,6 +48,13 @@ class Meta:
 
     def active(self):
         return all(a for a, _ in self.stack)
+
+    def line_active(self, text):
+        """Whether the line is compiled (a metacommand line counts with its enclosing block)"""
+        st = text.strip()
+        if re.match(r'\$(Else|ElseIf|End\s*If|EndIf)\b', st, re.I):
+            return all(a for a, _ in self.stack[:-1])
+        return self.active()
 
     def cond(self, expr):
         m = re.match(r'\s*(\w+)\s*=\s*(\w+)\s*$', expr)
@@ -83,42 +95,57 @@ class Meta:
             self.stack.pop()
 
 
+def merged_name(entry):
+    return os.path.join(WORK, os.path.splitext(entry)[0] + '_ALL.BAS')
+
+
 def merge():
-    meta = Meta()
-    done = set()
-    out = []
+    for entry in ENTRIES:
+        meta = Meta()
+        done = set()
+        out = []
+        act = []
 
-    # an inlined file is indented like the include line, as the IDE will indent it
-    def inline(name, prefix):
-        done.add(name.upper())
-        for text in read_lines(name):
-            m = INCLUDE_RE.match(text)
-            ind = prefix + text[:len(text) - len(text.lstrip(' '))]
-            if m:
-                inc = m.group(1)
-                if meta.active() and inc.upper() not in done:
-                    out.append(ind + MARK + 'BEGIN ' + inc + ' ' + text.strip())
-                    inline(inc, ind)
-                    out.append(ind + MARK + 'END ' + inc)
-                else:
-                    out.append(ind + MARK + 'INC ' + text.strip())
-                continue
-            meta.line(text)
-            out.append(prefix + text if text.strip() else text)
+        # an inlined file is indented like the include line, as the IDE will indent it
+        def inline(name, prefix):
+            done.add(name.upper())
+            for text in read_lines(name):
+                m = INCLUDE_RE.match(text)
+                ind = prefix + text[:len(text) - len(text.lstrip(' '))]
+                if m:
+                    inc = m.group(1)
+                    if meta.active() and inc.upper() not in done:
+                        out.append(ind + MARK + 'BEGIN ' + inc + ' ' + text.strip())
+                        act.append(True)
+                        inline(inc, ind)
+                        out.append(ind + MARK + 'END ' + inc)
+                    else:
+                        out.append(ind + MARK + 'INC ' + text.strip())
+                    act.append(meta.active())
+                    continue
+                act.append(meta.line_active(text))
+                meta.line(text)
+                out.append(prefix + text if text.strip() else text)
 
-    inline(MAIN, '')
-    os.makedirs(WORK, exist_ok=True)
-    open(MERGED, 'w', encoding='latin-1', newline='').write('\r\n'.join(out) + '\r\n')
-    print('merged %d files, %d lines: %s' % (len(done), len(out), MERGED))
+        inline(entry, '')
+        os.makedirs(WORK, exist_ok=True)
+        merged = merged_name(entry)
+        open(merged, 'w', encoding='latin-1', newline='').write('\r\n'.join(out) + '\r\n')
+        open(merged + '.act', 'w').write(''.join('1' if a else '0' for a in act))
+        print('merged %s: %d files, %d lines' % (entry, len(done), len(out)))
 
 
-def split():
-    lines = open(MERGED, encoding='latin-1', newline='').read().replace('\r\n', '\n')
+def split_one(entry):
+    """{file: [(text, compiled)]} of one formatted build"""
+    merged = merged_name(entry)
+    lines = open(merged, encoding='latin-1', newline='').read().replace('\r\n', '\n')
     if lines.endswith('\n'):
         lines = lines[:-1]
     lines = lines.split('\n')
+    act = [c == '1' for c in open(merged + '.act').read()]
+    assert len(act) == len(lines), (entry, 'the IDE changed the number of lines', len(act), len(lines))
     files = {}
-    stack = [[MAIN, 0, []]]  # name, base indentation, lines
+    stack = [[entry, 0, []]]  # name, base indentation, lines
 
     def indent(t):
         return len(t) - len(t.lstrip(' '))
@@ -126,7 +153,7 @@ def split():
     def unindent(t, base):
         return t[min(base, indent(t)):]
 
-    for text in lines:
+    for text, a in zip(lines, act):
         st = text.strip()
         if st.startswith(MARK):
             kind, rest = st[len(MARK):].split(' ', 1)
@@ -134,22 +161,34 @@ def split():
             if kind == 'BEGIN':
                 name, original = rest.split(' ', 1)
                 ind = indent(text)
-                cur[2].append(' ' * max(ind - cur[1], 0) + original)
+                cur[2].append((' ' * max(ind - cur[1], 0) + original, a))
                 stack.append([name, ind, []])
             elif kind == 'END':
                 name, base, body = stack.pop()
                 assert name == rest, (name, rest)
                 files[name] = body
             elif kind == 'INC':
-                cur[2].append(' ' * max(indent(text) - cur[1], 0) + rest)
+                cur[2].append((' ' * max(indent(text) - cur[1], 0) + rest, a))
             continue
         cur = stack[-1]
-        cur[2].append(unindent(text, cur[1]))
+        cur[2].append((unindent(text, cur[1]), a))
     assert len(stack) == 1
-    files[MAIN] = stack[0][2]
+    files[entry] = stack[0][2]
+    return files
 
+
+def split():
+    builds = [split_one(e) for e in ENTRIES]
+    names = sorted({n for b in builds for n in b})
     changed = 0
-    for name, body in sorted(files.items()):
+    for name in names:
+        versions = [b[name] for b in builds if name in b]
+        assert len({len(v) for v in versions}) == 1, (name, 'the builds give different lines',
+                                                      [len(v) for v in versions])
+        body = []
+        for k in range(len(versions[0])):
+            # the line from a build that compiles it, else from the first build
+            body.append(next((v[k][0] for v in versions if v[k][1]), versions[0][k][0]))
         path = os.path.join(ROOT, name)
         new = '\r\n'.join(body) + '\r\n'
         old = open(path, encoding='latin-1', newline='').read()
@@ -157,13 +196,14 @@ def split():
             open(path, 'w', encoding='latin-1', newline='').write(new)
             changed += 1
             print('  formatted', name)
-    print('%d of %d files changed' % (changed, len(files)))
+    print('%d of %d files changed' % (changed, len(names)))
 
 
 def ide():
     ps = os.path.join(ROOT, 'tools', 'ide_roundtrip.ps1')
-    subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps,
-                    '-files', MERGED, '-loadwait', '60'], check=True)
+    for entry in ENTRIES:
+        subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps,
+                        '-files', merged_name(entry), '-loadwait', '60'], check=True)
 
 
 if __name__ == '__main__':

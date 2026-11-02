@@ -1,21 +1,10 @@
-' AUDIOWL6.H - MUSE Header for .WL6
-' Created Tue Jul 14 15:04:53 1992
-' Converted to QB64
+' AUDIOWL6.BI - generated from origsrc/AUDIOWL6.H (Created Tue Jul 14 15:04:53 1992) by tools/gen_headers.py
 
 $If INCLUDE_AUDIOWL6_BI = UNDEFINED Then
     $Let INCLUDE_AUDIOWL6_BI = 1
 
-    ' Constants
-    $If APOGEE_1_0 = DEFINED Then
-            ' The v1.0 shareware data (AUDIOT.WL1) has the first 73 sounds of this list, with
-            ' the same numbers (the sounds 73-86 were added later), and the same music slots.
-            ' AUDIOWL1.H (April 1992, 69 sounds) is older than that data and does not fit it
-            Const NUMSOUNDS = 73
-            Const NUMSNDCHUNKS = 246
-    $Else
-        Const NUMSOUNDS = 87
-        Const NUMSNDCHUNKS = 288
-    $End If
+    Const NUMSOUNDS = 87
+    Const NUMSNDCHUNKS = 288
 
     ' Sound names & indexes
     Const HITWALLSND = 0
@@ -109,9 +98,9 @@ $If INCLUDE_AUDIOWL6_BI = UNDEFINED Then
 
     ' Base offsets
     Const STARTPCSOUNDS = 0
-    Const STARTADLIBSOUNDS = NUMSOUNDS
-    Const STARTDIGISOUNDS = NUMSOUNDS * 2
-    Const STARTMUSIC = NUMSOUNDS * 3
+    Const STARTADLIBSOUNDS = 87
+    Const STARTDIGISOUNDS = 174
+    Const STARTMUSIC = 261
 
     ' Music names & indexes
     Const CORNER_MUS = 0
@@ -144,4 +133,3 @@ $If INCLUDE_AUDIOWL6_BI = UNDEFINED Then
     Const LASTMUSIC = 27
 
 $End If
-

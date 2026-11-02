@@ -72,20 +72,28 @@ $If INCLUDE_WL_DRAW_BI = UNDEFINED Then
     Dim Shared drawscreen As _MEM
     Dim Shared viewscreenx As Integer, viewscreeny As Integer ' top left of the view on the screen
 
-    ' unsigned vgaCeiling[] - ceiling color of each map (WL6), generated from origsrc/WL_DRAW.C
+    ' unsigned vgaCeiling[] - ceiling color of each map, from origsrc/WL_DRAW.C
     ' (the color byte doubled in a word)
     Dim Shared vgaCeiling(0 To 59) As Long
-    vgaCeiling(0) = &H1D1D: vgaCeiling(1) = &H1D1D: vgaCeiling(2) = &H1D1D: vgaCeiling(3) = &H1D1D: vgaCeiling(4) = &H1D1D
-    vgaCeiling(5) = &H1D1D: vgaCeiling(6) = &H1D1D: vgaCeiling(7) = &H1D1D: vgaCeiling(8) = &H1D1D: vgaCeiling(9) = &HBFBF
-    vgaCeiling(10) = &H4E4E: vgaCeiling(11) = &H4E4E: vgaCeiling(12) = &H4E4E: vgaCeiling(13) = &H1D1D: vgaCeiling(14) = &H8D8D
-    vgaCeiling(15) = &H4E4E: vgaCeiling(16) = &H1D1D: vgaCeiling(17) = &H2D2D: vgaCeiling(18) = &H1D1D: vgaCeiling(19) = &H8D8D
-    vgaCeiling(20) = &H1D1D: vgaCeiling(21) = &H1D1D: vgaCeiling(22) = &H1D1D: vgaCeiling(23) = &H1D1D: vgaCeiling(24) = &H1D1D
-    vgaCeiling(25) = &H2D2D: vgaCeiling(26) = &HDDDD: vgaCeiling(27) = &H1D1D: vgaCeiling(28) = &H1D1D: vgaCeiling(29) = &H9898
-    vgaCeiling(30) = &H1D1D: vgaCeiling(31) = &H9D9D: vgaCeiling(32) = &H2D2D: vgaCeiling(33) = &HDDDD: vgaCeiling(34) = &HDDDD
-    vgaCeiling(35) = &H9D9D: vgaCeiling(36) = &H2D2D: vgaCeiling(37) = &H4D4D: vgaCeiling(38) = &H1D1D: vgaCeiling(39) = &HDDDD
-    vgaCeiling(40) = &H7D7D: vgaCeiling(41) = &H1D1D: vgaCeiling(42) = &H2D2D: vgaCeiling(43) = &H2D2D: vgaCeiling(44) = &HDDDD
-    vgaCeiling(45) = &HD7D7: vgaCeiling(46) = &H1D1D: vgaCeiling(47) = &H1D1D: vgaCeiling(48) = &H1D1D: vgaCeiling(49) = &H2D2D
-    vgaCeiling(50) = &H1D1D: vgaCeiling(51) = &H1D1D: vgaCeiling(52) = &H1D1D: vgaCeiling(53) = &H1D1D: vgaCeiling(54) = &HDDDD
-    vgaCeiling(55) = &HDDDD: vgaCeiling(56) = &H7D7D: vgaCeiling(57) = &HDDDD: vgaCeiling(58) = &HDDDD: vgaCeiling(59) = &HDDDD
+    $If SPEAR = UNDEFINED Then
+        vgaCeiling(0) = &H1D1D: vgaCeiling(1) = &H1D1D: vgaCeiling(2) = &H1D1D: vgaCeiling(3) = &H1D1D: vgaCeiling(4) = &H1D1D
+        vgaCeiling(5) = &H1D1D: vgaCeiling(6) = &H1D1D: vgaCeiling(7) = &H1D1D: vgaCeiling(8) = &H1D1D: vgaCeiling(9) = &HBFBF
+        vgaCeiling(10) = &H4E4E: vgaCeiling(11) = &H4E4E: vgaCeiling(12) = &H4E4E: vgaCeiling(13) = &H1D1D: vgaCeiling(14) = &H8D8D
+        vgaCeiling(15) = &H4E4E: vgaCeiling(16) = &H1D1D: vgaCeiling(17) = &H2D2D: vgaCeiling(18) = &H1D1D: vgaCeiling(19) = &H8D8D
+        vgaCeiling(20) = &H1D1D: vgaCeiling(21) = &H1D1D: vgaCeiling(22) = &H1D1D: vgaCeiling(23) = &H1D1D: vgaCeiling(24) = &H1D1D
+        vgaCeiling(25) = &H2D2D: vgaCeiling(26) = &HDDDD: vgaCeiling(27) = &H1D1D: vgaCeiling(28) = &H1D1D: vgaCeiling(29) = &H9898
+        vgaCeiling(30) = &H1D1D: vgaCeiling(31) = &H9D9D: vgaCeiling(32) = &H2D2D: vgaCeiling(33) = &HDDDD: vgaCeiling(34) = &HDDDD
+        vgaCeiling(35) = &H9D9D: vgaCeiling(36) = &H2D2D: vgaCeiling(37) = &H4D4D: vgaCeiling(38) = &H1D1D: vgaCeiling(39) = &HDDDD
+        vgaCeiling(40) = &H7D7D: vgaCeiling(41) = &H1D1D: vgaCeiling(42) = &H2D2D: vgaCeiling(43) = &H2D2D: vgaCeiling(44) = &HDDDD
+        vgaCeiling(45) = &HD7D7: vgaCeiling(46) = &H1D1D: vgaCeiling(47) = &H1D1D: vgaCeiling(48) = &H1D1D: vgaCeiling(49) = &H2D2D
+        vgaCeiling(50) = &H1D1D: vgaCeiling(51) = &H1D1D: vgaCeiling(52) = &H1D1D: vgaCeiling(53) = &H1D1D: vgaCeiling(54) = &HDDDD
+        vgaCeiling(55) = &HDDDD: vgaCeiling(56) = &H7D7D: vgaCeiling(57) = &HDDDD: vgaCeiling(58) = &HDDDD: vgaCeiling(59) = &HDDDD
+    $Else
+        vgaCeiling(0) = &H6F6F: vgaCeiling(1) = &H4F4F: vgaCeiling(2) = &H1D1D: vgaCeiling(3) = &HDEDE: vgaCeiling(4) = &HDFDF
+        vgaCeiling(5) = &H2E2E: vgaCeiling(6) = &H7F7F: vgaCeiling(7) = &H9E9E: vgaCeiling(8) = &HAEAE: vgaCeiling(9) = &H7F7F
+        vgaCeiling(10) = &H1D1D: vgaCeiling(11) = &HDEDE: vgaCeiling(12) = &HDFDF: vgaCeiling(13) = &HDEDE: vgaCeiling(14) = &HDFDF
+        vgaCeiling(15) = &HDEDE: vgaCeiling(16) = &HE1E1: vgaCeiling(17) = &HDCDC: vgaCeiling(18) = &H2E2E: vgaCeiling(19) = &H1D1D
+        vgaCeiling(20) = &HDCDC
+    $End If
 
 $End If

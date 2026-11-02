@@ -4,7 +4,7 @@ $If INCLUDE_ID_HEADS_BI = UNDEFINED Then
     $Let INCLUDE_ID_HEADS_BI = 1
     '$INCLUDE:'VERSION.BI'
 
-    ' Version-specific includes (converted from C preprocessor directives)
+    ' Version-specific includes, as in ID_HEADS.H (the .BI files come from tools/gen_headers.py)
     $If JAPAN = DEFINED Then
         $If JAPDEMO = DEFINED Then
                 'REM '$INCLUDE:'FOREIGN\JAPAN\GFXV_WJ1.BI'
@@ -15,23 +15,24 @@ $If INCLUDE_ID_HEADS_BI = UNDEFINED Then
             'REM: TODO: create file '$INCLUDE:'MAPSWL6.BI'
     $Else
         $If SPEAR = UNDEFINED Then
-            ' IAN: This should be included for Wolf 3D
             $If APOGEE_1_0 = DEFINED Then
-                    '$INCLUDE:'GFXV_WL1.BI'
+                ' the v1.0 shareware data (WOLF1.BAS)
+                '$INCLUDE:'GFXV_WL1.BI'
+                '$INCLUDE:'AUDIOWL1.BI'
             $Else
                 '$INCLUDE:'GFXV_WL6.BI'
+                '$INCLUDE:'AUDIOWL6.BI'
             $End If
-            '$INCLUDE:'AUDIOWL6.BI'
             '$INCLUDE:'MAPSWL6.BI'
         $Else
             $If SPEARDEMO = UNDEFINED Then
-                    'REM '$INCLUDE:'GFXV_SOD.BI'
-                    'REM '$INCLUDE:'AUDIOSOD.BI'
-                    'REM '$INCLUDE:'MAPSSOD.BI'
+                '$INCLUDE:'GFXV_SOD.BI'
+                '$INCLUDE:'AUDIOSOD.BI'
+                '$INCLUDE:'MAPSSOD.BI'
             $Else
-                    'REM '$INCLUDE:'GFXV_SDM.BI'
-                    'REM '$INCLUDE:'AUDIOSDM.BI'
-                    'REM '$INCLUDE:'MAPSSDM.BI'
+                '$INCLUDE:'GFXV_SDM.BI'
+                '$INCLUDE:'AUDIOSDM.BI'
+                '$INCLUDE:'MAPSSDM.BI'
             $End If
         $End If
     $End If

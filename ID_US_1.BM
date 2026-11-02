@@ -10,6 +10,75 @@ $If INCLUDE_ID_US_1_BM = UNDEFINED Then
 
     '$INCLUDE: 'ID_US.BI'
 
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_CheckParm() - checks to see if a string matches one of a set of
+    '//      strings. The check is case insensitive. The routine returns the
+    '//      index of the string that matched, or -1 if no matches were found
+    '//      (the C code skipped the leading non-letters of parm, like / or -,
+    '//      and a parm matches when it starts with the string; here the strings
+    '//      are one comma separated list)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function US_CheckParm% (parm As String, strings As String)
+        Dim p As String, s As String, i As Integer, start As Integer, k As Integer
+
+        p = UCase$(parm)
+        Do While Len(p) > 0
+            If Left$(p, 1) >= "A" And Left$(p, 1) <= "Z" Then Exit Do
+            p = Mid$(p, 2)
+        Loop
+
+        US_CheckParm% = -1
+        start = 1
+        i = 0
+        Do
+            k = InStr(start, strings, ",")
+            If k = 0 Then s = Mid$(strings, start) Else s = Mid$(strings, start, k - start)
+            s = UCase$(s)
+            If Len(s) > 0 And Left$(p, Len(s)) = s Then
+                US_CheckParm% = i
+                Exit Function
+            End If
+            If k = 0 Then Exit Do
+            start = k + 1
+            i = i + 1
+        Loop
+    End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_Startup() - Starts the User Mgr: the random numbers and the command
+    '//      line parameters (COMP / NOCOMP, TEDLEVEL n, NOWAIT)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_Startup ()
+        Dim i As Integer, n As Integer
+
+        US_InitRndT TRUE ' Initialize the random number generator
+
+        For i = 1 To _CommandCount
+            Select Case US_CheckParm(Command$(i), "COMP,NOCOMP")
+                Case 0
+                    compatability = TRUE
+                Case 1
+                    compatability = FALSE
+            End Select
+        Next i
+
+        ' Check for TED launching here
+        For i = 1 To _CommandCount
+            n = US_CheckParm(Command$(i), "TEDLEVEL,NOWAIT")
+            Select Case n
+                Case 0
+                    tedlevelnum = Val(Command$(i + 1))
+                    If tedlevelnum >= 0 And Len(Command$(i + 1)) > 0 Then tedlevel = TRUE
+                Case 1
+                    NoWait = TRUE
+            End Select
+        Next i
+    End Sub
+
     '=================================================
     '
     ' void US_InitRndT (boolean randomize)

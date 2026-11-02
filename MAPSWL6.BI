@@ -1,8 +1,9 @@
-' MAPSWL6.H - TED5 Map Header for WL6, map names
-' Generated from origsrc/MAPSWL6.H
+' MAPSWL6.BI - generated from origsrc/MAPSWL6.H (?) by tools/gen_headers.py
+
 $If INCLUDE_MAPSWL6_BI = UNDEFINED Then
     $Let INCLUDE_MAPSWL6_BI = 1
 
+    ' Map Names
     Const WOLF1_MAP1_MAP = 0
     Const WOLF1_MAP2_MAP = 1
     Const WOLF1_MAP3_MAP = 2

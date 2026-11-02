@@ -1,9 +1,9 @@
-' GFXV_WL6.BI - Auto-converted from GFXV_WL6.H
+' GFXV_WL6.BI - generated from origsrc/GFXV_WL6.H (IGRAB-ed on Wed Apr 13 06:58:44 1994) by tools/gen_headers.py
 
 $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     $Let INCLUDE_GFXV_WL6_BI = 1
 
-    ' --- Graphics enum as Consts ---
+    ' Lump Start
     Const H_BJPIC = 3
     Const H_CASTLEPIC = 4
     Const H_BLAZEPIC = 5
@@ -11,6 +11,8 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     Const H_LEFTWINDOWPIC = 7
     Const H_RIGHTWINDOWPIC = 8
     Const H_BOTTOMINFOPIC = 9
+
+    ' Lump Start
     Const C_OPTIONSPIC = 10
     Const C_CURSOR1PIC = 11
     Const C_CURSOR2PIC = 12
@@ -44,6 +46,8 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     Const C_SCOREPIC = 40
     Const C_JOY1PIC = 41
     Const C_JOY2PIC = 42
+
+    ' Lump Start
     Const L_GUYPIC = 43
     Const L_COLONPIC = 44
     Const L_NUM0PIC = 45
@@ -92,6 +96,8 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     Const PG13PIC = 88
     Const CREDITSPIC = 89
     Const HIGHSCORESPIC = 90
+
+    ' Lump Start
     Const KNIFEPIC = 91
     Const GUNPIC = 92
     Const MACHINEGUNPIC = 93
@@ -151,17 +157,20 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     Const T_ENDART6 = 148
     Const ENUMEND = 149
 
-    ' --- Data LUMPs ---
+    ' Data LUMPs
     Const README_LUMP_START = 3
     Const README_LUMP_END = 9
+
     Const CONTROLS_LUMP_START = 10
     Const CONTROLS_LUMP_END = 42
+
     Const LEVELEND_LUMP_START = 43
     Const LEVELEND_LUMP_END = 85
+
     Const LATCHPICS_LUMP_START = 91
     Const LATCHPICS_LUMP_END = 134
 
-    ' --- Amount of each data item ---
+    ' Amount of each data item
     Const NUMCHUNKS = 149
     Const NUMFONT = 2
     Const NUMFONTM = 0
@@ -176,8 +185,9 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     Const NUMTILE32M = 0
     Const NUMEXTERNS = 13
 
-    ' --- File offsets for data items ---
+    ' File offsets for data items
     Const STRUCTPIC = 0
+
     Const STARTFONT = 1
     Const STARTFONTM = 3
     Const STARTPICS = 3
@@ -192,4 +202,3 @@ $If INCLUDE_GFXV_WL6_BI = UNDEFINED Then
     Const STARTEXTERNS = 136
 
 $End If
-' --- End of GFXV_WL6.BI ---

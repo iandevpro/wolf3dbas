@@ -4,10 +4,10 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     $Let INCLUDE_WL_MENU_BI = 1
 
     $If SPEAR = DEFINED Then
-            Const BORDCOLOR = &H99
-            Const BORD2COLOR = &H93
-            Const DEACTIVE = &H9B
-            Const BKGDCOLOR = &H9D
+        Const BORDCOLOR = &H99
+        Const BORD2COLOR = &H93
+        Const DEACTIVE = &H9B
+        Const BKGDCOLOR = &H9D
     $Else
         Const BORDCOLOR = &H29
         Const BORD2COLOR = &H23
@@ -25,7 +25,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     $If SPEAR = UNDEFINED Then
         Const INTROSONG = 7 ' NAZI_NOR_MUS
     $Else
-            Const INTROSONG = 23 ' XTOWER2_MUS
+        Const INTROSONG = 23 ' XTOWER2_MUS
     $End If
 
     Dim Shared menulastmusic As Integer ' static int lastmusic in WL_MENU.C, renamed: it clashes with LASTMUSIC
@@ -41,7 +41,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
     $If SPEAR = UNDEFINED Then
         Const MENU_H = 13 * 10 + 6
     $Else
-            Const MENU_H = 13 * 9 + 6
+        Const MENU_H = 13 * 9 + 6
     $End If
 
     '
@@ -89,7 +89,7 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
             $Let READTHIS_ITEM = 0
     $End If
     $If SPEAR = DEFINED Then
-            $Let READTHIS_ITEM = 0
+        $Let READTHIS_ITEM = 0
     $End If
     $If READTHIS_ITEM = 1 Then
         Const mi_readthis = 6
@@ -99,11 +99,11 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
         Const MAINMENU_ITEMS = 10
         Const STARTITEM = mi_readthis
     $Else
-            Const mi_viewscores = 6
-            Const mi_backtodemo = 7
-            Const mi_quit = 8
-            Const MAINMENU_ITEMS = 9
-            Const STARTITEM = mi_newgame
+        Const mi_viewscores = 6
+        Const mi_backtodemo = 7
+        Const mi_quit = 8
+        Const MAINMENU_ITEMS = 9
+        Const STARTITEM = mi_newgame
     $End If
 
     ' Menu strings (FOREIGN.H)
@@ -162,7 +162,16 @@ $If INCLUDE_WL_MENU_BI = UNDEFINED Then
         endStrings(7) = "You are at an intersection." + Chr$(10) + "A sign says, 'Press Y to quit.'" + Chr$(10) + ">"
         endStrings(8) = "For guns and glory, press N." + Chr$(10) + "For work and worry, press Y."
     $Else
-            ' TODO: ENDSTR1..ENDSTR9 for SPEAR (FOREIGN.H)
+        ' ENDSTR1..ENDSTR9 of F_SPEAR.H
+        endStrings(0) = "Heroes don't quit, but" + Chr$(10) + "go ahead and press Y" + Chr$(10) + "if you aren't one."
+        endStrings(1) = "Press Y to quit," + Chr$(10) + "or press N to enjoy" + Chr$(10) + "more violent diversion."
+        endStrings(2) = "Depressing the Y key means" + Chr$(10) + "you must return to the" + Chr$(10) + "humdrum workday world."
+        endStrings(3) = "Hey, quit or play," + Chr$(10) + "Y or N:" + Chr$(10) + "it's your choice."
+        endStrings(4) = "Sure you don't want to" + Chr$(10) + "waste a few more" + Chr$(10) + "productive hours?"
+        endStrings(5) = "I think you had better" + Chr$(10) + "play some more. Please" + Chr$(10) + "press N...please?"
+        endStrings(6) = "If you are tough, press N." + Chr$(10) + "If not, press Y daintily."
+        endStrings(7) = "I'm thinkin' that" + Chr$(10) + "you might wanna press N" + Chr$(10) + "to play more. You do it."
+        endStrings(8) = "Sure. Fine. Quit." + Chr$(10) + "See if we care." + Chr$(10) + "Get it over with." + Chr$(10) + "Press Y."
     $End If
 
     color_hlite(0) = DEACTIVE: color_hlite(1) = HIGHLIGHT: color_hlite(2) = READHCOLOR: color_hlite(3) = &H67

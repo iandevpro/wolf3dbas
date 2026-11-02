@@ -5,15 +5,9 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
     Sub ClearMScreen ()
         $If SPEAR = UNDEFINED Then
-            ' Call VWB_Bar to fill the screen with BORDCOLOR
-            Call VWB_Bar(0, 0, 320, 200, BORDCOLOR)
-            '    ELSE
-            '' Load and draw an image for C_BACKDROPPIC (adjust path as needed)
-            'DIM img AS INTEGER
-            'img = _LOADIMAGE("path_to_C_BACKDROPPIC.png")
-            'IF img THEN
-            '_DRAWIMAGE (0, 0), img
-            'End If
+            VWB_Bar 0, 0, 320, 200, BORDCOLOR
+        $Else
+            VWB_DrawPic 0, 0, C_BACKDROPPIC ' (BACKDROP_LUMP, cached by SetupControlPanel)
         $End If
     End Sub
 
@@ -28,8 +22,8 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             VL_Bar 0, y, 320, 24, 0
             VWB_Hlin 0, 319, y + 22, STRIPE
         $Else
-                VL_Bar 0, y, 320, 22, 0
-                VWB_Hlin 0, 319, y + 23, 0
+            VL_Bar 0, y, 320, 22, 0
+            VWB_Hlin 0, 319, y + 23, 0
         $End If
     End Sub
 
@@ -39,7 +33,26 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         ' Each build only reads its own data: the chunk numbers of the graphics, sounds
         ' and sprites are constants (the C code also needed a build per version).
         ' The C code also looked for *.WL3 (episodes 1-3), there is no such data here
-        $If UPLOAD = UNDEFINED Then
+        $If SPEAR = DEFINED Then
+            $If SPEARDEMO = UNDEFINED Then
+                If _FileExists("VSWAP.SOD") Then
+                    extension = "SOD"
+                Else
+                    Print "NO SPEAR OF DESTINY DATA FILES TO BE FOUND!"
+                    Print "This build needs VSWAP.SOD in the current directory."
+                    Print "For the demo files (*.SDM) build SPEARDEMO.BAS."
+                    End
+                End If
+            $Else
+                If _FileExists("VSWAP.SDM") Then
+                    extension = "SDM"
+                Else
+                    Print "NO SPEAR OF DESTINY DEMO DATA FILES TO BE FOUND!"
+                    Print "This build needs VSWAP.SDM in the current directory."
+                    End
+                End If
+            $End If
+        $ElseIf UPLOAD = UNDEFINED Then
             Dim i As Integer
             If _FileExists("VSWAP.WL6") Then
                 extension = "WL6"
@@ -52,17 +65,17 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             Else
                 Print "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
                 Print "This build needs VSWAP.WL6 (the full version) in the current directory."
-                Print "For the shareware files (*.WL1) build WOLF1.BAS."
+                Print "For the shareware files (*.WL1) build WOLF1.BAS, for Spear of Destiny SPEAR.BAS."
                 End
             End If
         $Else
-                If _FileExists("VSWAP.WL1") Then
+            If _FileExists("VSWAP.WL1") Then
                 extension = "WL1"
-                Else
+            Else
                 Print "NO WOLFENSTEIN 3-D DATA FILES TO BE FOUND!"
                 Print "This shareware build needs VSWAP.WL1 in the current directory."
                 End
-                End If
+            End If
         $End If
 
         ' Append extension to all file names
@@ -72,13 +85,6 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         PageFileName = RTrim$(PageFileName) + RTrim$(extension)
         audioname = RTrim$(audioname) + RTrim$(extension)
         demoname = RTrim$(demoname) + RTrim$(extension)
-        ' TODO
-        '#ifdef SPEAR
-        '#ifndef SPEARDEMO
-        '   if (!findfirst("*.SOD",&f,FA_ARCH))
-        '   {
-        '       strcpy(extension,"SOD");
-        '   }
     End Sub
 
     Sub StartCPMusic (song As Integer)
@@ -110,7 +116,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $If SPEAR = UNDEFINED Then
             VL_FadeOut 0, 255, 43, 0, 0, 10
         $Else
-                VL_FadeOut 0, 255, 0, 0, 51, 10
+            VL_FadeOut 0, 255, 0, 0, 51, 10
         $End If
     End Sub
 
@@ -137,7 +143,10 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             Case RTN_CHANGEVIEW
                 CP_ChangeView
             Case RTN_READTHIS
-                CP_ReadThis
+                ' (Spear has no Read This item; a $If between Case lines breaks Select Case)
+                $If SPEAR = UNDEFINED Then
+                    CP_ReadThis
+                $End If
             Case RTN_VIEWSCORES
                 CP_ViewScores
             Case RTN_MOUSESENS
@@ -184,7 +193,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                         $If SPEAR = UNDEFINED Then
                             HelpScreens ' TODO: BossKey for GOODTIMES
                         $Else
-                                ' TODO: BossKey
+                            ' TODO: BossKey
                         $End If
                     Case sc_F2
                         result = CP_SaveGame(0)
@@ -199,8 +208,15 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 End Select
                 ' finishup:
                 CleanupControlPanel
+                $If SPEAR = DEFINED Then
+                    UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+                $End If
                 Exit Sub
         End Select
+
+        $If SPEAR = DEFINED Then
+            CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+        $End If
 
         DrawMainMenu
         MenuFadeIn
@@ -254,6 +270,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             MainMenu(mi_viewscores).routine = RTN_NONE
             MainMenu(mi_viewscores).txt = STR_EG
         End If
+
+        ' RETURN/START GAME EXECUTION
+        $If SPEAR = DEFINED Then
+            UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+        $End If
     End Sub
 
     '////////////////////////
@@ -300,11 +321,13 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '// READ THIS!
     '//
     '////////////////////////////////////////////////////////////////////
-    Sub CP_ReadThis ()
-        StartCPMusic CORNER_MUS
-        HelpScreens
-        StartCPMusic MENUSONG
-    End Sub
+    $If SPEAR = UNDEFINED Then
+        Sub CP_ReadThis ()
+            StartCPMusic CORNER_MUS
+            HelpScreens
+            StartCPMusic MENUSONG
+        End Sub
+    $End If
 
     '////////////////////////////////////////////////////////////////////
     '//
@@ -347,12 +370,17 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                     fontnumber = 0
                 Else
                     CA_CacheGrChunk STARTFONT + 1
-                    CA_CacheGrChunk C_CURSOR1PIC
-                    CA_CacheGrChunk C_CURSOR2PIC
-                    CA_CacheGrChunk C_DISKLOADING1PIC
-                    CA_CacheGrChunk C_DISKLOADING2PIC
-                    CA_CacheGrChunk C_SAVEGAMEPIC
-                    CA_CacheGrChunk C_MOUSELBACKPIC
+                    $If SPEAR = UNDEFINED Then
+                        CA_CacheGrChunk C_CURSOR1PIC
+                        CA_CacheGrChunk C_CURSOR2PIC
+                        CA_CacheGrChunk C_DISKLOADING1PIC
+                        CA_CacheGrChunk C_DISKLOADING2PIC
+                        CA_CacheGrChunk C_SAVEGAMEPIC
+                        CA_CacheGrChunk C_MOUSELBACKPIC
+                    $Else
+                        CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+                        CA_CacheGrChunk C_CURSOR1PIC
+                    $End If
 
                     VW_FadeOut
 
@@ -361,12 +389,16 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
                     CP_QuickReturn
 
-                    UNCACHEGRCHUNK C_CURSOR1PIC
-                    UNCACHEGRCHUNK C_CURSOR2PIC
-                    UNCACHEGRCHUNK C_DISKLOADING1PIC
-                    UNCACHEGRCHUNK C_DISKLOADING2PIC
-                    UNCACHEGRCHUNK C_SAVEGAMEPIC
-                    UNCACHEGRCHUNK C_MOUSELBACKPIC
+                    $If SPEAR = UNDEFINED Then
+                        UNCACHEGRCHUNK C_CURSOR1PIC
+                        UNCACHEGRCHUNK C_CURSOR2PIC
+                        UNCACHEGRCHUNK C_DISKLOADING1PIC
+                        UNCACHEGRCHUNK C_DISKLOADING2PIC
+                        UNCACHEGRCHUNK C_SAVEGAMEPIC
+                        UNCACHEGRCHUNK C_MOUSELBACKPIC
+                    $Else
+                        UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+                    $End If
                 End If
                 CP_CheckQuick% = 1
 
@@ -385,12 +417,17 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                     fontnumber = 0
                 Else
                     CA_CacheGrChunk STARTFONT + 1
-                    CA_CacheGrChunk C_CURSOR1PIC
-                    CA_CacheGrChunk C_CURSOR2PIC
-                    CA_CacheGrChunk C_DISKLOADING1PIC
-                    CA_CacheGrChunk C_DISKLOADING2PIC
-                    CA_CacheGrChunk C_LOADGAMEPIC
-                    CA_CacheGrChunk C_MOUSELBACKPIC
+                    $If SPEAR = UNDEFINED Then
+                        CA_CacheGrChunk C_CURSOR1PIC
+                        CA_CacheGrChunk C_CURSOR2PIC
+                        CA_CacheGrChunk C_DISKLOADING1PIC
+                        CA_CacheGrChunk C_DISKLOADING2PIC
+                        CA_CacheGrChunk C_LOADGAMEPIC
+                        CA_CacheGrChunk C_MOUSELBACKPIC
+                    $Else
+                        CA_CacheGrChunk C_CURSOR1PIC
+                        CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+                    $End If
 
                     VW_FadeOut
 
@@ -399,12 +436,16 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
                     CP_QuickReturn
 
-                    UNCACHEGRCHUNK C_CURSOR1PIC
-                    UNCACHEGRCHUNK C_CURSOR2PIC
-                    UNCACHEGRCHUNK C_DISKLOADING1PIC
-                    UNCACHEGRCHUNK C_DISKLOADING2PIC
-                    UNCACHEGRCHUNK C_LOADGAMEPIC
-                    UNCACHEGRCHUNK C_MOUSELBACKPIC
+                    $If SPEAR = UNDEFINED Then
+                        UNCACHEGRCHUNK C_CURSOR1PIC
+                        UNCACHEGRCHUNK C_CURSOR2PIC
+                        UNCACHEGRCHUNK C_DISKLOADING1PIC
+                        UNCACHEGRCHUNK C_DISKLOADING2PIC
+                        UNCACHEGRCHUNK C_LOADGAMEPIC
+                        UNCACHEGRCHUNK C_MOUSELBACKPIC
+                    $Else
+                        UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+                    $End If
                 End If
                 CP_CheckQuick% = 1
 
@@ -503,8 +544,8 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         fontnumber = 0
 
         $If SPEAR = DEFINED Then
-                ' TODO: UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
-                StartCPMusic XAWARD_MUS
+            UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+            StartCPMusic XAWARD_MUS
         $Else
             StartCPMusic ROSTER_MUS
         $End If
@@ -518,6 +559,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
         StartCPMusic MENUSONG
         MenuFadeOut
+
+        $If SPEAR = DEFINED Then
+            CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+            CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+        $End If
     End Sub
 
     '////////////////////////////////////////////////////////////////////
@@ -532,6 +578,10 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '////////////////////////////////////////////////////////////////////
     Sub CP_NewGame ()
         Dim which As Integer, episode As Integer
+
+        $If SPEAR = DEFINED Then
+            UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+        $End If
 
         $If SPEAR = UNDEFINED Then
             Do ' firstpart:
@@ -579,8 +629,30 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 MenuFadeOut ' goto firstpart
             Loop
         $Else
-                ' TODO: SPEAR new game (NEWGAME lumps, no episode selection)
+            episode = 0
+
+            '
+            ' ALREADY IN A GAME?
+            '
+            CacheLump NEWGAME_LUMP_START, NEWGAME_LUMP_END
+            DrawNewGame
+            If ingame Then
+                If Confirm(CURGAME) = 0 Then
+                    MenuFadeOut
+                    UnCacheLump NEWGAME_LUMP_START, NEWGAME_LUMP_END
+                    CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+                    Exit Sub
+                End If
+            End If
+
+            DrawNewGame
+            which = HandleMenu(NewItems, NewMenu(), DRAWRTN_NEWGAMEDIFF)
+            If which < 0 Then
+                MenuFadeOut
+                UnCacheLump NEWGAME_LUMP_START, NEWGAME_LUMP_END
+                CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
                 Exit Sub
+            End If
         $End If
 
         CP_ShootSnd
@@ -596,39 +668,46 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $End If
 
         pickquick = 0
-    End Sub
 
-    '/////////////////////
-    '//
-    '// DRAW NEW EPISODE MENU
-    '//
-    Sub DrawNewEpisode ()
-        Dim i As Integer
-
-        ClearMScreen
-        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
-
-        DrawWindow NE_X - 4, NE_Y - 4, NE_W + 8, NE_H + 8, BKGDCOLOR
-        SETFONTCOLOR READHCOLOR, BKGDCOLOR
-        PrintY = 2
-        WindowX = 0
-        $If SPANISH = DEFINED Then
-                US_CPrint "Cual episodio jugar?"
-        $Else
-            US_CPrint "Which episode to play?"
+        $If SPEAR = DEFINED Then
+            UnCacheLump NEWGAME_LUMP_START, NEWGAME_LUMP_END
+            CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
         $End If
-
-        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
-        DrawMenu NewEitems, NewEmenu()
-
-        For i = 0 To 5
-            VWB_DrawPic NE_X + 32, NE_Y + i * 26, C_EPISODE1PIC + i
-        Next i
-
-        VW_UpdateScreen
-        MenuFadeIn
-        WaitKeyUp
     End Sub
+
+    $If SPEAR = UNDEFINED Then
+        '/////////////////////
+        '//
+        '// DRAW NEW EPISODE MENU
+        '//
+        Sub DrawNewEpisode ()
+            Dim i As Integer
+
+            ClearMScreen
+            VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+
+            DrawWindow NE_X - 4, NE_Y - 4, NE_W + 8, NE_H + 8, BKGDCOLOR
+            SETFONTCOLOR READHCOLOR, BKGDCOLOR
+            PrintY = 2
+            WindowX = 0
+            $If SPANISH = DEFINED Then
+                    US_CPrint "Cual episodio jugar?"
+            $Else
+                US_CPrint "Which episode to play?"
+            $End If
+
+            SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+            DrawMenu NewEitems, NewEmenu()
+
+            For i = 0 To 5
+                VWB_DrawPic NE_X + 32, NE_Y + i * 26, C_EPISODE1PIC + i
+            Next i
+
+            VW_UpdateScreen
+            MenuFadeIn
+            WaitKeyUp
+        End Sub
+    $End If
 
     '/////////////////////
     '//
@@ -642,10 +721,14 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         PrintX = NM_X + 20
         PrintY = NM_Y - 32
 
-        $If SPANISH = DEFINED Then
-                US_Print "Eres macho?"
+        $If SPEAR = UNDEFINED Then
+            $If SPANISH = DEFINED Then
+                    US_Print "Eres macho?"
+            $Else
+                US_Print "How tough are you?"
+            $End If
         $Else
-            US_Print "How tough are you?"
+            VWB_DrawPic PrintX, PrintY, C_HOWTOUGHPIC
         $End If
 
         DrawWindow NM_X - 5, NM_Y - 10, NM_W, NM_H, BKGDCOLOR
@@ -672,6 +755,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '////////////////////////////////////////////////////////////////////
     Sub CP_Sound ()
         Dim which As Integer, result As Integer
+
+        $If SPEAR = DEFINED Then
+            UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+            CacheLump SOUND_LUMP_START, SOUND_LUMP_END
+        $End If
 
         DrawSoundMenu
         MenuFadeIn
@@ -750,6 +838,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Loop While which >= 0
 
         MenuFadeOut
+
+        $If SPEAR = DEFINED Then
+            UnCacheLump SOUND_LUMP_START, SOUND_LUMP_END
+            CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+        $End If
     End Sub
 
     '//////////////////////
@@ -833,6 +926,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     Sub CP_Control ()
         Dim which As Integer
 
+        $If SPEAR = DEFINED Then
+            UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+            CacheLump CONTROL_LUMP_START, CONTROL_LUMP_END
+        $End If
+
         DrawCtlScreen
         MenuFadeIn
         WaitKeyUp
@@ -873,6 +971,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Loop While which >= 0
 
         MenuFadeOut
+
+        $If SPEAR = DEFINED Then
+            UnCacheLump CONTROL_LUMP_START, CONTROL_LUMP_END
+            CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+        $End If
     End Sub
 
     '////////////////////////////////
@@ -1410,8 +1513,8 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             VWB_Hlin 7, 32, y - 2, BORDCOLOR
             VWB_Hlin 7, 32, y + 13, BORDCOLOR
         $Else
-                VWB_Hlin 7, 32, y - 2, BORD2COLOR
-                VWB_Hlin 7, 32, y + 13, BORD2COLOR
+            VWB_Hlin 7, 32, y - 2, BORD2COLOR
+            VWB_Hlin 7, 32, y + 13, BORD2COLOR
         $End If
     End Sub
 
@@ -1860,6 +1963,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             End If
         End If
 
+        $If SPEAR = DEFINED Then
+            UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+            CacheLump LOADSAVE_LUMP_START, LOADSAVE_LUMP_END
+        $End If
+
         DrawLoadSaveScreen 0
 
         Do
@@ -1899,6 +2007,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Loop While which >= 0
 
         MenuFadeOut
+
+        $If SPEAR = DEFINED Then
+            UnCacheLump LOADSAVE_LUMP_START, LOADSAVE_LUMP_END
+            CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+        $End If
 
         CP_LoadGame% = xit
     End Function
@@ -1990,6 +2103,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             End If
         End If
 
+        $If SPEAR = DEFINED Then
+            UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+            CacheLump LOADSAVE_LUMP_START, LOADSAVE_LUMP_END
+        $End If
+
         DrawLoadSaveScreen 1
 
         Do
@@ -2042,6 +2160,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Loop While which >= 0
 
         MenuFadeOut
+
+        $If SPEAR = DEFINED Then
+            UnCacheLump LOADSAVE_LUMP_START, LOADSAVE_LUMP_END
+            CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+        $End If
 
         CP_SaveGame% = xit
     End Function
@@ -2168,7 +2291,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $If SPEAR = UNDEFINED Then
             CacheLump CONTROLS_LUMP_START, CONTROLS_LUMP_END
         $Else
-                ' TODO: CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+            CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
         $End If
 
         SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
@@ -2201,7 +2324,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         $If SPEAR = UNDEFINED Then
             UnCacheLump CONTROLS_LUMP_START, CONTROLS_LUMP_END
         $Else
-                ' TODO: UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+            UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
         $End If
 
         fontnumber = 0

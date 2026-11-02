@@ -31,33 +31,33 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             Dim tempstr As String
 
             $If SPEAR = DEFINED Then
-                    StartCPMusic XTHEEND_MUS
+                StartCPMusic XTHEEND_MUS
 
-                    CA_CacheGrChunk BJCOLLAPSE1PIC
-                    CA_CacheGrChunk BJCOLLAPSE2PIC
-                    CA_CacheGrChunk BJCOLLAPSE3PIC
-                    CA_CacheGrChunk BJCOLLAPSE4PIC
+                CA_CacheGrChunk BJCOLLAPSE1PIC
+                CA_CacheGrChunk BJCOLLAPSE2PIC
+                CA_CacheGrChunk BJCOLLAPSE3PIC
+                CA_CacheGrChunk BJCOLLAPSE4PIC
 
-                    VWB_Bar 0, 0, 320, 200, VIEWCOLOR
-                    VWB_DrawPic 124, 44, BJCOLLAPSE1PIC
-                    VW_UpdateScreen
-                    VW_FadeIn
-                    VL_WaitVBL 2 * 70
-                    VWB_DrawPic 124, 44, BJCOLLAPSE2PIC
-                    VW_UpdateScreen
-                    VL_WaitVBL 105
-                    VWB_DrawPic 124, 44, BJCOLLAPSE3PIC
-                    VW_UpdateScreen
-                    VL_WaitVBL 105
-                    VWB_DrawPic 124, 44, BJCOLLAPSE4PIC
-                    VW_UpdateScreen
-                    VL_WaitVBL 3 * 70
+                VWB_Bar 0, 0, 320, 200, VIEWCOLOR
+                VWB_DrawPic 124, 44, BJCOLLAPSE1PIC
+                VW_UpdateScreen
+                VW_FadeIn
+                VL_WaitVBL 2 * 70
+                VWB_DrawPic 124, 44, BJCOLLAPSE2PIC
+                VW_UpdateScreen
+                VL_WaitVBL 105
+                VWB_DrawPic 124, 44, BJCOLLAPSE3PIC
+                VW_UpdateScreen
+                VL_WaitVBL 105
+                VWB_DrawPic 124, 44, BJCOLLAPSE4PIC
+                VW_UpdateScreen
+                VL_WaitVBL 3 * 70
 
-                    UNCACHEGRCHUNK BJCOLLAPSE1PIC
-                    UNCACHEGRCHUNK BJCOLLAPSE2PIC
-                    UNCACHEGRCHUNK BJCOLLAPSE3PIC
-                    UNCACHEGRCHUNK BJCOLLAPSE4PIC
-                    VL_FadeOut 0, 255, 0, 17, 17, 5
+                UNCACHEGRCHUNK BJCOLLAPSE1PIC
+                UNCACHEGRCHUNK BJCOLLAPSE2PIC
+                UNCACHEGRCHUNK BJCOLLAPSE3PIC
+                UNCACHEGRCHUNK BJCOLLAPSE4PIC
+                VL_FadeOut 0, 255, 0, 17, 17, 5
             $End If
 
             StartCPMusic URAHERO_MUS
@@ -98,9 +98,9 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
                 sr = sr \ 8
                 tr = tr \ 8
             $Else
-                    kr = kr \ 14
-                    sr = sr \ 14
-                    tr = tr \ 14
+                kr = kr \ 14
+                sr = sr \ 14
+                tr = tr \ 14
             $End If
 
             min = sec \ 60
@@ -178,7 +178,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             $If SPEAR = UNDEFINED Then
                 EndText
             $Else
-                    ' TODO: EndSpear (the Spear end screens)
+                ' TODO: EndSpear (the Spear end screens)
             $End If
         $End If
     End Sub
@@ -523,7 +523,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         $If SPEAR = UNDEFINED Then
             LevelCompletedNormal% = (mapon < 8)
         $Else
-                LevelCompletedNormal% = (mapon <> 4 And mapon <> 9 And mapon <> 15 And mapon < 17)
+            LevelCompletedNormal% = (mapon <> 4 And mapon <> 9 And mapon <> 15 And mapon < 17)
         $End If
     End Function
 
@@ -531,14 +531,14 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
     Sub LevelCompletedSecret ()
         $If SPEAR = DEFINED Then
             $If SPEARDEMO = UNDEFINED Then
-                    Select Case mapon
+                Select Case mapon
                     Case 4: WritePic 14, 4, " trans" + Chr$(10) + " grosse" + Chr$(10) + STR_DEFEATED
                     Case 9: WritePic 14, 4, "barnacle" + Chr$(10) + "wilhelm" + Chr$(10) + STR_DEFEATED
                     Case 15: WritePic 14, 4, "ubermutant" + Chr$(10) + STR_DEFEATED
                     Case 17: WritePic 14, 4, " death" + Chr$(10) + " knight" + Chr$(10) + STR_DEFEATED
                     Case 18: WritePic 13, 4, "secret tunnel" + Chr$(10) + "    area" + Chr$(10) + "  completed!"
                     Case 19: WritePic 13, 4, "secret castle" + Chr$(10) + "    area" + Chr$(10) + "  completed!"
-                    End Select
+                End Select
             $End If
         $Else
             WritePic 14, 4, "secret floor" + Chr$(10) + " completed!"
@@ -704,12 +704,17 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
 
             SETFONTCOLOR 15, &H29
         $Else
-                ' TODO: SPEAR backdrop and HIGHSCORESPIC lumps (CacheLump / UnCacheLump)
-                ClearMScreen
-                DrawStripes 10
-                CA_CacheGrChunk STARTFONT + 1
-                fontnumber = 1
-                SETFONTCOLOR HIGHLIGHT, &H29
+            CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+            ClearMScreen
+            DrawStripes 10
+            UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+
+            CacheLump HIGHSCORES_LUMP_START, HIGHSCORES_LUMP_END
+            CA_CacheGrChunk STARTFONT + 1
+            VWB_DrawPic 0, 0, HIGHSCORESPIC
+
+            fontnumber = 1
+            SETFONTCOLOR HIGHLIGHT, &H29
         $End If
 
         For i = 0 To MaxScores - 1
@@ -721,7 +726,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             $If SPEAR = UNDEFINED Then
                 PrintX = 4 * 8
             $Else
-                    PrintX = 16
+                PrintX = 16
             $End If
             US_Print US_CString$(Scores(i).name)
 
@@ -733,7 +738,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             $If SPEAR = UNDEFINED Then
                 PrintX = (22 * 8) - w
             $Else
-                    PrintX = 194 - w
+                PrintX = 194 - w
             $End If
 
             $If UPLOAD = UNDEFINED Then
@@ -746,11 +751,11 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             $End If
 
             $If SPEAR = DEFINED Then
-                    If Scores(i).completed = 21 Then
+                If Scores(i).completed = 21 Then
                     VWB_DrawPic PrintX + 8, PrintY - 1, C_WONSPEARPIC
-                    Else
+                Else
                     US_Print buffer
-                    End If
+                End If
             $Else
                 US_Print buffer
             $End If
@@ -763,7 +768,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             $If SPEAR = UNDEFINED Then
                 PrintX = (34 * 8) - 8 - w
             $Else
-                    PrintX = 292 - w
+                PrintX = 292 - w
             $End If
             US_Print buffer
         Next i
@@ -771,7 +776,8 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         VW_UpdateScreen
 
         $If SPEAR = DEFINED Then
-                fontnumber = 0
+            UnCacheLump HIGHSCORES_LUMP_START, HIGHSCORES_LUMP_END
+            fontnumber = 0
         $End If
     End Sub
 
@@ -802,7 +808,7 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
         Next i
 
         $If SPEAR = DEFINED Then
-                StartCPMusic XAWARD_MUS
+            StartCPMusic XAWARD_MUS
         $Else
             StartCPMusic ROSTER_MUS
         $End If
@@ -822,13 +828,13 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
                 fontcolor = 15
                 result = US_LineInput(PrintX, PrintY, nm, "", TRUE, MaxHighName, 100)
             $Else
-                    PrintX = 16
-                    fontnumber = 1
-                    VWB_Bar PrintX - 2, PrintY - 2, 145, 15, &H9C
-                    VW_UpdateScreen
-                    backcolor = &H9C
-                    fontcolor = 15
-                    result = US_LineInput(PrintX, PrintY, nm, "", TRUE, MaxHighName, 130)
+                PrintX = 16
+                fontnumber = 1
+                VWB_Bar PrintX - 2, PrintY - 2, 145, 15, &H9C
+                VW_UpdateScreen
+                backcolor = &H9C
+                fontcolor = 15
+                result = US_LineInput(PrintX, PrintY, nm, "", TRUE, MaxHighName, 130)
             $End If
             ' (US_LineInput only stores the name on Enter: after Esc it stays empty, as in C)
             Scores(n).name = nm + Chr$(0)
@@ -837,6 +843,15 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
             result = IN_UserInput(500)
         End If
     End Sub
+
+    $If SPEAR = DEFINED Then
+        $If SPEARDEMO = UNDEFINED Then
+            ' CopyProtection (WL_INTER.C 1485-1716), the manual quiz of the retail game,
+            ' is ported in step 7g. Until then the game starts without it
+            Sub CopyProtection ()
+            End Sub
+        $End If
+    $End If
 
     '$INCLUDE: 'ID_VH.BM'
     '$INCLUDE: 'WL_MENU.BM'

@@ -1,17 +1,15 @@
-' GFXV_WL1.BI - converted from GFXV_WL1.H (IGRAB-ed on Sun May 03 01:19:32 1992),
-' the graphics of the v1.0 shareware data (VGAGRAPH.WL1)
-'
-' The pictures (3-138) are as in GFXV_WL1.H. The rest of that header does not fit the
-' data: VGAHEAD.WL1 has 148 chunks, with no 16x16 tiles, and the externs after the
-' 8x8 tiles are the order and error screens, the help text, one end text and four
-' demos (in the v1.0 format, see PollControls).
+' GFXV_WL1.BI - generated from origsrc/GFXV_WL1.H (IGRAB-ed on Sun May 03 01:19:32 1992) by tools/gen_headers.py
+' The v1.0 shareware data (VGAGRAPH.WL1, May 1992). The pictures (3-138) are as in
+' GFXV_WL1.H. The rest of that header does not fit the data: VGAHEAD.WL1 has 148 chunks,
+' with no 16x16 tiles, and the externs after the 8x8 tiles are the order and error screens,
+' the help text, one end text and four demos (in the v1.0 format, see PollControls).
 ' Not in v1.0: C_TIMECODEPIC, C_LEVELPIC, C_NAMEPIC, C_SCOREPIC, C_JOY1PIC, C_JOY2PIC,
 ' L_APOSTROPHEPIC and T_ENDART2-6 (the code that uses them checks APOGEE_1_0)
 
 $If INCLUDE_GFXV_WL1_BI = UNDEFINED Then
     $Let INCLUDE_GFXV_WL1_BI = 1
 
-    ' --- Graphics enum as Consts ---
+    ' Lump Start
     Const H_BJPIC = 3
     Const H_CASTLEPIC = 4
     Const H_KEYBOARDPIC = 5
@@ -30,6 +28,8 @@ $If INCLUDE_GFXV_WL1_BI = UNDEFINED Then
     Const H_LEFTWINDOWPIC = 18
     Const H_RIGHTWINDOWPIC = 19
     Const H_BOTTOMINFOPIC = 20
+
+    ' Lump Start
     Const C_OPTIONSPIC = 21
     Const C_CURSOR1PIC = 22
     Const C_CURSOR2PIC = 23
@@ -57,6 +57,8 @@ $If INCLUDE_GFXV_WL1_BI = UNDEFINED Then
     Const C_EPISODE5PIC = 45
     Const C_EPISODE6PIC = 46
     Const C_CODEPIC = 47
+
+    ' Lump Start
     Const L_GUYPIC = 48
     Const L_COLONPIC = 49
     Const L_NUM0PIC = 50
@@ -104,6 +106,8 @@ $If INCLUDE_GFXV_WL1_BI = UNDEFINED Then
     Const PG13PIC = 92
     Const CREDITSPIC = 93
     Const HIGHSCORESPIC = 94
+
+    ' Lump Start
     Const KNIFEPIC = 95
     Const GUNPIC = 96
     Const MACHINEGUNPIC = 97
@@ -160,17 +164,20 @@ $If INCLUDE_GFXV_WL1_BI = UNDEFINED Then
     Const T_DEMO3 = 147
     Const ENUMEND = 148
 
-    ' --- Data LUMPs ---
+    ' Data LUMPs
     Const README_LUMP_START = 3
     Const README_LUMP_END = 20
+
     Const CONTROLS_LUMP_START = 21
     Const CONTROLS_LUMP_END = 47
+
     Const LEVELEND_LUMP_START = 48
     Const LEVELEND_LUMP_END = 89
+
     Const LATCHPICS_LUMP_START = 95
     Const LATCHPICS_LUMP_END = 138
 
-    ' --- Amount of each data item ---
+    ' Amount of each data item
     Const NUMCHUNKS = 148
     Const NUMFONT = 2
     Const NUMFONTM = 0
@@ -185,8 +192,9 @@ $If INCLUDE_GFXV_WL1_BI = UNDEFINED Then
     Const NUMTILE32M = 0
     Const NUMEXTERNS = 8
 
-    ' --- File offsets for data items ---
+    ' File offsets for data items
     Const STRUCTPIC = 0
+
     Const STARTFONT = 1
     Const STARTFONTM = 3
     Const STARTPICS = 3

@@ -640,7 +640,7 @@ Commit 8d040d2.
 
 ## 2026-10-31: Shareware support (*.WL1, v1.0 data)
 
-Not committed yet.
+Commit e19c2a3.
 
 - **The data is v1.0 shareware** (May 5, 1992), older than this v1.4 source:
   - There is no GAMEMAPS.WL1: the maps are in MAPTEMP.WL1, not Carmack-compressed.
@@ -693,3 +693,81 @@ Not committed yet.
   - The demo sync for v1.0.
   - The end of the shareware episode was not played through.
   - The level-end screen was not seen.
+
+## 2026-11-01: Step 7a, groundwork for Spear of Destiny
+
+Not committed yet. Plan: `plans/step7_spear.plan.md` (decisions 1, 3 and 4 done here: one build per version, TEDLEVEL, `/demotest`).
+
+- **Four builds:**
+  - `WOLF3D.BAS`: WL6.
+  - `WOLF1.BAS`: WL1 v1.0.
+  - `SPEAR.BAS` (new): `$Let SPEAR`, like SODVER.H.
+  - `SPEARDEMO.BAS` (new): `SPEAR` + `SPEARDEMO`, like SDMVER.H. SDM is the Spear of Destiny demo; there was no Spear shareware.
+
+  Each of the entry files includes WOLF3D.BAS.
+- **Headers:**
+  - `tools/gen_headers.py` writes GFXV_*.BI, AUDIO*.BI and MAPS*.BI from the origsrc headers for WL6, SOD and SDM. The SOD and SDM headers fit their data: 169 / 133 graphics chunks, 267 sound chunks, 421 sprites.
+  - It also writes the v1.0 shareware files: `GFXV_WL1.BI`, and a new `AUDIOWL1.BI` that holds the 73-sound counts which were an `$If` in AUDIOWL6.BI.
+  - The regenerated WL6 files have the same constants as the hand-converted ones.
+  - `ID_HEADS.BI` picks them as ID_HEADS.H does.
+- **Sprite numbers:** `tools/gen_sprites.py` writes `WL_SPR.BI` from the WL_DEF.H enum, with one numbered list per game (421 Spear sprites, 436 Wolfenstein sprites) and the v1.0 shifts.
+  - This fixes `MACHINEGUNATK3`, which has no `SPR_` in C: the v1.0 shift had missed it. Nothing uses it by name.
+- **Spear tables, from C:** `songs()` (WL_PLAY.BI) and `vgaCeiling()` (WL_DRAW.BI).
+  - The statinfo arrays grew to 0-53: Spear has 4 more statics. The Spear build stopped with "Subscript out of range" before.
+- **CheckForEpisodes:** *.SOD / *.SDM with the C messages; each build looks only for its own files.
+- **What the Spear builds needed to compile,** each as in C:
+  - `CP_ReadThis` and `DrawNewEpisode` are Wolfenstein only. The Read This `Case` keeps its line and puts the `$If` inside, since a `$If` between `Case` lines breaks `Select Case`.
+  - `C_HOWTOUGHPIC` in `DrawNewGame`.
+  - `DrawFace`: the god mode face, and `MUTANTBJPIC` for Wolfenstein only.
+  - WL_TEXT.BI / WL_TEXT.BM are left out of the Spear builds. Spear has no help screens, and its ending is EndSpear; the page layout uses pictures that only Wolfenstein has.
+  - **Stubs, ported later:**
+    - `SpawnTrans`, `SpawnUber`, `SpawnWill`, `SpawnDeath`, `SpawnAngel` and `SpawnSpectre` (7e).
+    - `CopyProtection` (7g).
+- **TEDLEVEL** (ID_US_1.BM `US_Startup`, `US_CheckParm`; WOLF3D.BAS `DemoLoop`), as in ID_US_1.C / WL_MAIN.C:
+  - `TEDLEVEL n` starts straight in map n (Wolfenstein: episode n\10, map n mod 10), with an optional `baby` / `easy` / `normal` / `hard`, and quits after the game.
+  - `NOWAIT` skips the sign-on waits.
+  - `COMP` / `NOCOMP` set `compatability`, which removes that warning.
+  - `US_Startup` runs before the sign-on screen here (in C, after CA_Startup), so that `NOWAIT` skips the port's sign-on waits.
+- **`/demotest`** (PORTDEBUG.BM `PortDemoTest`): plays all the demos in real time, writes each one's end state to DEMOTEST.TXT (gitignored), and quits without writing the config.
+- **`tools/ide_format.py`** formats every build (WOLF3D, WOLF1, SPEAR, SPEARDEMO). Each line comes from a build that compiles it, so the Spear code is now really formatted instead of flattened. Two passes in a row change nothing.
+- **Tested:**
+  - All four builds compile. WOLF3D and WOLF1 have 12 warnings. SPEAR and SPEARDEMO have more, from the stub parameters, the empty WL6 boss routines and the single SDM demo.
+  - **WL6 demos** (`/demotest nowait`): 3900/15, 13600/51, 7100/27, 5600/21, each to the last frame. These are the 6j results, so the WL6 game is unchanged.
+  - **WOLF1:** `TEDLEVEL 0 baby nowait` starts in E1M1 as before.
+  - **SPEAR:**
+    - It runs to the sign-on, PC-13 and the menu, still without the Spear art (7b/7c); "Read This!" is gone.
+    - `TEDLEVEL 0 baby nowait` plays Tunnels 1, with Spear walls and statics.
+    - **SOD demos:** maps 1, 3, 5, 12; 2900/13, 1000/10, 3000/12, 7300/13. Each ends in a death on the last frame of its data (1954, 2242, 2353, 2569), as the WL6 demos do when they play back exactly. So these demos only need the ported enemies.
+  - **SPEARDEMO:** `TEDLEVEL 0` plays Tunnels 1, and its one demo ends like SOD demo 0 (death on frame 1954).
+- **The sign-on screen and palette per build** (found when you ran the Spear exes in another directory: "Path not found"):
+  - **The cause:** `SignonScreen` opened `OBJ\signon.bin` at run time. The original builds linked SIGNON.OBJ and GAMEPAL.OBJ into the exe, so this affected all four builds.
+  - **`tools/extract_exe_data.py`** unpacks an original exe (LZEXE 0.91) and finds the palette: 768 bytes of 6-bit values starting with the standard colours 0-2. The 64000-byte sign-on screen is right before it, as GAMEPAL.OBJ followed SIGNON.OBJ in the link. From SPEAR-ORIG.EXE and SPEAR-DEMO-ORIG.EXE it wrote `OBJ/signon_sod.bin`, `OBJ/signon_sdm.bin` (the same screen with "DEMO") and `OBJ/gamepal_sod.bin` / `_sdm.bin`. The two palettes are identical; Spear differs from WL6 in the colours 166 and 167 (purple in WL6, dark green in Spear).
+  - **`tools/gen_signon.py`** writes:
+    - `GAMEPAL.BAS`, with the WL6 palette (unchanged) and the Spear palette under `$If SPEAR`;
+    - `SIGNON_WL6.BAS` / `SIGNON_SOD.BAS` / `SIGNON_SDM.BAS`, the screen as text, two letters per byte.
+  - WOLF3D.BAS includes the build's files. WOLF1 keeps the WL6 screen: there is no v1.0 exe to take one from.
+  - **Tested:** SPEAR.exe and SPEARDEMO.exe, each run from a directory with only its data files, show their own sign-on screens and go on to the hardware bars. WOLF3D still shows the Wolfenstein one. The formatter changes nothing.
+  - The original exes are gitignored (`*.EXE`). The extracted Spear files and SIGNON_SOD.BAS / SIGNON_SDM.BAS hold data from them.
+- **The v1.0 shareware sign-on** (from WOLF3D-SHARE-ORIG.EXE, May 5, 1992, LZEXE 0.91):
+  - In this exe the screen follows the palette instead of preceding it, so `extract_exe_data.py` now takes the side that looks like a picture: pixels equal to their left neighbour, and not mostly zeros (zero-filled data follows the Spear palette). The Spear screens it extracts are unchanged.
+  - The v1.0 screen has the Apogee logo where v1.4 has the GT one. Its palette is the same as WL6's.
+  - `SIGNON_WL1.BAS` is included with `APOGEE_1_0`.
+  - **Tested:** WOLF1.exe, run from a directory with only the *.WL1 files, shows the Apogee sign-on.
+- **Spear menus** (reported: New Game did not start, no "Options" picture, an empty quit box). These are menu items of 7c, done now because they blocked using the Spear builds:
+  - **Lump caching:** all the Spear lump caching of WL_MENU.C is ported (the TODOs before). The Spear menu pictures are in lumps that each menu caches and frees, and an uncached picture draws nothing.
+    - `SetupControlPanel` / `CleanupControlPanel`: BACKDROP.
+    - `US_ControlPanel`: OPTIONS around the main menu.
+    - `CP_Sound`: SOUND. `CP_Control`: CONTROL. `CP_LoadGame` / `CP_SaveGame`: LOADSAVE.
+    - `CP_ViewScores`, and the quick save/load keys of `CP_CheckQuick`: BACKDROP.
+  - **`ClearMScreen`** draws `C_BACKDROPPIC` for Spear (it drew nothing before).
+  - **`CP_NewGame`** for Spear: no episode menu (episode 0), NEWGAME around the difficulty menu, as in C.
+  - **`endStrings`** for Spear: ENDSTR1-9 of F_SPEAR.H.
+  - **`DrawHighScores`** for Spear: the backdrop and the full-screen `HIGHSCORESPIC` (HIGHSCORES_LUMP).
+  - **Tested in SPEAR (and New Game in SPEARDEMO):**
+    - The main menu shows the Options picture on the blue backdrop.
+    - New Game: "How tough are you?" (picture), then Tunnels 1.
+    - Sound, Control and Load Game have their pictures.
+    - View Scores shows the Spear high scores.
+    - Esc gives a Spear quit question.
+    - Inactive menu items are drawn in DEACTIVE (0x9B) on BKGDCOLOR (0x9D), dim blue on blue, as the Spear colours are.
+  - **Left for 7b/7c:** the I+D easter egg, which needs a palette from the graphics file, like the Spear title.

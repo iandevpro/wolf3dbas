@@ -1,0 +1,139 @@
+' AUDIOWL1.BI - generated from origsrc/AUDIOWL6.H (Created Tue Jul 14 15:04:53 1992) by tools/gen_headers.py
+' The v1.0 shareware data (AUDIOT.WL1) has the first 73 sounds of the WL6 list, with the
+' same numbers (the sounds 73-86 were added later), and the same music slots. AUDIOWL1.H
+' (April 1992, 69 sounds) is older than that data and does not fit it. The names of the
+' later sounds stay, SD_PlaySound ignores the sounds from NUMSOUNDS on
+
+$If INCLUDE_AUDIOWL1_BI = UNDEFINED Then
+    $Let INCLUDE_AUDIOWL1_BI = 1
+
+    Const NUMSOUNDS = 73
+    Const NUMSNDCHUNKS = 246
+
+    ' Sound names & indexes
+    Const HITWALLSND = 0
+    Const SELECTWPNSND = 1
+    Const SELECTITEMSND = 2
+    Const HEARTBEATSND = 3
+    Const MOVEGUN2SND = 4
+    Const MOVEGUN1SND = 5
+    Const NOWAYSND = 6
+    Const NAZIHITPLAYERSND = 7
+    Const SCHABBSTHROWSND = 8
+    Const PLAYERDEATHSND = 9
+    Const DOGDEATHSND = 10
+    Const ATKGATLINGSND = 11
+    Const GETKEYSND = 12
+    Const NOITEMSND = 13
+    Const WALK1SND = 14
+    Const WALK2SND = 15
+    Const TAKEDAMAGESND = 16
+    Const GAMEOVERSND = 17
+    Const OPENDOORSND = 18
+    Const CLOSEDOORSND = 19
+    Const DONOTHINGSND = 20
+    Const HALTSND = 21
+    Const DEATHSCREAM2SND = 22
+    Const ATKKNIFESND = 23
+    Const ATKPISTOLSND = 24
+    Const DEATHSCREAM3SND = 25
+    Const ATKMACHINEGUNSND = 26
+    Const HITENEMYSND = 27
+    Const SHOOTDOORSND = 28
+    Const DEATHSCREAM1SND = 29
+    Const GETMACHINESND = 30
+    Const GETAMMOSND = 31
+    Const SHOOTSND = 32
+    Const HEALTH1SND = 33
+    Const HEALTH2SND = 34
+    Const BONUS1SND = 35
+    Const BONUS2SND = 36
+    Const BONUS3SND = 37
+    Const GETGATLINGSND = 38
+    Const ESCPRESSEDSND = 39
+    Const LEVELDONESND = 40
+    Const DOGBARKSND = 41
+    Const ENDBONUS1SND = 42
+    Const ENDBONUS2SND = 43
+    Const BONUS1UPSND = 44
+    Const BONUS4SND = 45
+    Const PUSHWALLSND = 46
+    Const NOBONUSSND = 47
+    Const PERCENT100SND = 48
+    Const BOSSACTIVESND = 49
+    Const MUTTISND = 50
+    Const SCHUTZADSND = 51
+    Const AHHHGSND = 52
+    Const DIESND = 53
+    Const EVASND = 54
+    Const GUTENTAGSND = 55
+    Const LEBENSND = 56
+    Const SCHEISTSND = 57
+    Const NAZIFIRESND = 58
+    Const BOSSFIRESND = 59
+    Const SSFIRESND = 60
+    Const SLURPIESND = 61
+    Const TOT_HUNDSND = 62
+    Const MEINGOTTSND = 63
+    Const SCHABBSHASND = 64
+    Const HITLERHASND = 65
+    Const SPIONSND = 66
+    Const NEINSOVASSND = 67
+    Const DOGATTACKSND = 68
+    Const FLAMETHROWERSND = 69
+    Const MECHSTEPSND = 70
+    Const GOOBSSND = 71
+    Const YEAHSND = 72
+    Const DEATHSCREAM4SND = 73
+    Const DEATHSCREAM5SND = 74
+    Const DEATHSCREAM6SND = 75
+    Const DEATHSCREAM7SND = 76
+    Const DEATHSCREAM8SND = 77
+    Const DEATHSCREAM9SND = 78
+    Const DONNERSND = 79
+    Const EINESND = 80
+    Const ERLAUBENSND = 81
+    Const KEINSND = 82
+    Const MEINSND = 83
+    Const ROSESND = 84
+    Const MISSILEFIRESND = 85
+    Const MISSILEHITSND = 86
+    Const LASTSOUND = 87
+
+    ' Base offsets
+    Const STARTPCSOUNDS = 0
+    Const STARTADLIBSOUNDS = 73
+    Const STARTDIGISOUNDS = 146
+    Const STARTMUSIC = 219
+
+    ' Music names & indexes
+    Const CORNER_MUS = 0
+    Const DUNGEON_MUS = 1
+    Const WARMARCH_MUS = 2
+    Const GETTHEM_MUS = 3
+    Const HEADACHE_MUS = 4
+    Const HITLWLTZ_MUS = 5
+    Const INTROCW3_MUS = 6
+    Const NAZI_NOR_MUS = 7
+    Const NAZI_OMI_MUS = 8
+    Const POW_MUS = 9
+    Const SALUTE_MUS = 10
+    Const SEARCHN_MUS = 11
+    Const SUSPENSE_MUS = 12
+    Const VICTORS_MUS = 13
+    Const WONDERIN_MUS = 14
+    Const FUNKYOU_MUS = 15
+    Const ENDLEVEL_MUS = 16
+    Const GOINGAFT_MUS = 17
+    Const PREGNANT_MUS = 18
+    Const ULTIMATE_MUS = 19
+    Const NAZI_RAP_MUS = 20
+    Const ZEROHOUR_MUS = 21
+    Const TWELFTH_MUS = 22
+    Const ROSTER_MUS = 23
+    Const URAHERO_MUS = 24
+    Const VICMARCH_MUS = 25
+    Const PACMAN_MUS = 26
+    Const LASTMUSIC = 27
+
+$End If

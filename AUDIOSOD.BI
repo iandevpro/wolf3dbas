@@ -1,0 +1,126 @@
+' AUDIOSOD.BI - generated from origsrc/AUDIOSOD.H (Created Thu Aug 13 09:25:58 1992) by tools/gen_headers.py
+
+$If INCLUDE_AUDIOSOD_BI = UNDEFINED Then
+    $Let INCLUDE_AUDIOSOD_BI = 1
+
+    Const NUMSOUNDS = 81
+    Const NUMSNDCHUNKS = 267
+
+    ' Sound names & indexes
+    Const HITWALLSND = 0
+    Const MISSILEHITSND = 1
+    Const SELECTITEMSND = 2
+    Const GHOSTSIGHTSND = 3
+    Const MOVEGUN2SND = 4
+    Const MOVEGUN1SND = 5
+    Const NOWAYSND = 6
+    Const NAZIHITPLAYERSND = 7
+    Const MISSILEFIRESND = 8
+    Const PLAYERDEATHSND = 9
+    Const DOGDEATHSND = 10
+    Const ATKGATLINGSND = 11
+    Const GETKEYSND = 12
+    Const NOITEMSND = 13
+    Const WALK1SND = 14
+    Const WALK2SND = 15
+    Const TAKEDAMAGESND = 16
+    Const GAMEOVERSND = 17
+    Const OPENDOORSND = 18
+    Const CLOSEDOORSND = 19
+    Const DONOTHINGSND = 20
+    Const HALTSND = 21
+    Const DEATHSCREAM2SND = 22
+    Const ATKKNIFESND = 23
+    Const ATKPISTOLSND = 24
+    Const DEATHSCREAM3SND = 25
+    Const ATKMACHINEGUNSND = 26
+    Const HITENEMYSND = 27
+    Const SHOOTDOORSND = 28
+    Const DEATHSCREAM1SND = 29
+    Const GETMACHINESND = 30
+    Const GETAMMOSND = 31
+    Const SHOOTSND = 32
+    Const HEALTH1SND = 33
+    Const HEALTH2SND = 34
+    Const BONUS1SND = 35
+    Const BONUS2SND = 36
+    Const BONUS3SND = 37
+    Const GETGATLINGSND = 38
+    Const ESCPRESSEDSND = 39
+    Const LEVELDONESND = 40
+    Const DOGBARKSND = 41
+    Const ENDBONUS1SND = 42
+    Const ENDBONUS2SND = 43
+    Const BONUS1UPSND = 44
+    Const BONUS4SND = 45
+    Const PUSHWALLSND = 46
+    Const NOBONUSSND = 47
+    Const PERCENT100SND = 48
+    Const BOSSACTIVESND = 49
+    Const DEATHSCREAM4SND = 50
+    Const SCHUTZADSND = 51
+    Const AHHHGSND = 52
+    Const DEATHSCREAM5SND = 53
+    Const DEATHSCREAM7SND = 54
+    Const DEATHSCREAM8SND = 55
+    Const LEBENSND = 56
+    Const DEATHSCREAM6SND = 57
+    Const NAZIFIRESND = 58
+    Const BOSSFIRESND = 59
+    Const SSFIRESND = 60
+    Const SLURPIESND = 61
+    Const GHOSTFADESND = 62
+    Const DEATHSCREAM9SND = 63
+    Const GETAMMOBOXSND = 64
+    Const ANGELSIGHTSND = 65
+    Const SPIONSND = 66
+    Const NEINSOVASSND = 67
+    Const DOGATTACKSND = 68
+    Const ANGELFIRESND = 69
+    Const TRANSSIGHTSND = 70
+    Const TRANSDEATHSND = 71
+    Const WILHELMSIGHTSND = 72
+    Const WILHELMDEATHSND = 73
+    Const UBERDEATHSND = 74
+    Const KNIGHTSIGHTSND = 75
+    Const KNIGHTDEATHSND = 76
+    Const ANGELDEATHSND = 77
+    Const KNIGHTMISSILESND = 78
+    Const GETSPEARSND = 79
+    Const ANGELTIREDSND = 80
+    Const LASTSOUND = 81
+
+    ' Base offsets
+    Const STARTPCSOUNDS = 0
+    Const STARTADLIBSOUNDS = 81
+    Const STARTDIGISOUNDS = 162
+    Const STARTMUSIC = 243
+
+    ' Music names & indexes
+    Const XFUNKIE_MUS = 0
+    Const DUNGEON_MUS = 1
+    Const XDEATH_MUS = 2
+    Const GETTHEM_MUS = 3
+    Const XTIPTOE_MUS = 4
+    Const GOINGAFT_MUS = 5
+    Const URAHERO_MUS = 6
+    Const XTHEEND_MUS = 7
+    Const NAZI_OMI_MUS = 8
+    Const POW_MUS = 9
+    Const TWELFTH_MUS = 10
+    Const SEARCHN_MUS = 11
+    Const SUSPENSE_MUS = 12
+    Const ZEROHOUR_MUS = 13
+    Const WONDERIN_MUS = 14
+    Const ULTIMATE_MUS = 15
+    Const ENDLEVEL_MUS = 16
+    Const XEVIL_MUS = 17
+    Const XJAZNAZI_MUS = 18
+    Const COPYPRO_MUS = 19
+    Const XAWARD_MUS = 20
+    Const XPUTIT_MUS = 21
+    Const XGETYOU_MUS = 22
+    Const XTOWER2_MUS = 23
+    Const LASTMUSIC = 24
+
+$End If

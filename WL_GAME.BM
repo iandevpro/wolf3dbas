@@ -195,38 +195,38 @@ Sub ScanInfoPlane ()
                         ScanSpawnEnemy tile, x, y
                 End Select
             $Else
-                    Select Case tile
+                Select Case tile
                     Case 19 To 22
-                    SpawnPlayer x, y, NORTH + tile - 19
+                        SpawnPlayer x, y, NORTH + tile - 19
 
                     Case 23 To 74 ' 73, 74: TRUCK AND SPEAR!
-                    SpawnStatic x, y, tile - 23
+                        SpawnStatic x, y, tile - 23
 
-                    '
-                    ' P wall
-                    '
+                        '
+                        ' P wall
+                        '
                     Case 98
-                    If Not loadedgame Then gamestate.secrettotal = gamestate.secrettotal + 1
+                        If Not loadedgame Then gamestate.secrettotal = gamestate.secrettotal + 1
 
-                    '
-                    ' boss
-                    '
+                        '
+                        ' boss
+                        '
                     Case 106
-                    SpawnSpectre x, y
+                        SpawnSpectre x, y
                     Case 107
-                    SpawnAngel x, y
+                        SpawnAngel x, y
                     Case 125
-                    SpawnTrans x, y
+                        SpawnTrans x, y
                     Case 142
-                    SpawnUber x, y
+                        SpawnUber x, y
                     Case 143
-                    SpawnWill x, y
+                        SpawnWill x, y
                     Case 161
-                    SpawnDeath x, y
+                        SpawnDeath x, y
 
                     Case Else
-                    ScanSpawnEnemy tile, x, y
-                    End Select
+                        ScanSpawnEnemy tile, x, y
+                End Select
             $End If
         Next x
     Next y
@@ -382,7 +382,7 @@ Sub PlayDemo (demonumber As Integer)
     $If SPEARDEMO = UNDEFINED Then
         demochunk = T_DEMO0 + demonumber ' dems[4]={T_DEMO0,T_DEMO1,T_DEMO2,T_DEMO3}
     $Else
-            demochunk = T_DEMO0
+        demochunk = T_DEMO0
     $End If
 
     CA_CacheGrChunk demochunk
@@ -504,7 +504,7 @@ Sub GameLoop ()
                     $If SPEAR = UNDEFINED Then
                         VW_FadeOut
                     $Else
-                            VL_FadeOut 0, 255, 0, 17, 17, 300
+                        VL_FadeOut 0, 255, 0, 17, 17, 300
                     $End If
                     ClearMemory
 
@@ -544,31 +544,31 @@ Sub NextLevelMap ()
             gamestate.mapon = gamestate.mapon + 1
         End If
     $Else
-            Const FROMSECRET1 = 3
-            Const FROMSECRET2 = 11
+        Const FROMSECRET1 = 3
+        Const FROMSECRET2 = 11
 
-            '
-            ' GOING TO SECRET LEVEL
-            '
-            If playstate = ex_secretlevel Then
+        '
+        ' GOING TO SECRET LEVEL
+        '
+        If playstate = ex_secretlevel Then
             Select Case gamestate.mapon
-            Case FROMSECRET1: gamestate.mapon = 18
-            Case FROMSECRET2: gamestate.mapon = 19
+                Case FROMSECRET1: gamestate.mapon = 18
+                Case FROMSECRET2: gamestate.mapon = 19
             End Select
-            ElseIf gamestate.mapon = 18 Or gamestate.mapon = 19 Then
+        ElseIf gamestate.mapon = 18 Or gamestate.mapon = 19 Then
             '
             ' COMING BACK FROM SECRET LEVEL
             '
             Select Case gamestate.mapon
-            Case 18: gamestate.mapon = FROMSECRET1 + 1
-            Case 19: gamestate.mapon = FROMSECRET2 + 1
+                Case 18: gamestate.mapon = FROMSECRET1 + 1
+                Case 19: gamestate.mapon = FROMSECRET2 + 1
             End Select
-            Else
+        Else
             '
             ' GOING TO NEXT LEVEL
             '
             gamestate.mapon = gamestate.mapon + 1
-            End If
+        End If
     $End If
 End Sub
 
