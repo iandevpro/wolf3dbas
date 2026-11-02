@@ -696,7 +696,7 @@ Commit e19c2a3.
 
 ## 2026-11-01: Step 7a, groundwork for Spear of Destiny
 
-Not committed yet. Plan: `plans/step7_spear.plan.md` (decisions 1, 3 and 4 done here: one build per version, TEDLEVEL, `/demotest`).
+Commit 0bf4d63. Plan: `plans/step7_spear.plan.md` (decisions 1, 3 and 4 done here: one build per version, TEDLEVEL, `/demotest`).
 
 - **Four builds:**
   - `WOLF3D.BAS`: WL6.
@@ -771,3 +771,25 @@ Not committed yet. Plan: `plans/step7_spear.plan.md` (decisions 1, 3 and 4 done 
     - Esc gives a Spear quit question.
     - Inactive menu items are drawn in DEACTIVE (0x9B) on BKGDCOLOR (0x9D), dim blue on blue, as the Spear colours are.
   - **Left for 7b/7c:** the I+D easter egg, which needs a palette from the graphics file, like the Spear title.
+
+## 2026-11-01: Step 7b, Spear start-up and screens
+
+Not committed yet.
+
+- **`VL_ChunkToPalette`** (ID_VL.BM): converts a palette stored in a graphics chunk (768 bytes of 6-bit values: TITLEPALETTE, IDGUYSPALETTE, END1-9PALETTE) into a palette array for `VL_FadeIn`. The C code passed the cached chunk itself, as in `VL_FadeIn(0,255,grsegs[TITLEPALETTE],30)`.
+- **The Spear title** (DemoLoop): TITLE1PIC and TITLE2PIC (two half screens), faded in with TITLEPALETTE, as in WL_MAIN.C.
+- **The Spear sign-on:** C's Spear `FinishSignon` has no "Press a key" and waits 3 seconds (`if (!NoWait) VW_WaitVBL(3*70)`). The port's two key waits are now Wolfenstein only. WL6 is unchanged; the port's first key wait, before the hardware bars, is not in C.
+- **PG-13, credits and high scores** needed nothing more: PG13 and the credits are the same in C, and the high scores were done in 7a.
+- **The I+D easter egg** (left over from 7c), as in US_ControlPanel:
+  - the id guys picture with IDGUYSPALETTE and XJAZNAZI_MUS;
+  - then the backdrop and Options lumps again.
+  - As in C, it is checked after HandleMenu returns, which clears the keys. So I+D must still be held after leaving a menu item: hold them while leaving a submenu, where the keyboard's auto-repeat sets them again during the fade. Esc on the main menu checks almost at once.
+- **Fix, reported** ("the second View Scores, I+D: SPEAR quit"): the palette arrays of the easter egg and the title were declared with `Dim` inside the loops. In QB64, a `Dim` of an array that runs a second time is runtime error 10, "Duplicate definition" (confirmed with a test program; plain variables are fine). The error screen's "press any key" was dismissed by the held keys, so the game seemed to quit.
+  - Both arrays are now declared at the top of the routine, under `$If SPEAR` (the easter egg's only without SPEARDEMO), so neither build gets a new warning.
+  - The title would have crashed too, the second time round the attract loop.
+- **Tested:**
+  - **SPEAR attract loop with no keys:** Spear sign-on with the hardware bars, then after 3 seconds PG-13, the Spear title in its palette, the Spear credits (FormGen as distributor), the high scores, and the demo. After the demo the title shows a second time.
+  - **SPEARDEMO:** its sign-on, the title with "Demo", and its demo on floor 2.
+  - **Easter egg:** three times in a row, with I+D held while leaving the Sound menu.
+  - **WL6:** the sign-on, the NonShareware notice and the title as before.
+  - Warnings: 12 / 12 / 38 / 40 (WOLF3D / WOLF1 / SPEAR / SPEARDEMO). The formatter changes nothing.

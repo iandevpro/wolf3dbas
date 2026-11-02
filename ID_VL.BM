@@ -30,6 +30,26 @@ $If INCLUDE_ID_VL_BM = UNDEFINED Then
         Next i
     End Sub
 
+    '=================
+    '=
+    '= VL_ChunkToPalette
+    '=
+    '= A palette stored in a graphics chunk (TITLEPALETTE, END1PALETTE..., IDGUYSPALETTE:
+    '= 768 bytes of 6-bit VGA values), as a palette for VL_FadeIn / VL_SetPalette.
+    '= The C code passed the cached chunk itself: VL_FadeIn(0,255,grsegs[TITLEPALETTE],30)
+    '=
+    '=================
+    Sub VL_ChunkToPalette (chunk As Integer, palette_array() As Long)
+        Dim i As Integer, o As _Offset
+
+        o = grsegsMem(chunk).OFFSET
+        For i = 0 To 255
+            palette_array(i) = _RGB32(_MemGet(grsegsMem(chunk), o + i * 3, _Unsigned _Byte) * 255 \ 63, _
+                                      _MemGet(grsegsMem(chunk), o + i * 3 + 1, _Unsigned _Byte) * 255 \ 63, _
+                                      _MemGet(grsegsMem(chunk), o + i * 3 + 2, _Unsigned _Byte) * 255 \ 63)
+        Next i
+    End Sub
+
     Sub c_fmemcpy (dest() As Long, src() As Long, num_bytes As Integer)
         Dim i As Integer
         Rem Simulate memory copy in QB64 Basic

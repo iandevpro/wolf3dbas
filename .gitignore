@@ -24,3 +24,6 @@ MAPCHECK.TXT
 
 # python
 __pycache__/
+
+# test screenshots of the port (tools runs)
+/_*.png

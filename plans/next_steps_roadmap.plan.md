@@ -52,7 +52,7 @@ Planned in sub-steps 6a-6k in `step6_game.plan.md`: groundwork, map and VSWAP da
 ### 7. Spear of Destiny — PLANNED 2026-10-31
 Planned in sub-steps 7a-7h in `step7_spear.plan.md`:
 - 7a (DONE 2026-11-01): one build per version (`SPEAR.BAS`, `SPEARDEMO.BAS`), with generated headers and sprite numbers, TEDLEVEL, and the formatter for all builds.
-- 7b-7d: screens, menus, and levels with the existing enemies.
+- 7b-7d: screens, menus (both DONE 2026-11-01), and levels with the existing enemies.
 - 7e: the Spear enemies and bosses.
 - 7f: the ending.
 - 7g: copy protection.

@@ -84,14 +84,14 @@ About 20 WL6-only sound names and 13 picture names are used in shared code. The 
   - SPEAR and SPEARDEMO compile and reach the sign-on screen.
   - The formatter is stable for all four builds.
 
-### 7b. Start-up and screens
+### 7b. Start-up and screens — DONE 2026-11-01
 - Title (`TITLE1PIC` / `TITLE2PIC` with `TITLEPALETTE`).
 - The PG-13 and credits screens.
 - High scores with the Spear backdrop lumps and font 1.
 - The Spear `NonShareware` path.
 - **Test:** the attract loop of SPEAR and SPEARDEMO up to the first demo.
 
-### 7c. Menus — partly done in 7a (the lump caching, new game, quit strings, high scores; left: the easter egg)
+### 7c. Menus — DONE (in 7a: the lump caching, new game, quit strings, high scores; in 7b: the easter egg)
 - The Spear menu art: `BACKDROP_LUMP`, `CONTROL_LUMP`, `OPTIONS_LUMP`, `SOUND_LUMP`, `NEWGAME_LUMP`, `LOADSAVE_LUMP`.
 - New game without episode selection.
 - The I+D easter egg (`EASTEREGG_LUMP`).

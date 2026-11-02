@@ -175,6 +175,12 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '////////////////////////////////////////////////////////////////////
     Sub US_ControlPanel (scancode As Integer)
         Dim which As Integer, result As Integer
+        $If SPEAR = DEFINED Then
+            $If SPEARDEMO = UNDEFINED Then
+                ' (the easter egg's palette; here, not in the loop: a Dim of an array that runs twice is an error)
+                Dim idpal(0 To 255) As Long
+            $End If
+        $End If
 
         If ingame Then
             If CP_CheckQuick(scancode) Then Exit Sub
@@ -228,7 +234,49 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         Do
             which = HandleMenu(MainItems, MainMenu(), DRAWRTN_NONE)
 
-            ' TODO: SPEAR easter egg (I + D keys)
+            $If SPEAR = DEFINED Then
+                $If SPEARDEMO = UNDEFINED Then
+                    '
+                    ' EASTER EGG FOR SPEAR OF DESTINY!
+                    '
+                    If Keyboard(sc_I) And Keyboard(sc_D) Then
+                        VW_FadeOut
+                        StartCPMusic XJAZNAZI_MUS
+                        UnCacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+                        UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+
+                        CA_CacheGrChunk IDGUYS1PIC
+                        VWB_DrawPic 0, 0, IDGUYS1PIC
+                        UNCACHEGRCHUNK IDGUYS1PIC
+
+                        CA_CacheGrChunk IDGUYS2PIC
+                        VWB_DrawPic 0, 80, IDGUYS2PIC
+                        UNCACHEGRCHUNK IDGUYS2PIC
+
+                        VW_UpdateScreen
+
+                        CA_CacheGrChunk IDGUYSPALETTE
+                        VL_ChunkToPalette IDGUYSPALETTE, idpal()
+                        VL_FadeIn 0, 255, idpal(), 30
+                        UNCACHEGRCHUNK IDGUYSPALETTE
+
+                        Do While Keyboard(sc_I) Or Keyboard(sc_D)
+                            _Limit 70
+                            INL_KeyService
+                        Loop
+                        IN_ClearKeysDown
+                        IN_Ack
+
+                        VW_FadeOut
+
+                        CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+                        CacheLump OPTIONS_LUMP_START, OPTIONS_LUMP_END
+                        DrawMainMenu
+                        StartCPMusic MENUSONG
+                        MenuFadeIn
+                    End If
+                $End If
+            $End If
 
             Select Case which
                 Case mi_viewscores

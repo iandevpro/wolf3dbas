@@ -245,17 +245,24 @@ Sub SignonScreen
 
     ' Wait a bit to show the screen
     _Delay 1
-    If Not NoWait Then
-        Do: Loop Until InKey$ <> ""
-    End If
+    $If SPEAR = UNDEFINED Then
+        If Not NoWait Then
+            Do: Loop Until InKey$ <> ""
+        End If
+    $End If
     'VL_FadeOut 200,255,100,100,100,30
     IntroScreen
     'Do: Loop Until InKey$ <> ""
     'ClearMScreen
-    ' FinishSignon: if (!NoWait) IN_Ack ();
-    If Not NoWait Then
-        Do: Loop Until InKey$ <> ""
-    End If
+    $If SPEAR = UNDEFINED Then
+        ' FinishSignon: if (!NoWait) IN_Ack ();
+        If Not NoWait Then
+            Do: Loop Until InKey$ <> ""
+        End If
+    $Else
+        ' FinishSignon (Spear): no "Press a key", if (!NoWait) VW_WaitVBL(3*70);
+        If Not NoWait Then VL_WaitVBL 3 * 70
+    $End If
     'VL_FadeOut 0,255,0,0,0,30
 End Sub
 
@@ -1093,6 +1100,10 @@ End Sub
 ' DemoLoop - Main menu and demo attract loop
 Sub DemoLoop
     Static LastDemo As Integer
+    $If SPEAR = DEFINED Then
+        ' (here, not in the loop: a Dim of an array that runs twice is an error)
+        Dim titlepal(0 To 255) As Long
+    $End If
 
     '
     ' check for launch from ted
@@ -1155,12 +1166,25 @@ Sub DemoLoop
             ' title page
             '
             $If DEMOTEST = UNDEFINED Then
-                $If SPEAR = UNDEFINED Then
+                $If SPEAR = DEFINED Then
+                    CA_CacheGrChunk TITLEPALETTE
+
+                    CA_CacheGrChunk TITLE1PIC
+                    VWB_DrawPic 0, 0, TITLE1PIC
+                    UNCACHEGRCHUNK TITLE1PIC
+
+                    CA_CacheGrChunk TITLE2PIC
+                    VWB_DrawPic 0, 80, TITLE2PIC
+                    UNCACHEGRCHUNK TITLE2PIC
+                    VW_UpdateScreen
+                    VL_ChunkToPalette TITLEPALETTE, titlepal()
+                    VL_FadeIn 0, 255, titlepal(), 30
+
+                    UNCACHEGRCHUNK TITLEPALETTE
+                $Else
                     CA_CacheScreen TITLEPIC
                     VW_UpdateScreen
                     VW_FadeIn
-                $Else
-                    ' TODO: SPEAR title (TITLEPALETTE, TITLE1PIC, TITLE2PIC)
                 $End If
                 If IN_UserInput(TickBase * 15) Then Exit Do
                 VW_FadeOut
