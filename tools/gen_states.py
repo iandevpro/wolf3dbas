@@ -18,7 +18,9 @@ PORTED = ['T_Player', 'T_Attack', 'T_Stand', 'T_Path', 'T_Chase', 'T_DogChase', 
           'A_DeathScream', 'T_Ghosts', 'T_Projectile', 'A_Smoke',
           'T_Schabb', 'T_SchabbThrow', 'T_Gift', 'T_GiftThrow', 'T_Fat', 'T_Fake', 'T_FakeFire',
           'A_MechaSound', 'A_HitlerMorph', 'A_Slurpie', 'A_StartDeathCam',
-          'T_BJRun', 'T_BJJump', 'T_BJYell', 'T_BJDone']
+          'T_BJRun', 'T_BJJump', 'T_BJYell', 'T_BJDone',
+          'T_UShoot', 'T_Will', 'T_Launch', 'A_Victory', 'A_StartAttack', 'A_Relaunch', 'A_Breathing',
+          'A_Dormant']
 
 STATE_RE = re.compile(r'^\s*statetype\s+(s_\w+)\s*=\s*\{([^}]*)\}\s*;')
 
@@ -158,13 +160,18 @@ for r in routines:
         init.append("                %s ob" % r)
 todo = [r for r in routines if r not in PORTED]
 init.append("            Case Else")
-init.append("                ' not ported (Spear of Destiny actors): " + ", ".join(todo))
+if todo:
+    init.append("                ' not ported: " + ", ".join(todo))
+else:
+    init.append("                ' (RT_NONE: no routine)")
 init.append("        End Select")
 init.append("    End Sub")
 
 bm = open(W + 'WL_STATE.BM', encoding='utf-8').read().replace('\r\n', '\n')
 i = bm.index("    ' The statetype initializers of the C files")
-j = bm.index("$EndIf")
+# the include guard's $End If at the end of the file (the QB64 IDE writes "$End If", earlier "$EndIf")
+j = max(bm.rfind("\n$End If"), bm.rfind("\n$EndIf")) + 1
+assert j > i, "the final $End If of WL_STATE.BM was not found"
 bm = bm[:i] + '\n'.join(init) + '\n\n' + bm[j:]
 open(W + 'WL_STATE.BM', 'w', encoding='utf-8', newline='\r\n').write(bm)
 print(len(states), 'states,', len(routines), 'routines; todo:', len(todo))

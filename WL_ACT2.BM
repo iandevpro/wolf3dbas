@@ -1,6 +1,6 @@
 ' WL_ACT2.C - enemies, bosses, projectiles
 ' Guards, officers, SS, dogs, mutants (step 6g), WL6 bosses, ghosts, BJ victory, death cam (6h).
-' Not ported: the Spear of Destiny actors
+' Spear of Destiny: trans, uber, will, death knight, angel, spectres (step 7e).
 
 $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
     $Let INCLUDE_WL_ACT2_BM = 1
@@ -441,41 +441,6 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
             SpawnBossCommon tilex, tiley, s_fatstand, fatobj, en_fat, dt_south
         End Sub
 
-        ' The angle from ob to the player (T_SchabbThrow / T_GiftThrow / T_FakeFire), C float math
-        Function AngleToPlayer% (ob As Integer)
-            Dim deltax As Long, deltay As Long
-            Dim angl As Single
-
-            deltax = objlist(player).x - objlist(ob).x
-            deltay = objlist(ob).y - objlist(player).y
-            angl = _Atan2(deltay, deltax)
-            If angl < 0 Then angl = _Pi * 2 + angl
-            AngleToPlayer% = Fix(angl / (_Pi * 2) * ANGLES)
-        End Function
-
-        ' A new projectile at ob's position, flying toward the player
-        Sub SpawnProjectile (ob As Integer, state As Integer, obclass As Integer, speed As Long, flags As Integer)
-            Dim iangle As Integer
-
-            iangle = AngleToPlayer(ob)
-
-            GetNewActor
-            objlist(newobj).state = state
-            objlist(newobj).ticcount = 1
-
-            objlist(newobj).tilex = objlist(ob).tilex
-            objlist(newobj).tiley = objlist(ob).tiley
-            objlist(newobj).x = objlist(ob).x
-            objlist(newobj).y = objlist(ob).y
-            objlist(newobj).obclass = obclass
-            objlist(newobj).dir = dt_nodir
-            objlist(newobj).angle = iangle
-            objlist(newobj).speed = speed
-
-            objlist(newobj).flags = flags
-            objlist(newobj).active = ac_yes
-        End Sub
-
         '=================
         '=
         '= T_SchabbThrow
@@ -496,57 +461,6 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
             SpawnProjectile ob, s_rocket, rocketobj, &H2000, FL_NONMARK
 
             PlaySoundLocActor MISSILEFIRESND, newobj
-        End Sub
-
-        ' T_Schabb / T_Gift / T_Fat: the same chase, with a throw (US_RndT() < (tics<<3)) and
-        ' running away when the player is closer than 4 tiles
-        Sub T_ThrowerChase (ob As Integer, shootstate As Integer)
-            Dim move As Long
-            Dim dx As Integer, dy As Integer, dist As Integer
-            Dim dodge As Integer
-
-            dodge = FALSE
-            dx = Abs(objlist(ob).tilex - objlist(player).tilex)
-            dy = Abs(objlist(ob).tiley - objlist(player).tiley)
-            If dx > dy Then dist = dx Else dist = dy
-
-            If CheckLine(ob) Then ' got a shot at player?
-                If US_RndT < tics * 8 Then
-                    '
-                    ' go into attack frame
-                    '
-                    NewState ob, shootstate
-                    Exit Sub
-                End If
-                dodge = TRUE
-            End If
-
-            If objlist(ob).dir = dt_nodir Then
-                If dodge Then
-                    SelectDodgeDir ob
-                Else
-                    SelectChaseDir ob
-                End If
-                If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
-            End If
-
-            move = objlist(ob).speed * tics
-
-            Do While move
-                If Not DoorOpenForActor(ob) Then Exit Sub
-
-                If Not ReachedGoal(ob, move) Then Exit Do
-
-                If dist < 4 Then
-                    SelectRunDir ob
-                ElseIf dodge Then
-                    SelectDodgeDir ob
-                Else
-                    SelectChaseDir ob
-                End If
-
-                If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
-            Loop
         End Sub
 
         '=================
@@ -883,8 +797,8 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
             End Select
         End Sub
     $Else
-        ' TODO: the Spear of Destiny actors (trans, uber, will, death knight, angel, spectre);
-        ' the WL6 routines of the state dispatcher do nothing in Spear
+        ' The Wolfenstein routines of the state dispatcher do nothing in Spear (its actors
+        ' are at the end of this file)
         Sub T_Schabb (ob As Integer)
         End Sub
         Sub T_SchabbThrow (ob As Integer)
@@ -902,8 +816,6 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
         Sub A_MechaSound (ob As Integer)
         End Sub
         Sub A_HitlerMorph (ob As Integer)
-        End Sub
-        Sub A_Slurpie (ob As Integer)
         End Sub
         Sub A_StartDeathCam (ob As Integer)
         End Sub
@@ -1322,20 +1234,352 @@ $If INCLUDE_WL_ACT2_BM = UNDEFINED Then
         End If
     End Sub
 
+    '
+    ' The helpers of the bosses that throw or shoot projectiles, Wolfenstein and Spear
+    '
+    ' The angle from ob to the player (T_SchabbThrow / T_GiftThrow / T_FakeFire; Spear: T_Launch), C float math
+    Function AngleToPlayer% (ob As Integer)
+        Dim deltax As Long, deltay As Long
+        Dim angl As Single
+
+        deltax = objlist(player).x - objlist(ob).x
+        deltay = objlist(ob).y - objlist(player).y
+        angl = _Atan2(deltay, deltax)
+        If angl < 0 Then angl = _Pi * 2 + angl
+        AngleToPlayer% = Fix(angl / (_Pi * 2) * ANGLES)
+    End Function
+
+    ' A new projectile at ob's position, flying toward the player
+    Sub SpawnProjectile (ob As Integer, state As Integer, obclass As Integer, speed As Long, flags As Integer)
+        SpawnProjectileAngle ob, AngleToPlayer(ob), state, obclass, speed, flags
+    End Sub
+
+    ' A new projectile at ob's position, flying at the angle iangle (T_Launch aims it 4 angles off)
+    Sub SpawnProjectileAngle (ob As Integer, iangle As Integer, state As Integer, obclass As Integer, speed As Long, flags As Integer)
+        GetNewActor
+        objlist(newobj).state = state
+        objlist(newobj).ticcount = 1
+
+        objlist(newobj).tilex = objlist(ob).tilex
+        objlist(newobj).tiley = objlist(ob).tiley
+        objlist(newobj).x = objlist(ob).x
+        objlist(newobj).y = objlist(ob).y
+        objlist(newobj).obclass = obclass
+        objlist(newobj).dir = dt_nodir
+        objlist(newobj).angle = iangle
+        objlist(newobj).speed = speed
+
+        objlist(newobj).flags = flags
+        objlist(newobj).active = ac_yes
+    End Sub
+
+    ' T_Schabb / T_Gift / T_Fat (Spear: T_Will): the same chase, with a throw (US_RndT() < (tics<<3)) and
+    ' running away when the player is closer than 4 tiles
+    Sub T_ThrowerChase (ob As Integer, shootstate As Integer)
+        Dim move As Long
+        Dim dx As Integer, dy As Integer, dist As Integer
+        Dim dodge As Integer
+
+        dodge = FALSE
+        dx = Abs(objlist(ob).tilex - objlist(player).tilex)
+        dy = Abs(objlist(ob).tiley - objlist(player).tiley)
+        If dx > dy Then dist = dx Else dist = dy
+
+        If CheckLine(ob) Then ' got a shot at player?
+            If US_RndT < tics * 8 Then
+                '
+                ' go into attack frame
+                '
+                NewState ob, shootstate
+                Exit Sub
+            End If
+            dodge = TRUE
+        End If
+
+        If objlist(ob).dir = dt_nodir Then
+            If dodge Then
+                SelectDodgeDir ob
+            Else
+                SelectChaseDir ob
+            End If
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+        End If
+
+        move = objlist(ob).speed * tics
+
+        Do While move
+            If Not DoorOpenForActor(ob) Then Exit Sub
+
+            If Not ReachedGoal(ob, move) Then Exit Do
+
+            If dist < 4 Then
+                SelectRunDir ob
+            ElseIf dodge Then
+                SelectDodgeDir ob
+            Else
+                SelectChaseDir ob
+            End If
+
+            If objlist(ob).dir = dt_nodir Then Exit Sub ' object is blocked in
+        Loop
+    End Sub
+
     $If SPEAR = DEFINED Then
-        ' The Spear of Destiny actors (WL_ACT2.C 1174-1975) are ported in step 7e.
-        ' Until then these spawns do nothing: the maps have no such enemies yet
+        '
+        ' =============================================================================
+        '                  SPEAR OF DESTINY ACTORS (WL_ACT2.C 1174-1975)
+        ' =============================================================================
+        '
+
+        ' The common part of the Spear boss spawns: unlike the Wolfenstein bosses they keep
+        ' the speed and direction SpawnNewObj gives (FirstSighting sets the speed)
+        Sub SpawnSpearBoss (tilex As Integer, tiley As Integer, state As Integer, obclass As Integer, which As Integer)
+            SpawnNewObj tilex, tiley, state
+            objlist(newobj).obclass = obclass
+            objlist(newobj).hitpoints = starthitpoints(gamestate.difficulty, which)
+            objlist(newobj).flags = objlist(newobj).flags Or FL_SHOOTABLE Or FL_AMBUSH
+            If Not loadedgame Then gamestate.killtotal = gamestate.killtotal + 1
+        End Sub
+
+        '===============
+        '=
+        '= SpawnTrans
+        '=
+        '===============
         Sub SpawnTrans (tilex As Integer, tiley As Integer)
+            If SoundBlasterPresent And DigiMode <> sds_Off Then states(s_transdie01).tictime = 105
+            SpawnSpearBoss tilex, tiley, s_transstand, transobj, en_trans
         End Sub
+
+        '===============
+        '=
+        '= SpawnUber
+        '=
+        '===============
         Sub SpawnUber (tilex As Integer, tiley As Integer)
+            If SoundBlasterPresent And DigiMode <> sds_Off Then states(s_uberdie01).tictime = 70
+            SpawnSpearBoss tilex, tiley, s_uberstand, uberobj, en_uber
         End Sub
+
+        '===============
+        '=
+        '= T_UShoot
+        '=
+        '===============
+        Sub T_UShoot (ob As Integer)
+            Dim dx As Integer, dy As Integer, dist As Integer
+
+            T_Shoot ob
+
+            dx = Abs(objlist(ob).tilex - objlist(player).tilex)
+            dy = Abs(objlist(ob).tiley - objlist(player).tiley)
+            If dx > dy Then dist = dx Else dist = dy
+            If dist <= 1 Then TakeDamage 10, ob
+        End Sub
+
+        '===============
+        '=
+        '= SpawnWill
+        '=
+        '===============
         Sub SpawnWill (tilex As Integer, tiley As Integer)
+            If SoundBlasterPresent And DigiMode <> sds_Off Then states(s_willdie2).tictime = 70
+            SpawnSpearBoss tilex, tiley, s_willstand, willobj, en_will
         End Sub
+
+        '================
+        '=
+        '= T_Will
+        '=
+        '================
+        Sub T_Will (ob As Integer)
+            ' the chase of T_Gift, attacking with the state of the class
+            Select Case objlist(ob).obclass
+                Case willobj
+                    T_ThrowerChase ob, s_willshoot1
+                Case angelobj
+                    T_ThrowerChase ob, s_angelshoot1
+                Case Else
+                    T_ThrowerChase ob, s_deathshoot1
+            End Select
+        End Sub
+
+        '===============
+        '=
+        '= SpawnDeath
+        '=
+        '===============
         Sub SpawnDeath (tilex As Integer, tiley As Integer)
+            If SoundBlasterPresent And DigiMode <> sds_Off Then states(s_deathdie2).tictime = 105
+            SpawnSpearBoss tilex, tiley, s_deathstand, deathobj, en_death
         End Sub
+
+        '===============
+        '=
+        '= T_Launch
+        '=
+        '===============
+        Sub T_Launch (ob As Integer)
+            Dim iangle As Integer
+
+            iangle = AngleToPlayer(ob)
+
+            If objlist(ob).obclass = deathobj Then
+                T_Shoot ob
+                If objlist(ob).state = s_deathshoot2 Then
+                    iangle = iangle - 4
+                    If iangle < 0 Then iangle = iangle + ANGLES
+                Else
+                    iangle = iangle + 4
+                    If iangle >= ANGLES Then iangle = iangle - ANGLES
+                End If
+            End If
+
+            Select Case objlist(ob).obclass
+                Case deathobj
+                    SpawnProjectileAngle ob, iangle, s_hrocket, hrocketobj, &H2000, FL_NONMARK
+                    PlaySoundLocActor KNIGHTMISSILESND, newobj
+                Case angelobj
+                    SpawnProjectileAngle ob, iangle, s_spark1, sparkobj, &H2000, FL_NONMARK
+                    PlaySoundLocActor ANGELFIRESND, newobj
+                Case Else
+                    SpawnProjectileAngle ob, iangle, s_rocket, rocketobj, &H2000, FL_NONMARK
+                    PlaySoundLocActor MISSILEFIRESND, newobj
+            End Select
+        End Sub
+
+        '
+        ' A_Slurpie / A_Breathing
+        '
+        Sub A_Slurpie (ob As Integer)
+            Dim played As Integer
+
+            played = SD_PlaySound(SLURPIESND)
+        End Sub
+
+        Sub A_Breathing (ob As Integer)
+            Dim played As Integer
+
+            played = SD_PlaySound(ANGELTIREDSND)
+        End Sub
+
+        '===============
+        '=
+        '= SpawnAngel
+        '=
+        '===============
         Sub SpawnAngel (tilex As Integer, tiley As Integer)
+            If SoundBlasterPresent And DigiMode <> sds_Off Then states(s_angeldie11).tictime = 105
+            SpawnSpearBoss tilex, tiley, s_angelstand, angelobj, en_angel
         End Sub
+
+        '=================
+        '=
+        '= A_Victory
+        '=
+        '=================
+        Sub A_Victory (ob As Integer)
+            playstate = ex_victorious
+        End Sub
+
+        '=================
+        '=
+        '= A_StartAttack
+        '=
+        '=================
+        Sub A_StartAttack (ob As Integer)
+            objlist(ob).temp1 = 0
+        End Sub
+
+        '=================
+        '=
+        '= A_Relaunch
+        '=
+        '=================
+        Sub A_Relaunch (ob As Integer)
+            objlist(ob).temp1 = objlist(ob).temp1 + 1
+            If objlist(ob).temp1 = 3 Then
+                NewState ob, s_angeltired
+                Exit Sub
+            End If
+
+            If US_RndT And 1 Then
+                NewState ob, s_angelchase1
+                Exit Sub
+            End If
+        End Sub
+
+        '===============
+        '=
+        '= SpawnSpectre
+        '=
+        '===============
         Sub SpawnSpectre (tilex As Integer, tiley As Integer)
+            SpawnNewObj tilex, tiley, s_spectrewait1
+            objlist(newobj).obclass = spectreobj
+            objlist(newobj).hitpoints = starthitpoints(gamestate.difficulty, en_spectre)
+            objlist(newobj).flags = objlist(newobj).flags Or FL_SHOOTABLE Or FL_AMBUSH ' |FL_NEVERMARK|FL_NONMARK;
+            If Not loadedgame Then gamestate.killtotal = gamestate.killtotal + 1
+        End Sub
+
+        '===============
+        '=
+        '= A_Dormant
+        '=
+        '= A spectre that faded away comes back when nothing is in its way
+        '=
+        '===============
+        Sub A_Dormant (ob As Integer)
+            Dim deltax As Long, deltay As Long
+            Dim xl As Integer, xh As Integer, yl As Integer, yh As Integer
+            Dim x As Integer, y As Integer
+            Dim tile As Integer
+
+            deltax = objlist(ob).x - objlist(player).x
+            deltay = objlist(ob).y - objlist(player).y
+            ' (C: goto moveok when not both within MINACTORDIST of the player)
+            If deltax >= -MINACTORDIST And deltax <= MINACTORDIST Then
+                If deltay >= -MINACTORDIST And deltay <= MINACTORDIST Then Exit Sub
+            End If
+
+            ' moveok: (the positions are positive, so \ is the C >> TILESHIFT)
+            xl = (objlist(ob).x - MINDIST) \ TILEGLOBAL
+            xh = (objlist(ob).x + MINDIST) \ TILEGLOBAL
+            yl = (objlist(ob).y - MINDIST) \ TILEGLOBAL
+            yh = (objlist(ob).y + MINDIST) \ TILEGLOBAL
+
+            For y = yl To yh
+                For x = xl To xh
+                    tile = actorat(x, y)
+                    If tile Then
+                        If tile < OBJ_BASE Then Exit Sub
+                        If objlist(tile - OBJ_BASE).flags And FL_SHOOTABLE Then Exit Sub
+                    End If
+                Next x
+            Next y
+
+            objlist(ob).flags = objlist(ob).flags Or FL_AMBUSH Or FL_SHOOTABLE
+            objlist(ob).flags = objlist(ob).flags And Not FL_ATTACKMODE
+            objlist(ob).dir = dt_nodir
+            NewState ob, s_spectrewait1
+        End Sub
+    $Else
+        ' The Spear routines of the state dispatcher do nothing in Wolfenstein
+        Sub T_UShoot (ob As Integer)
+        End Sub
+        Sub T_Will (ob As Integer)
+        End Sub
+        Sub T_Launch (ob As Integer)
+        End Sub
+        Sub A_Breathing (ob As Integer)
+        End Sub
+        Sub A_Victory (ob As Integer)
+        End Sub
+        Sub A_StartAttack (ob As Integer)
+        End Sub
+        Sub A_Relaunch (ob As Integer)
+        End Sub
+        Sub A_Dormant (ob As Integer)
         End Sub
     $End If
 

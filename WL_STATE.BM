@@ -1644,8 +1644,24 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
                 T_Bite ob
             Case RT_T_DOGCHASE
                 T_DogChase ob
+            Case RT_T_USHOOT
+                T_UShoot ob
+            Case RT_T_WILL
+                T_Will ob
+            Case RT_T_LAUNCH
+                T_Launch ob
             Case RT_A_SLURPIE
                 A_Slurpie ob
+            Case RT_A_VICTORY
+                A_Victory ob
+            Case RT_A_STARTATTACK
+                A_StartAttack ob
+            Case RT_A_RELAUNCH
+                A_Relaunch ob
+            Case RT_A_BREATHING
+                A_Breathing ob
+            Case RT_A_DORMANT
+                A_Dormant ob
             Case RT_T_SCHABB
                 T_Schabb ob
             Case RT_A_STARTDEATHCAM
@@ -1675,7 +1691,7 @@ $If INCLUDE_WL_STATE_BM = UNDEFINED Then
             Case RT_T_BJDONE
                 T_BJDone ob
             Case Else
-                ' not ported (Spear of Destiny actors): T_UShoot, T_Will, T_Launch, A_Victory, A_StartAttack, A_Relaunch, A_Breathing, A_Dormant
+                ' (RT_NONE: no routine)
         End Select
     End Sub
 

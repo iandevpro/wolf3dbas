@@ -796,7 +796,7 @@ Commit a5f4051.
 
 ## 2026-11-02: Step 7d, Spear levels with the existing enemies
 
-Not committed yet.
+Commit ae1c3d8.
 
 - **Already ported** (the C Spear blocks of WL_GAME, WL_AGENT, WL_ACT1, WL_PLAY, WL_DRAW and WL_STATE were checked one by one):
   - ScanInfoPlane's statics 23-74, with the truck and the spear;
@@ -828,3 +828,39 @@ Not committed yet.
   - **Tab-G-F10:** "God mode ON". The test held the keys briefly: held with auto-repeat, each repeat acknowledges the message and toggles god mode again, which is the same in C.
   - **Demos:** the SOD demos and the WL6 demos end exactly as before.
   - **Builds:** 12 / 12 / 38 / 40 warnings. The formatter changes nothing.
+
+## 2026-11-02: Step 7e, the Spear enemies and bosses
+
+Not committed yet.
+
+- **Already ported earlier**, in steps 6g/6h, as the `$Else` branches of the boss cases:
+  - the Spear cases of KillActor (points, death states, the key), FirstSighting (the sight sounds and speeds) and A_DeathScream;
+  - the hrocket smoke and explosion in A_Smoke / T_Projectile, and the spark and hrocket damage.
+- **Now ported (WL_ACT2.C 1174-1975),** at the end of WL_ACT2.BM:
+  - **The spawns:** SpawnTrans, SpawnUber, SpawnWill, SpawnDeath, SpawnAngel, SpawnSpectre.
+    - Unlike the Wolfenstein bosses, they keep the speed and direction from SpawnNewObj.
+    - With digitized sound, they lengthen a death state as in C: trans 105, uber 70, will 70, death 105, angel 105.
+  - **T_UShoot:** T_Shoot, plus 10 damage when the player is within one tile.
+  - **T_Will:** the chase of T_Gift, attacking with the state of the class (will, angel, death knight). It uses the T_ThrowerChase of the Wolfenstein bosses.
+  - **T_Launch:** a rocket (an hrocket for the death knight, a spark for the angel) aimed at the player. The death knight also shoots, and aims 4 angles to one side and then the other (on s_deathshoot2, and otherwise).
+  - **The angel's routines:** A_Breathing, A_Victory (ex_victorious), A_StartAttack, A_Relaunch (three attacks, then tired), and Spear's own A_Slurpie.
+  - **A_Dormant:** a spectre comes back when nothing is in its way. C's `goto moveok` is an If here.
+- **Shared helpers:** AngleToPlayer, SpawnProjectile and T_ThrowerChase moved out of the Wolfenstein-only block, so Spear uses them too. SpawnProjectileAngle takes a given angle, which T_Launch needs.
+- **The Wolfenstein builds** get empty stubs of the 8 new routines, as Spear has empty stubs of the Wolfenstein ones. Their unused `ob` parameters are 8 new warnings (12 to 20).
+- **tools/gen_states.py:**
+  - The 8 routines were added to PORTED, so the state dispatcher calls them; nothing is left unported.
+  - It now finds the final `$End If` of WL_STATE.BM in either spelling. Since the IDE formatting (`$EndIf` became `$End If`) it had failed.
+  - Regenerating WL_STATE.BM changed only the dispatcher.
+- **Where the Spear actors are** (from a decoder of GAMEMAPS.SOD):
+  - trans on map 4, wilhelm on map 9, the ubermutant on map 15, the death knight on map 17;
+  - the angel and 37 spectres on map 20;
+  - none on the demo maps (1, 3, 5, 12) or in SDM.
+- **Tested** with a temporary `/testboss N` hook (removed). After 2 s it turned god mode on, made the Spear actors see the player (FirstSighting), put the player 3 tiles from the boss facing it, and after N s killed the boss (DamageActor). Every 1.5 s screenshots:
+  - **Trans:** fires both guns, comes closer, dies, drops the key, 5000 points.
+  - **Wilhelm:** fires rockets (a hit flashes the screen red and explodes), then the same death, key and points.
+  - **Ubermutant:** fires, comes to melee range, and the same death, key and points.
+  - **Death knight:** rockets with their own smoke (hrocket), and the same death, key and points.
+  - **Angel of Death:** green sparks while the spectres come. When it is killed, its death ends in the green fade-out of ex_victorious; the ending is 7f.
+  - Not seen on screen: a spectre fading and coming back (A_Dormant), and the tired angel (A_Relaunch / A_Breathing).
+  - **Demos:** the SOD demos (no Spear actors on their maps) and the WL6 demos end exactly as before.
+  - **Builds:** 20 / 20 / 28 / 30 warnings (WOLF3D / WOLF1 / SPEAR / SPEARDEMO). The formatter changes nothing.

@@ -109,7 +109,7 @@ About 20 WL6-only sound names and 13 picture names are used in shared code. The 
   - Then level end and the next map.
   - With TEDLEVEL, a secret floor.
 
-### 7e. Spear enemies and bosses
+### 7e. Spear enemies and bosses — DONE 2026-11-02
 - Port WL_ACT2.C 1174-1975: spawns, think and action routines, missiles.
 - Add them to `tools/gen_states.py` (the `PORTED` list) and the state dispatcher.
 - The Spear `A_DeathScream` cases.
