@@ -34,6 +34,13 @@ $If INCLUDE_WL_INTER_BI = UNDEFINED Then
     Const STR_RATKILL = "kill    %"
     Const STR_RATSECRET = "secret    %"
     Const STR_RATTREASURE = "treasure    %"
+    $If SPEAR = DEFINED Then
+        ' the end of the game (F_SPEAR.H; "by able" as in the original)
+        Const STR_ENDGAME1 = "We owe you a great debt, Mr. Blazkowicz."
+        Const STR_ENDGAME2 = "You have served your country well."
+        Const STR_ENDGAME3 = "With the spear gone, the Allies will finally"
+        Const STR_ENDGAME4 = "by able to destroy Hitler..."
+    $End If
 
     '
     ' Write: the picture of each character from '0' (alpha[] in Write)

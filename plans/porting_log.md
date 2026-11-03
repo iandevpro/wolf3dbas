@@ -831,7 +831,7 @@ Commit ae1c3d8.
 
 ## 2026-11-02: Step 7e, the Spear enemies and bosses
 
-Not committed yet.
+Commit d1138bf.
 
 - **Already ported earlier**, in steps 6g/6h, as the `$Else` branches of the boss cases:
   - the Spear cases of KillActor (points, death states, the key), FirstSighting (the sight sounds and speeds) and A_DeathScream;
@@ -864,3 +864,21 @@ Not committed yet.
   - Not seen on screen: a spectre fading and coming back (A_Dormant), and the tired angel (A_Relaunch / A_Breathing).
   - **Demos:** the SOD demos (no Spear actors on their maps) and the WL6 demos end exactly as before.
   - **Builds:** 20 / 20 / 28 / 30 warnings (WOLF3D / WOLF1 / SPEAR / SPEARDEMO). The formatter changes nothing.
+
+## 2026-11-02: Step 7f, the end of Spear of Destiny
+
+Not committed yet.
+
+- **Already there:** the Spear parts of Victory (ported in 6h): BJ's collapse (BJCOLLAPSE1-4PIC to XTHEEND_MUS) and the victory screen.
+- **Now ported (WL_INTER.C 35-98):**
+  - **EndScreen:** a full-screen picture, faded in with its own palette chunk (VL_ChunkToPalette, see 7b), until a key. Its C parameters `palette` and `screen` are QB64 keywords, so they are renamed.
+  - **EndSpear:**
+    - the story screen (ENDSCREEN11PIC);
+    - the debt scene (ENDSCREEN3PIC) with STR_ENDGAME1-4 of F_SPEAR.H in fontcolor 0xD0, each pair for up to 10 seconds or a key ("by able" as in the original);
+    - ENDSCREEN4-9PIC and THE END (ENDSCREEN12PIC), each with its END*PALETTE;
+    - then Save Game becomes inactive.
+  - Victory calls EndSpear where C does (the TODO before).
+- **Tested** with a temporary `/testkill N` hook (removed) that killed the Angel of Death on map 20 after N s:
+  - The test also had to make the angel active. An inactive actor in an area not connected to the player's does not run its states (DoActor, as in C), so its death never went on.
+  - The whole ending ran in order: the green fade, BJ's collapse, "you win!" with the time and averages, the story, the two messages, "But that's another story...", the Spear of Destiny title, "A Game by id", "Distributed by FormGen", the beta testers, "Thanks for playing...", THE END, then the high scores.
+  - Builds: 20 / 20 / 28 / 30 warnings as before. The formatter changes nothing.

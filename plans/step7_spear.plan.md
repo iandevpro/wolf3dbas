@@ -117,7 +117,7 @@ About 20 WL6-only sound names and 13 picture names are used in shared code. The 
   - The SOD demos and the SDM demo play to the end of their data. There is no DOSBox-X reference for Spear here (only the data files, no SPEAR.EXE). A demo that ends right where its data ends, with no stuck movement, is strong evidence, as for the WL6 demos.
   - With TEDLEVEL, fight each boss: 4 Trans Grosse, 9 Wilhelm, 15 Übermutant, 17 Death Knight, 20 Angel of Death. Spectres are in the castle maps.
 
-### 7f. The ending
+### 7f. The ending — DONE 2026-11-02
 - `EndSpear`: the Angel of Death's death, taking the spear, the end screens (`ENDSCREEN*`, `BJCOLLAPSE*`, `IDGUYS*`, `ENDPICPIC`) and the end music.
 - The victory and high score entry.
 - **Test:** with TEDLEVEL 20, beat the Angel and watch the whole ending.

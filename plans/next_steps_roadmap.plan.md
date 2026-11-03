@@ -54,7 +54,7 @@ Planned in sub-steps 7a-7h in `step7_spear.plan.md`:
 - 7a (DONE 2026-11-01): one build per version (`SPEAR.BAS`, `SPEARDEMO.BAS`), with generated headers and sprite numbers, TEDLEVEL, and the formatter for all builds.
 - 7b-7d: screens, menus (both DONE 2026-11-01), and levels with the existing enemies (DONE 2026-11-02).
 - 7e: the Spear enemies and bosses (DONE 2026-11-02).
-- 7f: the ending.
+- 7f: the ending (DONE 2026-11-02).
 - 7g: copy protection.
 - 7h: the demo version.
 
