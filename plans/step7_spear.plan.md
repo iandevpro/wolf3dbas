@@ -128,7 +128,7 @@ About 20 WL6-only sound names and 13 picture names are used in shared code. The 
   - A wrong answer three times quits.
   - Right answers (from the C tables) start the game.
 
-### 7h. The demo version (SPEARDEMO)
+### 7h. The demo version (SPEARDEMO) — DONE 2026-11-03
 - The 2 maps.
 - "Get Psyched!" skipped on map 1, and the end of the demo after map 1 (WL_GAME.C 1338, WL_INTER.C 906/924).
 - One demo.

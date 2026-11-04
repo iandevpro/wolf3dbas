@@ -1299,11 +1299,16 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
                     End If
                 Loop
 
-                ' Three wrong answers: back to DOS with a msgtext (C: ShutdownId, text mode,
-                ' printf, exit(1); Quit with a msgtext does not write the config either)
+                ' Three wrong answers: back to DOS with a message (C: ShutdownId, text mode,
+                ' printf, exit(1); the config is not written)
                 ClearMemory
-                msgtext = CopyProStr$("dos", US_RndT Mod 9)
-                Quit msgtext
+                ShutdownId
+                Screen 0
+                Width 80, 25
+                _AutoDisplay
+                Print CopyProStr$("dos", US_RndT Mod 9)
+                Sleep
+                System
             End Sub
         $End If
     $End If

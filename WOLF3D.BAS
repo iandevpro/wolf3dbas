@@ -117,14 +117,16 @@ Call InitGame
 'Wolfenstein 3D
 'Options
 ' Port debug views (PORTDEBUG.BM, not in the original): WOLF3D.exe /mapview, /demotest
+' (they end without the config and the order screen of Quit)
 If InStr(UCase$(Command$), "/MAPVIEW") Then
     PortDebugView
-    Quit ""
+    ShutdownId
+    System
 End If
 If InStr(UCase$(Command$), "/DEMOTEST") Then
     PortDemoTest
-    configread = FALSE ' (a test run does not write the config)
-    Quit ""
+    ShutdownId
+    System
 End If
 
 Call DemoLoop
@@ -203,21 +205,87 @@ $End If
 '=
 '==========================
 Sub Quit (errmsg As String)
-    ' TODO: the ORDERSCREEN / ERRORSCREEN text mode screens
-    If Len(errmsg) = 0 And configread Then WriteConfig
-    IN_Shutdown
-    SD_Shutdown
-    PM_Shutdown
+    Static quitting As Integer
+    Dim chunk As Integer
 
-    If Len(errmsg) Then
-        Palette ' default colors, the screen may be faded out
-        _AutoDisplay ' VW_UpdateScreen switched to manual display
-        Cls
+    ' The text screen of the exit, cached before the shutdown: ORDERSCREEN for a normal
+    ' quit, ERRORSCREEN for an error. Not when the graphics file is not open yet, or when
+    ' the caching itself fails and quits again
+    chunk = -1
+    If Not quitting And grhandle <> 0 Then
+        quitting = TRUE
+        If Len(errmsg) = 0 Then chunk = ORDERSCREEN Else chunk = ERRORSCREEN
+        CA_CacheGrChunk chunk
+    End If
+
+    ClearMemory
+    If Len(errmsg) = 0 And configread Then WriteConfig
+
+    ShutdownId
+
+    If chunk >= 0 Then
+        If Len(errmsg) Then
+            ' the top 7 lines of ERRORSCREEN, with the error in its box
+            ShowTextScreen chunk, 7
+            PutTextChars 4, 10, errmsg
+            Locate 8, 1
+        Else
+            ' the whole ORDERSCREEN
+            ShowTextScreen chunk, 25
+            Locate 24, 1
+        End If
+        ' DOS leaves the screen at the prompt; the window waits for a key
+        Sleep
+    ElseIf Len(errmsg) Then
+        Screen 0
+        Width 80, 25
         Print errmsg
         Sleep
     End If
 
     System
+End Sub
+
+' ShutdownId (WL_MAIN.C): shuts down the managers
+Sub ShutdownId
+    IN_Shutdown
+    SD_Shutdown
+    PM_Shutdown
+End Sub
+
+' Shows a text mode screen chunk (ORDERSCREEN / ERRORSCREEN) in an 80x25 text screen.
+' The chunk is a BSAVE dump of the text memory: a 7 byte header, then a character and
+' an attribute byte per cell. C copies it to 0xb800, the same layout as _MemImage of
+' a QB64 text screen
+Sub ShowTextScreen (chunk As Integer, rows As Integer)
+    Dim scr As _MEM, bytes As _Offset
+
+    Screen 0
+    Width 80, 25
+    _AutoDisplay ' VW_UpdateScreen switched to manual display
+    Color 7, 0
+    Cls
+
+    bytes = rows * 160
+    If bytes > grsegsMem(chunk).SIZE - 7 Then bytes = grsegsMem(chunk).SIZE - 7
+    scr = _MemImage(0)
+    _MemCopy grsegsMem(chunk), grsegsMem(chunk).OFFSET + 7, bytes To scr, scr.OFFSET
+    _MemFree scr
+    Color 7, 0
+End Sub
+
+' Writes the characters of text at row, col (1-based) of the text screen and keeps the
+' attributes there, as puts does in DOS
+Sub PutTextChars (row As Integer, col As Integer, text As String)
+    Dim scr As _MEM, i As Long, cell As Long
+
+    scr = _MemImage(0)
+    cell = (row - 1) * 80 + col - 1
+    For i = 1 To Len(text)
+        If cell + i - 1 >= 80 * 25 Then Exit For
+        _MemPut scr, scr.OFFSET + (cell + i - 1) * 2, Asc(text, i) As _UNSIGNED _BYTE
+    Next i
+    _MemFree scr
 End Sub
 
 ' SignonScreen - Displays the game's intro screen

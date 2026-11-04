@@ -885,7 +885,7 @@ Commit 39b01fc.
 
 ## 2026-11-03: Step 7g, copy protection
 
-Not committed yet.
+Commit 91652bb.
 
 - **Ported (WL_INTER.C 1315-1716),** in the retail Spear build only (not SPEARDEMO, as in C). DemoLoop already called the empty stub.
   - **CopyProStr$(table, i):** the C string tables (CopyProFailedStrs, BackDoorStrs, GoodBoyStrs, bossstrs, WordStr/WordCorrect, MemberStr/MemberCorrect, DosMessages, MiscTitle/MiscStr/MiscCorrect) and the F_SPEAR.H strings, by name and index. The empty C entries return "".
@@ -903,3 +903,32 @@ Not committed yet.
   - Demos: SOD 2900/13, 1000/10, 3000/12, 7300/13 and WL6 3900/15, 13600/51, 7100/27, 5600/21, as before.
   - Builds: 20 / 20 / 28 / 30 warnings as before. The formatter changes nothing.
 - **Turned off** at the user's request: the CopyProtection call in DemoLoop (WOLF3D.BAS) is commented out, so SPEAR starts without the quiz. The quiz code stays in WL_INTER.BM.
+
+## 2026-11-03: Step 7h, the demo version and the exit screens
+
+Committed as "Step 7h: the Spear of Destiny demo version and the exit screens" (this commit).
+
+- **Checked:** every `SPEARDEMO` block of the C code against the port.
+  - Already ported in earlier steps:
+    - the digitized sounds the demo doesn't have (InitDigiMap);
+    - the I+D easter egg (not in the demo);
+    - the *.SDM files (CheckForEpisodes);
+    - the one demo (PlayDemo 0, T_DEMO0);
+    - the end after map 1 with its message (7d);
+    - no copy protection.
+  - DoJukebox (holding M at start-up; not in the demo) is not ported in any build. It's a separate item, not part of 7h.
+- **Quit, the exit screens (WL_MAIN.C Quit),** for every build:
+  - **A normal quit** shows ORDERSCREEN, and **an error** shows the top 7 lines of ERRORSCREEN with the message in its box (C: gotoxy(10,4), puts).
+  - The chunks are BSAVE dumps of the DOS text memory: a 7 byte header, then a character and an attribute per cell. ShowTextScreen copies them into an 80x25 QB64 text screen, whose _MemImage has the same layout as 0xb800.
+  - PutTextChars writes the error without changing the attributes, as puts does, so it takes the colors of the box.
+  - DOS leaves the screen at the prompt; the window waits for a key before closing.
+  - The chunk is cached before the shutdown. A Quit before the graphics file is open, or a second Quit while caching it, keeps the old plain text message.
+  - Quit now also calls ClearMemory, as C does.
+  - **ShutdownId** (new) shuts down the managers. CopyProtection uses it for its DOS message instead of Quit, which would now show ERRORSCREEN; C prints the message on a plain screen.
+- **/mapview and /demotest** end with ShutdownId and System: no config and no order screen, so a test run still exits by itself.
+- **Tested:**
+  - **The order screen:** quitting from the menu shows each build's own screen. SDM shows "SPECIAL DEMO ... We hope you've enjoyed this demo"; SOD shows the registration card text; WL6 shows "Thanks for playing"; WL1 shows the Apogee order form. A key closes the window.
+  - **The error screen:** a temporary `Quit` in the start-up (removed) showed "Spear of Destiny Error!" with the message in white on red.
+  - **SPEARDEMO:** with a temporary hook that ended each level after 2 s (removed), New Game went through floor 1 and floor 2 (no "Get Psyched!" in between), then "This concludes your demo of Spear of Destiny!...".
+  - **Demos:** SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before. Each /demotest run exits by itself (code 0).
+  - **Builds:** 20 / 20 / 28 / 30 warnings as before. The formatter changes nothing.
