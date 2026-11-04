@@ -867,7 +867,7 @@ Commit d1138bf.
 
 ## 2026-11-02: Step 7f, the end of Spear of Destiny
 
-Not committed yet.
+Commit 39b01fc.
 
 - **Already there:** the Spear parts of Victory (ported in 6h): BJ's collapse (BJCOLLAPSE1-4PIC to XTHEEND_MUS) and the victory screen.
 - **Now ported (WL_INTER.C 35-98):**
@@ -882,3 +882,24 @@ Not committed yet.
   - The test also had to make the angel active. An inactive actor in an area not connected to the player's does not run its states (DoActor, as in C), so its death never went on.
   - The whole ending ran in order: the green fade, BJ's collapse, "you win!" with the time and averages, the story, the two messages, "But that's another story...", the Spear of Destiny title, "A Game by id", "Distributed by FormGen", the beta testers, "Thanks for playing...", THE END, then the high scores.
   - Builds: 20 / 20 / 28 / 30 warnings as before. The formatter changes nothing.
+
+## 2026-11-03: Step 7g, copy protection
+
+Not committed yet.
+
+- **Ported (WL_INTER.C 1315-1716),** in the retail Spear build only (not SPEARDEMO, as in C). DemoLoop already called the empty stub.
+  - **CopyProStr$(table, i):** the C string tables (CopyProFailedStrs, BackDoorStrs, GoodBoyStrs, bossstrs, WordStr/WordCorrect, MemberStr/MemberCorrect, DosMessages, MiscTitle/MiscStr/MiscCorrect) and the F_SPEAR.H strings, by name and index. The empty C entries return "".
+  - **BackDoor%:** "a spoon?", "bite me!", "joshua", "pelt" and "snoops" always pass, with their own reply in the box.
+  - **CopyProSubMatch%:** the C loops of the boss and staff questions. The answer passes when it is found, case insensitive, anywhere in the correct string and is longer than 3 (bosses) or 2 (staff) characters. That is why "UBERMUTANTUBER MUTANT" and "john carmackjohn romero" are one string each.
+  - **CopyProtection:** the backdrop, COPYPROT_LUMP, COPYPRO_MUS and up to three questions of the four kinds (debriefing, check yer manual, staff, misc); the same question is not asked twice. A wrong answer shows a random reply with NOWAYSND for 3 seconds.
+  - **Success:** BONUS1UPSND, then it frees the lump and the sounds of the sound mode, as C does (US_ControlPanel loads them again).
+  - **Three wrong answers:** a random DOS message, through `Quit` (C: ShutdownId, text mode, printf, exit(1)). The local variable is `msgtext`, because `message` is the name of WL_MENU's Message sub.
+- **CA_LoadAllSounds** returned early when the sound mode had not changed. It now only skips freeing the sounds then, and always caches them in again. CA_CacheAudioChunk skips cached chunks. Without this, the menu sounds after the quiz would be uncached (SD_PlaySound quits on an uncached sound).
+- **Tested in SPEAR.exe:**
+  - One wrong answer, then "joshua": the Professor Falken reply, then the PC-13 screen.
+  - Three wrong answers: the game quits with "What's a nice user like you doin' at a DOS prompt like this?".
+  - A right answer, with a temporary hook (removed) that forced the "Might engineer some software?" question: "Romero" passes.
+  - With AdLib sound effects (no config, so the hardware default): the quiz, then the menus with their sounds, then a new game.
+  - Demos: SOD 2900/13, 1000/10, 3000/12, 7300/13 and WL6 3900/15, 13600/51, 7100/27, 5600/21, as before.
+  - Builds: 20 / 20 / 28 / 30 warnings as before. The formatter changes nothing.
+- **Turned off** at the user's request: the CopyProtection call in DemoLoop (WOLF3D.BAS) is commented out, so SPEAR starts without the quiz. The quiz code stays in WL_INTER.BM.

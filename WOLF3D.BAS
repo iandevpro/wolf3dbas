@@ -1145,7 +1145,7 @@ Sub DemoLoop
                 $Else
                     $If GOODTIMES = UNDEFINED Then
                         $If SPEARDEMO = UNDEFINED Then
-                            CopyProtection
+                            'CopyProtection ' the manual quiz (step 7g), turned off
                         $End If
                     $End If
                 $End If

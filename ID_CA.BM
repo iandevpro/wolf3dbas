@@ -714,15 +714,15 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim start As Integer, i As Integer
 
         ' Free the sounds of the previous mode (orig C marks them purgable).
-        ' The same mode keeps its sounds, a playing sound must not be freed
-        If oldsoundmode = SoundMode Then Exit Sub
-        Select Case oldsoundmode
-            Case sdm_PC
-                start = STARTPCSOUNDS
-            Case sdm_AdLib
-                start = STARTADLIBSOUNDS
-        End Select
-        If oldsoundmode <> sdm_Off Then
+        ' The same mode keeps its sounds (a playing sound must not be freed), but they
+        ' are cached in again below: CopyProtection frees them (MM_FreePtr) as in C
+        If oldsoundmode <> SoundMode And oldsoundmode <> sdm_Off Then
+            Select Case oldsoundmode
+                Case sdm_PC
+                    start = STARTPCSOUNDS
+                Case sdm_AdLib
+                    start = STARTADLIBSOUNDS
+            End Select
             For i = 0 To NUMSOUNDS - 1
                 CA_FreeAudioChunk start + i
             Next i

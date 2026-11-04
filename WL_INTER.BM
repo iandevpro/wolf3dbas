@@ -935,9 +935,375 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
 
     $If SPEAR = DEFINED Then
         $If SPEARDEMO = UNDEFINED Then
-            ' CopyProtection (WL_INTER.C 1485-1716), the manual quiz of the retail game,
-            ' is ported in step 7g. Until then the game starts without it
+            '////////////////////////////////////////////////////////
+            '//
+            '// COPY PROTECTION FOR FormGen (WL_INTER.C 1315-1716)
+            '//
+            '////////////////////////////////////////////////////////
+
+            ' The string tables of the quiz (char far CopyProFailedStrs[], BackDoorStrs[]...,
+            ' the strings of F_SPEAR.H), by table name and index
+            Function CopyProStr$ (table As String, i As Integer)
+                Dim s As String
+
+                Select Case table
+                    Case "failed" ' CopyProFailedStrs[18]
+                        Select Case i
+                            Case 0: s = "That's close, but not close enough to get"
+                            Case 1: s = "you into the game."
+                            Case 2: s = "Wow, you must have the early version of the"
+                            Case 3: s = "manual with the totally false information in it."
+                            Case 4: s = "I would let you into the game, but seeing"
+                            Case 5: s = "as that was not at all the right answer..."
+                            Case 6: s = "It's just too bad we can't get together on"
+                            Case 7: s = "this one.  Sorry."
+                            Case 8: s = "Hey, you're just SO off base!"
+                            Case 10: s = "You know, I once typed that myself when"
+                            Case 11: s = "I was your age."
+                            Case 12: s = "Nops.  Zero points.  Zugga."
+                            Case 14: s = "Yeah...right."
+                            Case 16: s = "You must like these quizzes."
+                        End Select
+                    Case "backdoor" ' BackDoorStrs[5] (BETA is not defined: "snoops")
+                        Select Case i
+                            Case 0: s = "a spoon?"
+                            Case 1: s = "bite me!"
+                            Case 2: s = "joshua"
+                            Case 3: s = "pelt"
+                            Case 4: s = "snoops"
+                        End Select
+                    Case "goodboy" ' GoodBoyStrs[10]
+                        Select Case i
+                            Case 0: s = "...is the CORRECT ANSWER!"
+                            Case 2: s = "Consider yourself bitten, sir."
+                            Case 4: s = "Greetings Professor Falken, would you"
+                            Case 5: s = "like to play Spear of Destiny?"
+                            Case 6: s = "Do you have any gold spray paint?"
+                            Case 8: s = "I wish I had a 21" + Chr$(34) + " monitor..."
+                        End Select
+                    Case "boss" ' bossstrs[4]
+                        Select Case i
+                            Case 0: s = "DEATH KNIGHT"
+                            Case 1: s = "BARNACLE WILHELM"
+                            Case 2: s = "UBERMUTANTUBER MUTANT"
+                            Case 3: s = "TRANS GROSSE"
+                        End Select
+                    Case "word" ' WordStr[5]
+                        Select Case i
+                            Case 0: s = "New Game"
+                            Case 1: s = "Sound...F4"
+                            Case 2: s = "Control...F6"
+                            Case 3: s = "Change View...F5"
+                            Case 4: s = "Quit...F10"
+                        End Select
+                    Case "wordcorrect" ' WordCorrect[5]
+                        Select Case i
+                            Case 0: s = "3"
+                            Case 1, 2: s = "4"
+                            Case 3, 4: s = "5"
+                        End Select
+                    Case "member" ' MemberStr[10]
+                        Select Case i
+                            Case 0: s = "Could be called " + Chr$(34) + "PixelMeister" + Chr$(34) + "?"
+                            Case 2: s = "Might engineer some software?"
+                            Case 4: s = "Would be found"
+                            Case 5: s = "directing creatively?"
+                            Case 6: s = "Might be found"
+                            Case 7: s = "handling operations?"
+                            Case 8: s = "Has a name familiar"
+                            Case 9: s = "to your weatherman?"
+                        End Select
+                    Case "membercorrect" ' MemberCorrect[5]
+                        Select Case i
+                            Case 0: s = "adrian carmack"
+                            Case 1: s = "john carmackjohn romero"
+                            Case 2: s = "tom hall"
+                            Case 3: s = "jay wilbur"
+                            Case 4: s = "kevin cloud"
+                        End Select
+                    Case "dos" ' DosMessages[9]
+                        Select Case i
+                            Case 0: s = "Welcome to the DOS prompt, pirate!"
+                            Case 1: s = "Eat hot DOS prompt, goober!"
+                            Case 2: s = "Ya know, this program doesn't cost that much."
+                            Case 3: s = "Hey...weren't you just AT this DOS prompt?"
+                            Case 4: s = "What's a nice user like you doin' at a DOS prompt like this?"
+                            Case 5: s = "Well, I'm sure you just " + Chr$(34) + "misplaced" + Chr$(34) + " the manual..."
+                            Case 6: s = "Run me again when you've boned up on your manual a bit."
+                            Case 7: s = "Nice try, but no Spear."
+                            Case 8: s = "That information is in the Spear of Destiny manual, by the way."
+                        End Select
+                    Case "misctitle" ' MiscTitle[4]
+                        Select Case i
+                            Case 0: s = "BLOOD TEST"
+                            Case 1: s = "STRAIGHT-LACED"
+                            Case 2: s = "QUITE SHAPELY"
+                            Case 3: s = "I AM WHAT I AMMO"
+                        End Select
+                    Case "misc" ' MiscStr[12]
+                        Select Case i
+                            Case 0: s = "Under " + Chr$(34) + "Killing the Enemy" + Chr$(34) + ", what"
+                            Case 1: s = "type of enemy is pictured?"
+                            Case 3: s = "How many eyelets are on B.J.'s"
+                            Case 4: s = "boots? (see page 2)"
+                            Case 6: s = "The word " + Chr$(34) + "minister" + Chr$(34) + " appears in"
+                            Case 7: s = "what gray shape on page 2?"
+                            Case 9: s = "How many bullets does B.J. have"
+                            Case 10: s = "on the screen-shot in the middle"
+                            Case 11: s = "of page 9?"
+                        End Select
+                    Case "misccorrect" ' MiscCorrect[4]
+                        Select Case i
+                            Case 0: s = "ss"
+                            Case 1: s = "8"
+                            Case 2: s = "star" ' STR_STAR
+                            Case 3: s = "45"
+                        End Select
+                End Select
+                CopyProStr$ = s
+            End Function
+
+            ' Some answers always pass, with their own reply
+            Function BackDoor% (s As String)
+                Dim i As Integer
+
+                s = LCase$(s) ' strlwr
+
+                For i = 0 To 4
+                    If s = CopyProStr$("backdoor", i) Then
+                        SETFONTCOLOR 14, 15
+                        fontnumber = 0
+                        PrintY = 175
+                        VWB_DrawPic 0, 20 * 8, COPYPROTBOXPIC
+                        US_CPrint CopyProStr$("goodboy", i * 2)
+                        US_CPrint CopyProStr$("goodboy", i * 2 + 1)
+                        VW_UpdateScreen
+                        BackDoor% = 1
+                        Exit Function
+                    End If
+                Next i
+
+                BackDoor% = 0
+            End Function
+
+            ' The C loops of the boss and staff questions: the answer matches when it is
+            ' found (case insensitive) anywhere in the correct string, and is longer than minlen
+            Function CopyProSubMatch% (answer As String, correct As String, minlen As Integer)
+                Dim i As Integer
+
+                CopyProSubMatch% = 0
+                If Len(answer) <= minlen Then Exit Function
+                For i = 1 To Len(correct)
+                    If LCase$(Mid$(correct, i, Len(answer))) = LCase$(answer) Then
+                        CopyProSubMatch% = 1
+                        Exit Function
+                    End If
+                Next i
+            End Function
+
             Sub CopyProtection ()
+                Const TYPEBOX_Y = 177
+                Const TYPEBOX_BKGD = &H9C
+                Const PRINTCOLOR = HIGHLIGHT
+
+                ' the quiz types
+                Const debriefing = 0
+                Const checkmanual = 1
+                Const staffquiz = 2
+                Const miscquiz = 3
+                Const totaltypes = 4
+
+                Dim i As Integer, match As Integer, whichboss As Integer, bossnum As Integer
+                Dim try As Integer, whichline As Integer, whichone As Integer, quiztype As Integer
+                Dim whichmem As Integer, whichword As Integer, start As Integer, played As Integer
+                Dim enemypicked(0 To 3) As Integer, whichpicked(0 To 3) As Integer
+                Dim memberpicked(0 To 4) As Integer, wordpicked(0 To 4) As Integer
+                Dim inputbuffer As String, msgtext As String
+
+                try = 0
+                VW_FadeOut
+                CA_CacheGrChunk C_BACKDROPPIC
+                CacheLump COPYPROT_LUMP_START, COPYPROT_LUMP_END
+                CA_CacheGrChunk STARTFONT + 1
+                CA_LoadAllSounds
+                StartCPMusic COPYPRO_MUS
+                US_InitRndT TRUE
+
+                Do While try < 3
+                    fontnumber = 1
+                    SETFONTCOLOR PRINTCOLOR - 2, 15
+                    VWB_DrawPic 0, 0, C_BACKDROPPIC
+                    VWB_DrawPic 0, 0, COPYPROTTOPPIC
+                    VWB_DrawPic 0, 20 * 8, COPYPROTBOXPIC
+                    WindowX = 0: WindowY = 0
+                    WindowW = 320
+                    WindowH = 200
+                    PrintY = 65
+
+                    quiztype = US_RndT Mod totaltypes
+                    Select Case quiztype
+                        '
+                        ' BOSSES QUIZ
+                        '
+                        Case debriefing
+                            PrintX = 0
+                            US_Print " DEBRIEFING" + Chr$(10) + " SESSION" + Chr$(10) ' STR_DEBRIEF
+                            SETFONTCOLOR PRINTCOLOR, 15
+
+                            Do
+                                whichboss = US_RndT And 3
+                            Loop While enemypicked(whichboss)
+                            enemypicked(whichboss) = 1
+                            bossnum = BOSSPIC1PIC + whichboss ' bosses[4]
+                            VWB_DrawPic 128, 60, bossnum
+                            fontnumber = 0
+                            PrintY = 130
+                            US_CPrint "Name the member of the" + Chr$(10) ' STR_ENEMY1
+                            US_CPrint "enemy forces shown above" + Chr$(10) + Chr$(10) ' STR_ENEMY2
+
+                            VW_UpdateScreen
+                            VW_FadeIn
+
+                            PrintX = 100
+                            fontcolor = 15
+                            backcolor = TYPEBOX_BKGD
+                            inputbuffer = ""
+                            PrintY = TYPEBOX_Y
+                            fontnumber = 1
+                            i = US_LineInput(PrintX, PrintY, inputbuffer, "", TRUE, 20, 100)
+
+                            match = CopyProSubMatch(inputbuffer, CopyProStr$("boss", whichboss), 3)
+                            match = match + BackDoor(inputbuffer)
+
+                            '
+                            ' MANUAL CHECK
+                            '
+                        Case checkmanual
+                            Do
+                                whichword = US_RndT Mod 5
+                            Loop While wordpicked(whichword)
+                            wordpicked(whichword) = 1
+                            US_CPrint "CHECK YER MANUAL!" ' STR_CHECKMAN
+                            SETFONTCOLOR PRINTCOLOR, 15
+                            PrintY = PrintY + 25
+                            US_CPrint "Which manual page" ' STR_MAN1
+                            US_CPrint "is the Options Menu" ' STR_MAN2
+                            msgtext = "function " + Chr$(34) + CopyProStr$("word", whichword) + Chr$(34) + " on?" ' STR_MAN3, STR_MAN4
+                            US_CPrint msgtext
+                            VW_UpdateScreen
+                            VW_FadeIn
+
+                            PrintX = 146
+                            fontcolor = 15
+                            backcolor = TYPEBOX_BKGD
+                            inputbuffer = ""
+                            PrintY = TYPEBOX_Y
+                            i = US_LineInput(PrintX, PrintY, inputbuffer, "", TRUE, 6, 100)
+
+                            inputbuffer = LCase$(inputbuffer)
+                            match = 0
+                            If inputbuffer = CopyProStr$("wordcorrect", whichword) Then match = 1
+                            match = match + BackDoor(inputbuffer)
+
+                            '
+                            ' STAFF QUIZ
+                            '
+                        Case staffquiz
+                            Do
+                                whichmem = US_RndT Mod 5
+                            Loop While memberpicked(whichmem)
+                            memberpicked(whichmem) = 1
+                            US_CPrint "Which member of Id Software:" ' STR_ID1
+                            SETFONTCOLOR PRINTCOLOR, 15
+                            PrintY = PrintY + 25
+                            US_CPrint CopyProStr$("member", whichmem * 2)
+                            US_CPrint CopyProStr$("member", whichmem * 2 + 1)
+                            VW_UpdateScreen
+                            VW_FadeIn
+
+                            PrintX = 100
+                            fontcolor = 15
+                            backcolor = TYPEBOX_BKGD
+                            inputbuffer = ""
+                            PrintY = TYPEBOX_Y
+                            i = US_LineInput(PrintX, PrintY, inputbuffer, "", TRUE, 20, 120)
+
+                            inputbuffer = LCase$(inputbuffer)
+                            match = CopyProSubMatch(inputbuffer, CopyProStr$("membercorrect", whichmem), 2)
+                            match = match + BackDoor(inputbuffer)
+
+                            '
+                            ' MISCELLANEOUS QUESTIONS
+                            '
+                        Case miscquiz
+                            Do
+                                whichone = US_RndT And 3
+                            Loop While whichpicked(whichone)
+                            whichpicked(whichone) = 1
+                            US_CPrint CopyProStr$("misctitle", whichone)
+                            SETFONTCOLOR PRINTCOLOR, 15
+                            PrintY = PrintY + 25
+                            US_CPrint CopyProStr$("misc", whichone * 3)
+                            US_CPrint CopyProStr$("misc", whichone * 3 + 1)
+                            US_CPrint CopyProStr$("misc", whichone * 3 + 2)
+                            VW_UpdateScreen
+                            VW_FadeIn
+
+                            PrintX = 146
+                            fontcolor = 15
+                            backcolor = TYPEBOX_BKGD
+                            inputbuffer = ""
+                            PrintY = TYPEBOX_Y
+                            i = US_LineInput(PrintX, PrintY, inputbuffer, "", TRUE, 6, 100)
+
+                            inputbuffer = LCase$(inputbuffer)
+                            match = 0
+                            If inputbuffer = CopyProStr$("misccorrect", whichone) Then match = 1
+                            match = match + BackDoor(inputbuffer)
+                    End Select
+
+                    '
+                    ' IF NO MATCH, WE'VE GOT A (MINOR) PROBLEM!
+                    '
+                    If match = 0 Then
+                        whichline = 2 * (US_RndT Mod 9)
+                        SETFONTCOLOR 14, 15
+                        fontnumber = 0
+                        PrintY = 175
+                        VWB_DrawPic 0, 20 * 8, COPYPROTBOXPIC
+                        US_CPrint CopyProStr$("failed", whichline)
+                        US_CPrint CopyProStr$("failed", whichline + 1)
+
+                        VW_UpdateScreen
+                        played = SD_PlaySound(NOWAYSND)
+                        i = IN_UserInput(TickBase * 3)
+                        VW_FadeOut
+                        try = try + 1
+                    Else
+                        played = SD_PlaySound(BONUS1UPSND)
+                        SD_WaitSoundDone
+                        UNCACHEGRCHUNK STARTFONT + 1
+                        UNCACHEGRCHUNK C_BACKDROPPIC
+                        UnCacheLump COPYPROT_LUMP_START, COPYPROT_LUMP_END
+
+                        Select Case SoundMode
+                            Case sdm_Off: Exit Sub
+                            Case sdm_PC: start = STARTPCSOUNDS
+                            Case sdm_AdLib: start = STARTADLIBSOUNDS
+                        End Select
+
+                        For i = 0 To NUMSOUNDS - 1
+                            CA_FreeAudioChunk start + i ' MM_FreePtr
+                        Next i
+                        Exit Sub
+                    End If
+                Loop
+
+                ' Three wrong answers: back to DOS with a msgtext (C: ShutdownId, text mode,
+                ' printf, exit(1); Quit with a msgtext does not write the config either)
+                ClearMemory
+                msgtext = CopyProStr$("dos", US_RndT Mod 9)
+                Quit msgtext
             End Sub
         $End If
     $End If

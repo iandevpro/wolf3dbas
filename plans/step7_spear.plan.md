@@ -122,7 +122,7 @@ About 20 WL6-only sound names and 13 picture names are used in shared code. The 
 - The victory and high score entry.
 - **Test:** with TEDLEVEL 20, beat the Angel and watch the whole ending.
 
-### 7g. Copy protection (decision 2)
+### 7g. Copy protection (decision 2) — DONE 2026-11-03
 - `CopyProtection` (WL_INTER.C 1485-1716): the boss, staff and word questions with `COPYPROT_LUMP`, the three tries, the `COPYPRO_MUS` music, and the quit on failure.
 - **Test:**
   - A wrong answer three times quits.
