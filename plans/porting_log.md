@@ -974,7 +974,7 @@ Commit 1c4ab9a.
 
 ## 2026-11-04: Demo recording
 
-Not committed yet.
+Commit 5120d75.
 
 - **Ported (WL_GAME.C 900-1030, WL_PLAY.C PollControls, WL_MAIN.C DemoLoop):**
   - **The trigger:** DemoLoop calls RecordDemo instead of the control panel when Tab is held as the title loop ends and the game was started with `goobers` (Spear: `debugmode`). MS_CheckParm (new, WOLF3D.BAS) checks the parameter, ignoring case and any - / \ in front.
@@ -999,3 +999,22 @@ Not committed yet.
 - **Not tested:** recording in SPEAR (`debugmode`) and WL1 (the 4-byte frames).
   - **Demos:** SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before (now read through demobuffer).
   - **Builds:** 16 / 16 / 24 / 25 warnings. SPEARDEMO has one fewer: PlayDemo's demonumber is now used there too, for the file name. The formatter changes nothing.
+
+### How to record and save a demo
+
+1. Start the game with the developer parameter: `WOLF3D.exe goobers` (WOLF1 too); SPEAR and SPEARDEMO use `debugmode`. Not with `nowait`, which skips the title loop.
+2. Hold Tab while the title screen or the demos are showing. The key repeat ends the title loop, and DemoLoop then sees Tab down and calls RecordDemo instead of the menu. A quick tap is not enough; hold it until "Demo which level(1-10):" appears.
+3. Let go of Tab before typing; while held it types tab characters into the prompt (Backspace removes them). Type the level and press Enter.
+   - Wolfenstein: 1-10 are the maps of episode 1 (11 = episode 2 map 1, and so on).
+   - Spear: the map.
+   - The game is on hard, with the "Demo" sprite on screen.
+4. Play. Keep it under about 2.5 minutes: the buffer is 8192 bytes (3 bytes a frame of 4 tics), and when it is full the game quits with "Demo buffer overflowed!" and nothing is saved.
+5. End the recording:
+   - die (all the original demos end with a death), or
+   - press Esc and choose New Game (episode, difficulty). Esc opens the menu as outside a game, as in C, so there's no End Game.
+6. The screen goes black (faded out, as in C), but "Demo number (0-9):" is waiting. Type a digit and press Enter.
+   - It writes `DEMO<n>.<ext>` (DEMO5.WL6 / .SOD / .SDM / .WL1) in the game directory.
+   - Esc cancels without saving.
+   - After New Game, that new game starts next.
+
+**To watch it:** `WOLF3D.exe /playdemo 5` (a port option; the game itself only plays the built-in T_DEMO chunks). It plays DEMO5.WL6, writes how it ended to DEMOTEST.TXT, and exits.
