@@ -50,6 +50,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         Timer(sdTimer) Free
         SD_StopSound
         SD_MusicOff
+        SDL_ShutPC
         _SndClose sdPipe
         sdPipe = 0
     End Sub
@@ -130,6 +131,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
 
         If sdLock = 0 Then
             Do While sdFxPending > 0
+                SDL_PCService
                 SDL_ALSoundService
                 sdFxPending = sdFxPending - 1
             Loop
@@ -163,6 +165,9 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
                     sdCurSample = OPL2_Generate&
                 Loop
                 s = (sdPrevSample + (sdCurSample - sdPrevSample) * (sdOplAcc / 65536!)) * SD_MUSICGAIN / 32768!
+
+                ' The PC speaker
+                If pcSpeakerStep > 0 Then s = s + SDL_PCSpeakerSample! * SD_PCGAIN
 
                 ' The digitized sound at SD_DIGIRATE (sample and hold, like the DAC)
                 l = s
@@ -337,8 +342,8 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
     '///////////////////////////////////////////////////////////////////////////
     '//
     '//  Sound effects
-    '//  The AdLib device and the digitized sounds are ported. PC speaker sounds
-    '//  (sdm_PC, sds_PC) are TODO.
+    '//  The PC speaker, the AdLib device and the digitized sounds. The digitized
+    '//  sounds on the PC speaker (sds_PC) are not ported: no menu selects them.
     '//
     '///////////////////////////////////////////////////////////////////////////
 
@@ -346,6 +351,91 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
     Sub SDL_SoundFinished ()
         SoundNumber = 0
         SoundPriority = 0
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  The PC speaker. The original programmed PIT channel 2 (ports 42h, 43h)
+    '//  and switched the speaker gate (port 61h); here the speaker is a square
+    '//  wave mixed into the output by SD_PumpAudio
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+
+    ' Port 61h: the speaker and gate on with the PIT divisor t, or off (t = 0)
+    Sub SDL_PCSpeaker (t As Long)
+        If t > 0 Then
+            pcSpeakerStep = PIT_CLOCK / t / sdRate
+        Else
+            pcSpeakerStep = 0
+            pcSpeakerPhase = 0
+        End If
+    End Sub
+
+    ' The next output sample of the speaker: the square wave (+1 for the first half of a
+    ' cycle, -1 for the second) averaged over the sample, so the high notes do not alias.
+    ' The integral of the square wave from the start of a cycle to u is u (u < 0.5) or
+    ' 1 - u, and 0 over a whole cycle
+    Function SDL_PCSpeakerSample! ()
+        Dim p1 As Double, i0 As Double, i1 As Double
+
+        If pcSpeakerPhase < 0.5 Then i0 = pcSpeakerPhase Else i0 = 1 - pcSpeakerPhase
+        p1 = pcSpeakerPhase + pcSpeakerStep
+        pcSpeakerPhase = p1 - Int(p1)
+        If pcSpeakerPhase < 0.5 Then i1 = pcSpeakerPhase Else i1 = 1 - pcSpeakerPhase
+        SDL_PCSpeakerSample! = (i1 - i0) / pcSpeakerStep
+    End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SDL_PCPlaySound() - Plays the specified sound on the PC speaker
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub SDL_PCPlaySound (snd As _MEM)
+        sdLock = -1 ' asm cli
+
+        pcLastSample = -1
+        pcLengthLeft = _MemGet(snd, snd.OFFSET, Long) ' sound->common.length
+        pcSoundMem = snd
+        pcSoundOffset = PCSOUND_DATA
+
+        sdLock = 0 ' asm popf
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  SDL_PCStopSound() - Stops the current sound playing on the PC Speaker
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub SDL_PCStopSound ()
+        pcSoundOffset = 0
+        SDL_PCSpeaker 0 ' Turn the speaker off
+    End Sub
+
+    ' SDL_ShutPC() - Turns off the pc speaker
+    Sub SDL_ShutPC ()
+        pcSoundOffset = 0
+        SDL_PCSpeaker 0 ' Turn the speaker & gate off
+    End Sub
+
+    ' PC speaker part of DOFX (ID_SD_A.ASM; SDL_PCService in C) - plays the next sample
+    Sub SDL_PCService ()
+        Dim s As Integer
+
+        If pcSoundOffset = 0 Then Exit Sub ' nil pointer - no PC effect going
+
+        s = _MemGet(pcSoundMem, pcSoundMem.OFFSET + pcSoundOffset, _Unsigned _Byte)
+        pcSoundOffset = pcSoundOffset + 1
+        If s <> pcLastSample Then ' Is this sample the same as last?
+            pcLastSample = s
+            ' a frequency: the PIT divisor pcSoundLookup[s] = s * 60; 0 = silence
+            SDL_PCSpeaker s * 60
+        End If
+
+        pcLengthLeft = pcLengthLeft - 1
+        If pcLengthLeft <= 0 Then
+            SDL_PCStopSound
+            SDL_SoundFinished
+        End If
     End Sub
 
     Sub SDL_ALStopSound ()
@@ -464,7 +554,6 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
             Case sdm_Off
                 result = TRUE
             Case sdm_PC
-                ' TODO: PC speaker sounds (SDL_PCPlaySound), they stay silent for now
                 SoundTableStart = STARTPCSOUNDS
                 result = TRUE
             Case sdm_AdLib
@@ -474,12 +563,15 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
 
         If result <> 0 And mode <> SoundMode Then
             ' SDL_ShutDevice
-            If SoundMode = sdm_AdLib Then
-                ' SDL_ShutAL
-                OPL2_Write alEffects, 0
-                OPL2_Write alFreqH + 0, 0
-                SDL_AlSetZeroInst
-            End If
+            Select Case SoundMode
+                Case sdm_PC
+                    SDL_ShutPC
+                Case sdm_AdLib
+                    ' SDL_ShutAL
+                    OPL2_Write alEffects, 0
+                    OPL2_Write alFreqH + 0, 0
+                    SDL_AlSetZeroInst
+            End Select
             SoundMode = mode
             ' SDL_StartDevice
             If SoundMode = sdm_AdLib Then
@@ -524,7 +616,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         End If
 
         If DigiMode <> sds_Off And DigiMap(snd) <> -1 Then
-            ' (the sds_PC with sdm_PC case is not ported)
+            ' (C has a case for sds_PC with sdm_PC first; sds_PC is not ported)
             ' s->priority (C read it even with the sounds off; here such a sound has priority 0)
             priority = 0
             If audiosegs(chunk) <> 0 Then priority = _MemGet(audiosegMem(chunk), audiosegMem(chunk).OFFSET + SOUND_PRIORITY, _Unsigned Integer)
@@ -553,7 +645,7 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
 
         Select Case SoundMode
             Case sdm_PC
-                ' TODO: SDL_PCPlaySound
+                SDL_PCPlaySound audiosegMem(chunk)
             Case sdm_AdLib
                 SDL_ALPlaySound audiosegMem(chunk)
         End Select
@@ -572,6 +664,8 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         Dim result As Integer
 
         Select Case SoundMode
+            Case sdm_PC
+                result = (pcSoundOffset <> 0)
             Case sdm_AdLib
                 result = (alSoundOffset <> 0)
         End Select
@@ -588,6 +682,8 @@ $If INCLUDE_ID_SD_BM = UNDEFINED Then
         If DigiPlaying Then SD_StopDigitized
 
         Select Case SoundMode
+            Case sdm_PC
+                SDL_PCStopSound
             Case sdm_AdLib
                 SDL_ALStopSound
         End Select

@@ -935,7 +935,7 @@ Committed as "Step 7h: the Spear of Destiny demo version and the exit screens" (
 
 ## 2026-11-04: Clearing out stale TODOs
 
-Not committed yet.
+Commit 167cb43.
 
 - **ID_CA.BM:** the C alternatives for headers linked into the exe are gone. These were the `$If MAPHEADERLINKED / GRHEADERLINKED / AUDIOHEADERLINKED` branches, with their TODOs and placeholder code, such as a 4096-byte dummy map header.
   - No version header of the original (VERSION.H, SODVER.H, SDMVER.H, WOLF1VER.H...) defines them, so only the code that reads the files was ever compiled.
@@ -951,3 +951,23 @@ Not committed yet.
   - **Demos:** SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before.
   - **WOLF1:** it starts, the menu music plays through StartCPMusic, and Quit shows the order screen.
   - All four builds compile; the formatter changes nothing.
+
+## 2026-11-04: PC speaker sounds
+
+Not committed yet.
+
+- **Ported (ID_SD.C, ID_SD_A.ASM):** the PC speaker sound effects, the "PC Speaker" choice of the sound menu. Until now that mode was silent.
+  - **SDL_PCPlaySound / SDL_PCStopSound / SDL_ShutPC:** the same as C. A PCSound chunk is SoundCommon (length, priority), then one byte per 140 Hz step from offset 6.
+  - **SDL_PCService:** the PC part of DOFX (ID_SD_A.ASM), run every effects tick before the AdLib part. A byte that differs from the last one sets the PIT divisor `s * 60` (pcSoundLookup), or turns the speaker off for 0. At the end of the sound it stops it (SDL_SoundFinished).
+  - **SD_PlaySound, SD_SoundPlaying, SD_StopSound, SD_SetSoundMode** (SDL_ShutPC when the mode changes) and **SD_Shutdown** have their PC cases.
+- **The speaker:** C programmed PIT channel 2 and the gate on port 61h. Here SDL_PCSpeaker turns the divisor into a frequency (1193182 / divisor Hz), and SD_PumpAudio mixes a square wave into the output (SD_PCGAIN 0.2).
+  - Each sample is the square wave averaged over the sample. The integral of the square wave is a triangle, so this costs two lookups. It keeps the high notes (up to ~19.9 kHz for s = 1) from aliasing.
+- **Not ported:** the digitized sounds on the PC speaker (sds_PC). No menu selects them; the digitized sound choices are None, Sound Source and Sound Blaster.
+- **Tested** in WOLF3D with a temporary hook (removed) that logged each byte the service played and dumped the speaker samples. The test selected PC Speaker in the menu, moved the menu cursor, and started a game.
+  - The bytes played match four PC sound chunks of AUDIOT.WL6 exactly (chunks 4, 5, 32 and 39).
+  - The tones in the dump are within 0.05% (median) of 1193182 / (s * 60). The samples stay within -1..1; the first try was off by a factor of 2 and reached ±2.
+  - The game ran in PC speaker mode.
+  - **Demos:** SOD 2900/13, 1000/10, 3000/12, 7300/13 and WL6 3900/15, 13600/51, 7100/27, 5600/21, as before.
+    - SDM ended as before (2900/13, frame 1954) in 3 of 5 runs. The other 2 were aborted (playstate ex_abort at frames 226 and 1672).
+    - A demo aborts on any key or mouse button (IN_CheckAck), and the test window stays on top, so input on the desktop during the run stops it. These were aborts, not desyncs; the PC speaker code doesn't read input.
+  - **Builds:** 16 / 16 / 24 / 26 warnings as before. The formatter changes nothing.
