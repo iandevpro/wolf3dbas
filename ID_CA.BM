@@ -1,4 +1,7 @@
 ' ID_CA.C
+' The headers and dictionaries are always read from their files: the C alternatives for
+' headers linked into the exe (MAPHEADERLINKED, GRHEADERLINKED, AUDIOHEADERLINKED) are
+' not ported, no version of the game defines them
 ' simulate IFDEFs settings
 $If INCLUDE_ID_CA_BM = UNDEFINED Then
     $Let INCLUDE_ID_CA_BM = 1
@@ -19,41 +22,28 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim fileBytes As _Unsigned _Byte
 
         ' Load maphead.ext (offsets and tileinfo for map file)
-        $If MAPHEADERLINKED = UNDEFINED Then
-            fname = mheadname + extension
+        fname = mheadname + extension
 
-            handle = FreeFile
-            Open fname For Binary As #handle
-            If Err Then
-                CA_CannotOpen fname
-            End If
+        handle = FreeFile
+        Open fname For Binary As #handle
+        If Err Then
+            CA_CannotOpen fname
+        End If
 
-            ' Get file length and allocate memory
-            length = LOF(handle)
-            tinf = _MemNew(length)
-            If tinf.SIZE = 0 Then
-                Close #handle
-                CA_CannotOpen "Memory allocation failed"
-            End If
-
-            ' Read file into a byte array, then copy to tinf
-            ReDim fileBytes(0 To length - 1) As _Unsigned _Byte
-            Get #handle, , fileBytes()
-            _MemPut tinf, tinf.OFFSET, fileBytes()
+        ' Get file length and allocate memory
+        length = LOF(handle)
+        tinf = _MemNew(length)
+        If tinf.SIZE = 0 Then
             Close #handle
-            RLEWtag = _MemGet(tinf, tinf.OFFSET, _Unsigned Integer) ' ((mapfiletype _seg *)tinf)->RLEWtag
-        $Else
-                ' Linked map header code would go here
-                ' For now, we'll just set up a basic structure
+            CA_CannotOpen "Memory allocation failed"
+        End If
 
-                ' TODO: probably need to remove this code, in the original
-                ' there was only 1 line
-                ' tinf = (byte _seg *)FP_SEG(&maphead);
-                tinf = _MemNew(4096) ' Arbitrary size for placeholder
-                If tinf.SIZE = 0 Then
-                CA_CannotOpen "Memory allocation failed"
-                End If
-        $End If
+        ' Read file into a byte array, then copy to tinf
+        ReDim fileBytes(0 To length - 1) As _Unsigned _Byte
+        Get #handle, , fileBytes()
+        _MemPut tinf, tinf.OFFSET, fileBytes()
+        Close #handle
+        RLEWtag = _MemGet(tinf, tinf.OFFSET, _Unsigned Integer) ' ((mapfiletype _seg *)tinf)->RLEWtag
 
         ' Open the data file
         $If CARMACIZED = DEFINED Then
@@ -287,51 +277,39 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim i As Integer
         Dim fileBytes As _Unsigned _Byte
 
-        ' GRHEADERLINKED - is not defined in the original C source code
-        $If GRHEADERLINKED = DEFINED Then
-                ' GRHEADERLINKED - is not defined in the original C source code
-                ' can comment out the following section
-                ' ' Linked graphics header code would go here
-                ' ' For now, we'll just set up a basic structure
-                ' grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
-                ' If grstarts.SIZE = 0 Then
-                '     CA_CannotOpen "Memory allocation failed for graphics starts"
-                ' End If
-        $Else
-            ' Load ???dict.ext (huffman dictionary for graphics files)
-            fname = gdictname + extension
+        ' Load ???dict.ext (huffman dictionary for graphics files)
+        fname = gdictname + extension
 
-            handle = FreeFile
-            Open fname For Binary As #handle
-            If Err Then
-                CA_CannotOpen fname
-            End If
+        handle = FreeFile
+        Open fname For Binary As #handle
+        If Err Then
+            CA_CannotOpen fname
+        End If
 
-            ' Read huffman dictionary
-            Get #handle, , grhuffman()
-            Close #handle
-            CAL_OptimizeNodes grhuffman()
+        ' Read huffman dictionary
+        Get #handle, , grhuffman()
+        Close #handle
+        CAL_OptimizeNodes grhuffman()
 
-            ' Load the data offsets from ???head.ext
-            grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
-            If grstarts.SIZE = 0 Then
-                CA_CannotOpen "Memory allocation failed for graphics starts"
-            End If
+        ' Load the data offsets from ???head.ext
+        grstarts = _MemNew((NUMCHUNKS + 1) * FILEPOSSIZE)
+        If grstarts.SIZE = 0 Then
+            CA_CannotOpen "Memory allocation failed for graphics starts"
+        End If
 
-            fname = gheadname + extension
+        fname = gheadname + extension
 
-            handle = FreeFile
-            Open fname For Binary As #handle
-            If Err Then
-                CA_CannotOpen fname
-            End If
+        handle = FreeFile
+        Open fname For Binary As #handle
+        If Err Then
+            CA_CannotOpen fname
+        End If
 
-            ' Read file into byte array, then copy to grstarts
-            ReDim fileBytes(0 To (NUMCHUNKS + 1) * FILEPOSSIZE - 1) As _Unsigned _Byte
-            Get #handle, , fileBytes()
-            _MemPut grstarts, grstarts.OFFSET, fileBytes()
-            Close #handle
-        $End If
+        ' Read file into byte array, then copy to grstarts
+        ReDim fileBytes(0 To (NUMCHUNKS + 1) * FILEPOSSIZE - 1) As _Unsigned _Byte
+        Get #handle, , fileBytes()
+        _MemPut grstarts, grstarts.OFFSET, fileBytes()
+        Close #handle
 
         ' Open the graphics file, leaving it open until the game is finished
         fname = gfilename + extension
@@ -619,57 +597,37 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         Dim fileBytes As _Unsigned _Byte
 
         ' Load maphead.ext (offsets and tileinfo for map file)
-        ' AUDIOHEADERLINKED - is not defined in the original C sources
-        $If AUDIOHEADERLINKED = UNDEFINED Then
-            fname = aheadname + extension
+        fname = aheadname + extension
 
-            handle = FreeFile
-            Open fname For Binary As #handle
-            If Err Then
-                CA_CannotOpen fname
-            End If
+        handle = FreeFile
+        Open fname For Binary As #handle
+        If Err Then
+            CA_CannotOpen fname
+        End If
 
-            length = LOF(handle)
-            ' MM_GetPtr equivalent - allocate memory for audio starts
-            audiostarts = _MemNew(length)
-            If audiostarts.SIZE = 0 Then
-                Close #handle
-                CA_CannotOpen "Memory allocation failed for audio starts"
-            End If
-
-            ' CA_FarRead equivalent - read file into byte array, then copy to audiostarts
-            ReDim fileBytes(0 To length - 1) As _Unsigned _Byte
-            Get #handle, , fileBytes()
-            _MemPut audiostarts, audiostarts.OFFSET, fileBytes()
+        length = LOF(handle)
+        ' MM_GetPtr equivalent - allocate memory for audio starts
+        audiostarts = _MemNew(length)
+        If audiostarts.SIZE = 0 Then
             Close #handle
+            CA_CannotOpen "Memory allocation failed for audio starts"
+        End If
 
-        $Else
-                ' Linked audio header code
-                ' TODO: Implement linked audio header handling
-                ' audiohuffman = (huffnode)&audiodict
-                ' CAL_OptimizeNodes(audiohuffman)
-                ' audiostarts = (long _seg *)FP_SEG(&audiohead)
-        $End If
+        ' CA_FarRead equivalent - read file into byte array, then copy to audiostarts
+        ReDim fileBytes(0 To length - 1) As _Unsigned _Byte
+        Get #handle, , fileBytes()
+        _MemPut audiostarts, audiostarts.OFFSET, fileBytes()
+        Close #handle
+
 
         ' Open the data file
-        $If AUDIOHEADERLINKED = UNDEFINED Then
-            fname = afilename + extension
+        fname = afilename + extension
 
-            ' TODO: Implement audio file opening
-            audiohandle = FreeFile
-            Open fname For Binary As #audiohandle
-            If Err Then
-                CA_CannotOpen fname
-            End If
-        $Else
-                ' TODO: Implement linked audio file handling
-                ' audiohandle = FreeFile
-                ' Open "AUDIO." + extension For Binary As #audiohandle
-                ' If Err Then
-                '     Print "Can't open AUDIO." + extension + "!"
-                '     End
-                ' End If
-        $End If
+        audiohandle = FreeFile
+        Open fname For Binary As #audiohandle
+        If Err Then
+            CA_CannotOpen fname
+        End If
 
     End Sub
 
@@ -686,20 +644,15 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         compressed = _MemGet(audiostarts, audiostarts.OFFSET + (chunk + 1) * 4, Long) - position
         If compressed <= 0 Then Exit Sub
 
-        ' AUDIOHEADERLINKED - is not defined in the original C sources, chunks are stored uncompressed
-        $If AUDIOHEADERLINKED = UNDEFINED Then
-            ' MM_GetPtr equivalent
-            audiosegMem(chunk) = _MemNew(compressed)
-            If audiosegMem(chunk).SIZE = 0 Then Exit Sub
+        ' MM_GetPtr equivalent
+        audiosegMem(chunk) = _MemNew(compressed)
+        If audiosegMem(chunk).SIZE = 0 Then Exit Sub
 
-            ' CA_FarRead equivalent
-            ReDim fileBytes(0 To compressed - 1) As _Unsigned _Byte
-            Get #audiohandle, position + 1, fileBytes() ' QB64 uses 1-based file positions
-            _MemPut audiosegMem(chunk), audiosegMem(chunk).OFFSET, fileBytes()
-            audiosegs(chunk) = audiosegMem(chunk).OFFSET
-        $Else
-                ' TODO: Implement linked (huffman compressed) audio chunks
-        $End If
+        ' CA_FarRead equivalent
+        ReDim fileBytes(0 To compressed - 1) As _Unsigned _Byte
+        Get #audiohandle, position + 1, fileBytes() ' QB64 uses 1-based file positions
+        _MemPut audiosegMem(chunk), audiosegMem(chunk).OFFSET, fileBytes()
+        audiosegs(chunk) = audiosegMem(chunk).OFFSET
     End Sub
 
     '======================

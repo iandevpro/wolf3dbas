@@ -932,3 +932,22 @@ Committed as "Step 7h: the Spear of Destiny demo version and the exit screens" (
   - **SPEARDEMO:** with a temporary hook that ended each level after 2 s (removed), New Game went through floor 1 and floor 2 (no "Get Psyched!" in between), then "This concludes your demo of Spear of Destiny!...".
   - **Demos:** SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before. Each /demotest run exits by itself (code 0).
   - **Builds:** 20 / 20 / 28 / 30 warnings as before. The formatter changes nothing.
+
+## 2026-11-04: Clearing out stale TODOs
+
+Not committed yet.
+
+- **ID_CA.BM:** the C alternatives for headers linked into the exe are gone. These were the `$If MAPHEADERLINKED / GRHEADERLINKED / AUDIOHEADERLINKED` branches, with their TODOs and placeholder code, such as a 4096-byte dummy map header.
+  - No version header of the original (VERSION.H, SODVER.H, SDMVER.H, WOLF1VER.H...) defines them, so only the code that reads the files was ever compiled.
+  - That code is unchanged, one level less indented. A note at the top of the file says why the alternatives are not ported.
+  - The "TODO: Implement audio file opening" comment was above code that already opens the file, so it is removed.
+- **ID_MM.BM is deleted.** It held empty stubs of MM_FreePtr, MM_SetLock and MM_BombOnError with TODOs; memory is managed by _MEM blocks and arrays.
+  - The only callers were in StartCPMusic (WL_MENU.BM): MM_BombOnError around the music caching (CA_CacheAudioChunk already returns without the chunk if it fails), and MM_SetLock on the music. They are removed, with a comment, and so is their tempPtr variable.
+  - The 4 unused stub parameters were warnings: now 16 / 16 / 24 / 26 (WOLF3D / WOLF1 / SPEAR / SPEARDEMO).
+- **WOLF3D.BAS, the main program:** the commented-out "main game loop" with its TODO and the shutdown code after DemoLoop are gone. DemoLoop never returns (it quits), so they never ran.
+  - Now `Quit "Demo loop exited???"` follows it, as at the end of C's main.
+- **Left:** the TODOs that are features, not stale: NonShareware (SignonScreen) and RecordDemo (DemoLoop).
+- **Tested:**
+  - **Demos:** SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before.
+  - **WOLF1:** it starts, the menu music plays through StartCPMusic, and Quit shows the order screen.
+  - All four builds compile; the formatter changes nothing.

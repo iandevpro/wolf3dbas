@@ -131,20 +131,7 @@ End If
 
 Call DemoLoop
 
-' Main game loop
-'Print "Debug: Entering main loop"
-'Do: Loop Until InKey$ <> ""
-'Do
-'' TODO: Implement main game loop
-'Call GameLoop
-
-'_Limit 60 ' Limit to ~60 FPS
-'Loop Until InKey$ = Chr$(27) ' ESC to quit
-
-IN_Shutdown
-SD_Shutdown
-VL_SetPalette gamepal() ' undo VW_FadeOut, so QB64's end prompt is readable
-_AutoDisplay ' VW_UpdateScreen switched to manual display
+Quit "Demo loop exited???" ' (DemoLoop never returns; it quits)
 End
 
 ErrorHandler:
@@ -180,7 +167,6 @@ $End If
 '$INCLUDE:'WL_INTER.BM'
 '$INCLUDE:'ID_CA.BM'
 '$INCLUDE:'WL_MENU.BM'
-'$INCLUDE:'ID_MM.BM'
 '$INCLUDE:'ID_SD.BM'
 '$INCLUDE:'ID_IN.BM'
 '$INCLUDE:'ID_US_1.BM'
