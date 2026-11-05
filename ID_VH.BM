@@ -36,6 +36,37 @@ $If INCLUDE_ID_VH_BM = UNDEFINED Then
         VL_PlanarMemToScreen grsegsMem(chunknum), width, height, drawx, y
     End Sub
 
+    '=================
+    '=
+    '= VWB_DrawTile8 (LatchDrawChar)
+    '=
+    '= Draws 8x8 tile number tile of the STARTTILE8 chunk (cached by LoadLatchMem):
+    '= 64 bytes a tile, 4 planes of 8 rows of 2 bytes
+    '=
+    '=================
+    Sub VWB_DrawTile8 (x As Integer, y As Integer, tile As Integer)
+        Dim scr As _MEM
+        Dim src As _Offset
+        Dim plane As Long, r As Long, b As Long, sx As Long, sy As Long
+
+        If grsegs(STARTTILE8) = 0 Then Exit Sub
+        scr = _MemImage(0)
+        src = grsegsMem(STARTTILE8).OFFSET + tile * 64
+        For plane = 0 To 3
+            For r = 0 To 7
+                sy = y + r
+                For b = 0 To 1
+                    sx = x + b * 4 + plane
+                    If sx >= 0 And sx < 320 And sy >= 0 And sy < 200 Then
+                        _MemPut scr, scr.OFFSET + sy * 320 + sx, _MemGet(grsegsMem(STARTTILE8), src, _Unsigned _Byte) As _UNSIGNED _BYTE
+                    End If
+                    src = src + 1
+                Next b
+            Next r
+        Next plane
+        _MemFree scr
+    End Sub
+
     ' #define SETFONTCOLOR(f,b) fontcolor=f;backcolor=b;
     Sub SETFONTCOLOR (f As Integer, b As Integer)
         fontcolor = f

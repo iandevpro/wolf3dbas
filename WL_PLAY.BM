@@ -231,13 +231,12 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         If demoplayback Or demorecord Then
             ' demo recording and playback needs to be constant:
             ' take DEMOTICS or more tics, and modify Timecount to reflect time taken
+            tics = DEMOTICS
             $If APOGEE_1_0 = DEFINED Then
                 ' The v1.0 demos are 4 bytes a frame: buttons, x, y (per tic, like the
                 ' later demos) and the tics of that frame as recorded (1-10). So a frame
                 ' takes its recorded tics (the 4th byte) instead of DEMOTICS
-                tics = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr + 3, _Unsigned _Byte)
-            $Else
-                tics = DEMOTICS
+                If demoplayback Then tics = _MemGet(demobuffer, demobuffer.OFFSET + demoptr + 3, _Unsigned _Byte)
             $End If
             Do While TimeCount < lasttimecount + tics
                 _Limit 1000 ' (the original spun here)
@@ -259,7 +258,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             '
             ' read commands from demo buffer
             '
-            buttonbits = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Unsigned _Byte)
+            buttonbits = _MemGet(demobuffer, demobuffer.OFFSET + demoptr, _Unsigned _Byte)
             demoptr = demoptr + 1
             For i = 0 To NUMBUTTONS - 1
                 If buttonbits And 1 Then buttonstate(i) = TRUE Else buttonstate(i) = FALSE
@@ -267,9 +266,9 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             Next i
 
             ' (signed chars)
-            controlx = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Byte)
+            controlx = _MemGet(demobuffer, demobuffer.OFFSET + demoptr, _Byte)
             demoptr = demoptr + 1
-            controly = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Byte)
+            controly = _MemGet(demobuffer, demobuffer.OFFSET + demoptr, _Byte)
             demoptr = demoptr + 1
             $If APOGEE_1_0 = DEFINED Then
                 demoptr = demoptr + 1 ' the tics, read above
@@ -319,7 +318,48 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
             controly = minv
         End If
 
-        ' TODO: save info out to demo buffer (demorecord: RecordDemo with Tab and the "goobers" parameter)
+        If demorecord Then
+            '
+            ' save info out to demo buffer
+            '
+            controlx = controlx \ tics
+            controly = controly \ tics
+
+            buttonbits = 0
+
+            For i = NUMBUTTONS - 1 To 0 Step -1
+                buttonbits = buttonbits * 2
+                If buttonstate(i) Then buttonbits = buttonbits Or 1
+            Next i
+
+            _MemPut demobuffer, demobuffer.OFFSET + demoptr, buttonbits As _UNSIGNED _BYTE
+            demoptr = demoptr + 1
+            _MemPut demobuffer, demobuffer.OFFSET + demoptr, controlx As _BYTE
+            demoptr = demoptr + 1
+            _MemPut demobuffer, demobuffer.OFFSET + demoptr, controly As _BYTE
+            demoptr = demoptr + 1
+            $If APOGEE_1_0 = DEFINED Then
+                ' (the 4 byte frames of the v1.0 demos, see above)
+                _MemPut demobuffer, demobuffer.OFFSET + demoptr, tics As _UNSIGNED _BYTE
+                demoptr = demoptr + 1
+            $End If
+
+            If demoptr >= lastdemoptr Then Quit "Demo buffer overflowed!"
+
+            controlx = controlx * tics
+            controly = controly * tics
+        End If
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  CenterWindow() - Generates a window of a given width & height in the
+    '//      middle of the screen (the view, 320x160)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub CenterWindow (w As Integer, h As Integer)
+        ' FixOfs: one screen buffer in the port
+        US_DrawWindow ((320 \ 8) - w) \ 2, ((160 \ 8) - h) \ 2, w, h
     End Sub
 
     '=====================

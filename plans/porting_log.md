@@ -954,7 +954,7 @@ Commit 167cb43.
 
 ## 2026-11-04: PC speaker sounds
 
-Not committed yet.
+Commit 1c4ab9a.
 
 - **Ported (ID_SD.C, ID_SD_A.ASM):** the PC speaker sound effects, the "PC Speaker" choice of the sound menu. Until now that mode was silent.
   - **SDL_PCPlaySound / SDL_PCStopSound / SDL_ShutPC:** the same as C. A PCSound chunk is SoundCommon (length, priority), then one byte per 140 Hz step from offset 6.
@@ -971,3 +971,31 @@ Not committed yet.
     - SDM ended as before (2900/13, frame 1954) in 3 of 5 runs. The other 2 were aborted (playstate ex_abort at frames 226 and 1672).
     - A demo aborts on any key or mouse button (IN_CheckAck), and the test window stays on top, so input on the desktop during the run stops it. These were aborts, not desyncs; the PC speaker code doesn't read input.
   - **Builds:** 16 / 16 / 24 / 26 warnings as before. The formatter changes nothing.
+
+## 2026-11-04: Demo recording
+
+Not committed yet.
+
+- **Ported (WL_GAME.C 900-1030, WL_PLAY.C PollControls, WL_MAIN.C DemoLoop):**
+  - **The trigger:** DemoLoop calls RecordDemo instead of the control panel when Tab is held as the title loop ends and the game was started with `goobers` (Spear: `debugmode`). MS_CheckParm (new, WOLF3D.BAS) checks the parameter, ignoring case and any - / \ in front.
+  - **RecordDemo** asks "Demo which level(1-10):", then starts that map on hard (Wolfenstein: episode level / 10, map level mod 10; Spear: map level). It records PlayLoop, then FinishDemoRecord.
+  - **StartDemoRecord** sets up an 8192-byte demobuffer (MAXDEMOSIZE). The header is the level byte and room for the length.
+  - **PollControls** writes each frame: the buttons byte and controlx / controly per tic. While recording, a frame takes DEMOTICS like playback. A full buffer quits with "Demo buffer overflowed!".
+    - The WL1 (APOGEE_1_0) build writes v1.0's 4th byte, the tics of the frame. Its playback reads that byte only while playing back.
+  - **FinishDemoRecord** writes the length (bytes 1-2), asks "Demo number (0-9):", and writes DEMO?.ext (CA_WriteFile, new). As in C, the screen is faded out at that point, so the prompt is not visible.
+  - GameLoop's `If demorecord And playstate <> ex_warped Then FinishDemoRecord`, as in C (only RecordDemo sets demorecord).
+  - **Helpers the port didn't have:**
+    - CenterWindow (WL_PLAY.C, centred in the 320x160 view);
+    - US_DrawWindow and US_ClearWindow (ID_US_1.C);
+    - VWB_DrawTile8 (the 8x8 frame tiles of the STARTTILE8 chunk: 64 bytes a tile, 4 planes);
+    - CA_LoadFile (new).
+- **The demo buffer:** PlayDemo and PollControls read from `demobuffer` (a _MEM) instead of grsegsMem(demochunk). It is the T_DEMO chunk as before, or a loaded file.
+- **/playdemo N** (port debug option, PORTDEBUG.BM): plays a recorded DEMO N.ext from a file, as C did without DEMOSEXTERN, and writes the end state to DEMOTEST.TXT like /demotest. The game itself still plays only the T_DEMO chunks, as the original did.
+- **Tested** in WOLF3D (`goobers`):
+  - **Recording:** Tab held while the title loop ended brought up the level prompt over the faded title; level 1 then played with the Demo sprite. The test walked, turned and fired 4 shots.
+  - **Ending it:** Esc while recording opens the menu as outside a game (ingame is not set, as in C). New Game ended the recording, and "5" wrote DEMO5.WL6: 574 bytes, a 4-byte header and 190 frames.
+  - **Playback:** `/playdemo 5` played it to the end of its data (frame 574 of 574). The player ended where the recording did (x 2071048, y 3698684, angle 339) with 4 rounds left, in two runs, logged by temporary hooks (removed).
+  - The Tab repeats that start the recorder also typed tab characters into the level prompt in the test. A real key release wouldn't.
+- **Not tested:** recording in SPEAR (`debugmode`) and WL1 (the 4-byte frames).
+  - **Demos:** SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before (now read through demobuffer).
+  - **Builds:** 16 / 16 / 24 / 25 warnings. SPEARDEMO has one fewer: PlayDemo's demonumber is now used there too, for the file name. The formatter changes nothing.

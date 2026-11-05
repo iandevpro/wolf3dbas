@@ -367,6 +367,112 @@ Sub DrawPlayScreen ()
     DrawScore
 End Sub
 
+
+'==================
+'=
+'= StartDemoRecord
+'=
+'==================
+Sub StartDemoRecord (levelnumber As Integer)
+    demobuffer = _MemNew(MAXDEMOSIZE) ' MM_GetPtr, MM_SetLock
+    _MemFill demobuffer, demobuffer.OFFSET, MAXDEMOSIZE, 0 As _UNSIGNED _BYTE
+    demoptr = 0
+    lastdemoptr = demoptr + MAXDEMOSIZE
+
+    _MemPut demobuffer, demobuffer.OFFSET + demoptr, levelnumber As _UNSIGNED _BYTE
+    demoptr = demoptr + 4 ' leave space for length
+    demorecord = TRUE
+End Sub
+
+'==================
+'=
+'= FinishDemoRecord
+'=
+'= Asks for the demo number and writes the demo to DEMO?.ext
+'=
+'==================
+Sub FinishDemoRecord ()
+    Dim length As Long, level As Long, inputstr As String
+
+    demorecord = FALSE
+
+    length = demoptr
+
+    _MemPut demobuffer, demobuffer.OFFSET + 1, length As _UNSIGNED INTEGER
+
+    CenterWindow 24, 3
+    PrintY = PrintY + 6
+    fontnumber = 0
+    US_Print " Demo number (0-9):"
+    VW_UpdateScreen
+
+    If US_LineInput(px, py, inputstr, "", TRUE, 2, 0) Then
+        level = Val(inputstr)
+        If level >= 0 And level <= 9 And Len(inputstr) > 0 Then
+            CA_WriteFile "DEMO" + LTrim$(Str$(level)) + "." + RTrim$(extension), demobuffer, length
+        End If
+    End If
+
+    _MemFree demobuffer ' MM_FreePtr (&demobuffer)
+End Sub
+
+'==================
+'=
+'= RecordDemo
+'=
+'= Fades the screen out, then starts a demo.  Exits with the screen faded
+'=
+'==================
+Sub RecordDemo ()
+    Dim level As Integer, esc As Integer, inputstr As String
+
+    CenterWindow 26, 3
+    PrintY = PrintY + 6
+    CA_CacheGrChunk STARTFONT
+    fontnumber = 0
+    US_Print "  Demo which level(1-10):"
+    VW_UpdateScreen
+    VW_FadeIn
+    esc = Not US_LineInput(px, py, inputstr, "", TRUE, 2, 0)
+    If esc Then Exit Sub
+
+    level = Val(inputstr)
+    level = level - 1
+
+    SETFONTCOLOR 0, 15
+    VW_FadeOut
+
+    $If SPEAR = UNDEFINED Then
+        NewGame gd_hard, level \ 10
+        gamestate.mapon = level Mod 10
+    $Else
+        NewGame gd_hard, 0
+        gamestate.mapon = level
+    $End If
+
+    StartDemoRecord level
+
+    DrawPlayScreen
+    VW_FadeIn
+
+    startgame = FALSE
+    demorecord = TRUE
+
+    SetupGameLevel
+    StartLevelMusic ' StartMusic
+    ' PM_CheckMainMem - memory management, not needed in QB64
+    fizzlein = TRUE
+
+    PlayLoop
+
+    demoplayback = FALSE
+
+    StopMusic
+    VW_FadeOut
+    ClearMemory
+
+    FinishDemoRecord
+End Sub
 '==================
 '=
 '= PlayDemo
@@ -385,14 +491,20 @@ Sub PlayDemo (demonumber As Integer)
         demochunk = T_DEMO0
     $End If
 
-    CA_CacheGrChunk demochunk
+    If demofromfile Then
+        ' C without DEMOSEXTERN: demoname[4] = '0'+demonumber; CA_LoadFile (demoname,&demobuffer)
+        If Not CA_LoadFile("DEMO" + LTrim$(Str$(demonumber)) + "." + RTrim$(extension), demobuffer) Then Exit Sub
+    Else
+        CA_CacheGrChunk demochunk
+        demobuffer = grsegsMem(demochunk)
+    End If
     demoptr = 0
 
     NewGame 1, 0
-    gamestate.mapon = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Unsigned _Byte)
+    gamestate.mapon = _MemGet(demobuffer, demobuffer.OFFSET + demoptr, _Unsigned _Byte)
     demoptr = demoptr + 1
     gamestate.difficulty = gd_hard
-    length = _MemGet(grsegsMem(demochunk), grsegsMem(demochunk).OFFSET + demoptr, _Unsigned Integer)
+    length = _MemGet(demobuffer, demobuffer.OFFSET + demoptr, _Unsigned Integer)
     demoptr = demoptr + 2
     demoptr = demoptr + 1
     lastdemoptr = demoptr - 4 + length
@@ -413,7 +525,11 @@ Sub PlayDemo (demonumber As Integer)
 
     PlayLoop
 
-    UNCACHEGRCHUNK demochunk
+    If demofromfile Then
+        _MemFree demobuffer ' MM_FreePtr (&demobuffer)
+    Else
+        UNCACHEGRCHUNK demochunk
+    End If
 
     demoplayback = FALSE
 
@@ -504,7 +620,7 @@ Sub GameLoop ()
             StopMusic
             ingame = FALSE
 
-            ' TODO: If demorecord And playstate <> ex_warped Then FinishDemoRecord (demo recording)
+            If demorecord And playstate <> ex_warped Then FinishDemoRecord
 
             If startgame Or loadedgame Then Exit Do ' goto restartgame
 

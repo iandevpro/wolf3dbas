@@ -116,7 +116,8 @@ Call InitGame
 'PC-13
 'Wolfenstein 3D
 'Options
-' Port debug views (PORTDEBUG.BM, not in the original): WOLF3D.exe /mapview, /demotest
+' Port debug views (PORTDEBUG.BM, not in the original): WOLF3D.exe /mapview, /demotest,
+' /playdemo N (plays a recorded DEMO N.ext, see RecordDemo)
 ' (they end without the config and the order screen of Quit)
 If InStr(UCase$(Command$), "/MAPVIEW") Then
     PortDebugView
@@ -125,6 +126,11 @@ If InStr(UCase$(Command$), "/MAPVIEW") Then
 End If
 If InStr(UCase$(Command$), "/DEMOTEST") Then
     PortDemoTest
+    ShutdownId
+    System
+End If
+If InStr(UCase$(Command$), "/PLAYDEMO") Then
+    PortPlayDemoFile
     ShutdownId
     System
 End If
@@ -1070,6 +1076,28 @@ Function LoadTheGame% (handle As Long, x As Integer, y As Integer)
     LoadTheGame% = TRUE
 End Function
 
+'=================
+'=
+'= MS_CheckParm
+'=
+'= TRUE when check is one of the command line parameters (case insensitive,
+'= with any - / \ etc. in front of it)
+'=
+'=================
+Function MS_CheckParm% (check As String)
+    Dim i As Integer, parm As String
+
+    MS_CheckParm% = FALSE
+    For i = 1 To _CommandCount
+        parm = Command$(i)
+        Do While Len(parm) > 0 ' skip - / \ etc.. in front of parm
+            If UCase$(Left$(parm, 1)) >= "A" And UCase$(Left$(parm, 1)) <= "Z" Then Exit Do
+            parm = Mid$(parm, 2)
+        Loop
+        If UCase$(parm) = UCase$(check) Then MS_CheckParm% = TRUE: Exit Function
+    Next i
+End Function
+
 '==========================
 '=
 '= NewGame
@@ -1275,8 +1303,19 @@ Sub DemoLoop
 
         VW_FadeOut
 
-        ' TODO: RecordDemo (Tab with the "goobers" parameter)
-        US_ControlPanel 0
+        $If SPEAR = UNDEFINED Then
+            If Keyboard(sc_Tab) And MS_CheckParm("goobers") Then
+                RecordDemo
+            Else
+                US_ControlPanel 0
+            End If
+        $Else
+            If Keyboard(sc_Tab) And MS_CheckParm("debugmode") Then
+                RecordDemo
+            Else
+                US_ControlPanel 0
+            End If
+        $End If
 
         If startgame Or loadedgame Then
             GameLoop

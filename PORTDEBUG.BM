@@ -192,6 +192,34 @@ $If INCLUDE_PORTDEBUG_BM = UNDEFINED Then
     '= play in real time (UpdateFace skips US_RndT while GETGATLINGSND plays)
     '=
     '=====================
+    ' /playdemo N: plays the recorded DEMO N.ext (C without DEMOSEXTERN loaded the demos
+    ' from these files) and writes how it ended to DEMOTEST.TXT, like /demotest
+    Sub PortPlayDemoFile ()
+        Dim f As Integer, i As Integer, n As Integer
+
+        i = InStr(UCase$(Command$), "/PLAYDEMO")
+        n = Val(Mid$(Command$, i + Len("/PLAYDEMO")))
+
+        f = FreeFile
+        Open "DEMOTEST.TXT" For Output As #f
+        Print #f, "demo"; Tab(7); "map"; Tab(12); "playstate"; Tab(23); "score"; Tab(31); "kills"; Tab(38); "health"; Tab(46); "frame"; Tab(54); "of"; "   (DEMO"; LTrim$(Str$(n)); "."; RTrim$(extension); ")"
+        Close #f
+
+        demofromfile = TRUE
+        lastdemoptr = -1
+        PlayDemo n
+        demofromfile = FALSE
+
+        f = FreeFile
+        Open "DEMOTEST.TXT" For Append As #f
+        If lastdemoptr = -1 Then
+            Print #f, "no file DEMO"; LTrim$(Str$(n)); "."; RTrim$(extension)
+        Else
+            Print #f, n; Tab(7); gamestate.mapon; Tab(12); playstate; Tab(23); gamestate.score; Tab(31); gamestate.killcount; Tab(38); gamestate.health; Tab(46); demoptr; Tab(54); lastdemoptr
+        End If
+        Close #f
+    End Sub
+
     Sub PortDemoTest ()
         Dim f As Integer, i As Integer, numdemos As Integer
 

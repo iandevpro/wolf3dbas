@@ -722,6 +722,49 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
         ca_levelnum = 0
     End Sub
 
+    '==========================
+    '=
+    '= CA_WriteFile
+    '=
+    '= Writes a file from a memory buffer
+    '=
+    '==========================
+    Sub CA_WriteFile (filename As String, source As _MEM, length As Long)
+        Dim handle As Integer
+        Dim fileBytes(0 To length - 1) As _Unsigned _Byte
+
+        _MemGet source, source.OFFSET, fileBytes()
+        If _FileExists(filename) Then Kill filename ' O_CREAT | O_TRUNC
+        handle = FreeFile
+        Open filename For Binary As #handle
+        Put #handle, , fileBytes()
+        Close #handle
+    End Sub
+
+    '==========================
+    '=
+    '= CA_LoadFile
+    '=
+    '= Allocate space for and load a file (FALSE if it is not there)
+    '=
+    '==========================
+    Function CA_LoadFile% (filename As String, dest As _MEM)
+        Dim handle As Integer, length As Long
+
+        CA_LoadFile% = FALSE
+        If Not _FileExists(filename) Then Exit Function
+        handle = FreeFile
+        Open filename For Binary As #handle
+        length = LOF(handle)
+        If length = 0 Then Close #handle: Exit Function
+        Dim fileBytes(0 To length - 1) As _Unsigned _Byte
+        Get #handle, , fileBytes()
+        Close #handle
+        dest = _MemNew(length) ' MM_GetPtr
+        _MemPut dest, dest.OFFSET, fileBytes()
+        CA_LoadFile% = TRUE
+    End Function
+
     Sub CA_CannotOpen (fname As String)
         Print "Error: Cannot open file: "; fname
         End

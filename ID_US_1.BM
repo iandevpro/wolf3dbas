@@ -116,6 +116,56 @@ $If INCLUDE_ID_US_1_BM = UNDEFINED Then
 
     '///////////////////////////////////////////////////////////////////////////
     '//
+    '//  US_ClearWindow() - Clears the current window to white and homes the
+    '//      cursor
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_ClearWindow ()
+        VWB_Bar WindowX, WindowY, WindowW, WindowH, 15 ' WHITE
+        PrintX = WindowX
+        PrintY = WindowY
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  US_DrawWindow() - Draws a frame and sets the current window parms
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub US_DrawWindow (x As Integer, y As Integer, w As Integer, h As Integer)
+        Dim i As Integer, sx As Integer, sy As Integer, sw As Integer, sh As Integer
+
+        WindowX = x * 8
+        WindowY = y * 8
+        WindowW = w * 8
+        WindowH = h * 8
+
+        PrintX = WindowX
+        PrintY = WindowY
+
+        sx = (x - 1) * 8
+        sy = (y - 1) * 8
+        sw = (w + 1) * 8
+        sh = (h + 1) * 8
+
+        US_ClearWindow
+
+        VWB_DrawTile8 sx, sy, 0: VWB_DrawTile8 sx, sy + sh, 5
+        i = sx + 8
+        Do While i <= sx + sw - 8
+            VWB_DrawTile8 i, sy, 1: VWB_DrawTile8 i, sy + sh, 6
+            i = i + 8
+        Loop
+        VWB_DrawTile8 i, sy, 2: VWB_DrawTile8 i, sy + sh, 7
+
+        i = sy + 8
+        Do While i <= sy + sh - 8
+            VWB_DrawTile8 sx, i, 3: VWB_DrawTile8 sx + sw, i, 4
+            i = i + 8
+        Loop
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
     '//  US_Print() - Prints a string in the current window. Newlines are
     '//      supported.
     '//
