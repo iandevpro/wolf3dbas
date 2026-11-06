@@ -440,6 +440,143 @@ Sub VL_MemToScreen (buffer() As _Unsigned _Byte, width As Integer, height As Int
     Next i
 End Sub
 
+'==================
+'=
+'= DoJukebox (WL_MAIN.C)
+'=
+'= "Robert's Jukebox": holding M at start-up plays the music of the game
+'=
+'==================
+$If SPEARDEMO = UNDEFINED Then
+    Sub DoJukebox ()
+        Dim which As Integer, lastsong As Integer, start As Integer, i As Integer
+        Dim MusicItems As CP_iteminfo
+        $If SPEAR = UNDEFINED Then
+            Const NUMSONGS = 18
+        $Else
+            Const NUMSONGS = 9
+        $End If
+        Dim MusicMenu(0 To NUMSONGS - 1) As CP_itemtype, jukesongs(0 To NUMSONGS - 1) As Integer
+        Dim shown(0 To 8) As CP_itemtype ' &MusicMenu[start]: the songs on the screen
+
+        lastsong = -1
+
+        $If SPEAR = UNDEFINED Then
+            ' CP_iteminfo MusicItems={CTL_X,CTL_Y,6,0,32}
+            MusicItems.x = CTL_X: MusicItems.y = CTL_Y: MusicItems.amount = 6: MusicItems.curpos = 0: MusicItems.indent = 32
+            MusicMenu(0).txt = "Get Them!": jukesongs(0) = GETTHEM_MUS
+            MusicMenu(1).txt = "Searching": jukesongs(1) = SEARCHN_MUS
+            MusicMenu(2).txt = "P.O.W.": jukesongs(2) = POW_MUS
+            MusicMenu(3).txt = "Suspense": jukesongs(3) = SUSPENSE_MUS
+            MusicMenu(4).txt = "War March": jukesongs(4) = WARMARCH_MUS
+            MusicMenu(5).txt = "Around The Corner!": jukesongs(5) = CORNER_MUS
+
+            MusicMenu(6).txt = "Nazi Anthem": jukesongs(6) = NAZI_OMI_MUS
+            MusicMenu(7).txt = "Lurking...": jukesongs(7) = PREGNANT_MUS
+            MusicMenu(8).txt = "Going After Hitler": jukesongs(8) = GOINGAFT_MUS
+            MusicMenu(9).txt = "Pounding Headache": jukesongs(9) = HEADACHE_MUS
+            MusicMenu(10).txt = "Into the Dungeons": jukesongs(10) = DUNGEON_MUS
+            MusicMenu(11).txt = "Ultimate Conquest": jukesongs(11) = ULTIMATE_MUS
+
+            MusicMenu(12).txt = "Kill the S.O.B.": jukesongs(12) = INTROCW3_MUS
+            MusicMenu(13).txt = "The Nazi Rap": jukesongs(13) = NAZI_RAP_MUS
+            MusicMenu(14).txt = "Twelfth Hour": jukesongs(14) = TWELFTH_MUS
+            MusicMenu(15).txt = "Zero Hour": jukesongs(15) = ZEROHOUR_MUS
+            MusicMenu(16).txt = "Ultimate Conquest": jukesongs(16) = ULTIMATE_MUS
+            MusicMenu(17).txt = "Wolfpack": jukesongs(17) = PACMAN_MUS
+        $Else
+            ' CP_iteminfo MusicItems={CTL_X,CTL_Y-20,9,0,32}
+            MusicItems.x = CTL_X: MusicItems.y = CTL_Y - 20: MusicItems.amount = 9: MusicItems.curpos = 0: MusicItems.indent = 32
+            MusicMenu(0).txt = "Funky Colonel Bill": jukesongs(0) = XFUNKIE_MUS
+            MusicMenu(1).txt = "Death To The Nazis": jukesongs(1) = XDEATH_MUS
+            MusicMenu(2).txt = "Tiptoeing Around": jukesongs(2) = XTIPTOE_MUS
+            MusicMenu(3).txt = "Is This THE END?": jukesongs(3) = XTHEEND_MUS
+            MusicMenu(4).txt = "Evil Incarnate": jukesongs(4) = XEVIL_MUS
+            MusicMenu(5).txt = "Jazzin' Them Nazis": jukesongs(5) = XJAZNAZI_MUS
+            MusicMenu(6).txt = "Puttin' It To The Enemy": jukesongs(6) = XPUTIT_MUS
+            MusicMenu(7).txt = "The SS Gonna Get You": jukesongs(7) = XGETYOU_MUS
+            MusicMenu(8).txt = "Towering Above": jukesongs(8) = XTOWER2_MUS
+        $End If
+        For i = 0 To NUMSONGS - 1
+            MusicMenu(i).active = 1
+            MusicMenu(i).routine = RTN_NONE
+        Next i
+
+        IN_ClearKeysDown
+        If Not AdLibPresent And Not SoundBlasterPresent Then Exit Sub
+
+        MenuFadeOut
+
+        $If SPEAR = UNDEFINED Then
+            $If UPLOAD = UNDEFINED Then
+                ' _dos_gettime: the hundredths of the time pick one of the three pages
+                start = ((Int(Timer(.01) * 100) Mod 100) Mod 3) * 6
+            $Else
+                start = 0
+            $End If
+        $Else
+            start = 0
+        $End If
+
+        CA_CacheGrChunk STARTFONT + 1
+        $If SPEAR = DEFINED Then
+            CacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+        $Else
+            CacheLump CONTROLS_LUMP_START, CONTROLS_LUMP_END
+        $End If
+        CA_LoadAllSounds
+
+        fontnumber = 1
+        ClearMScreen
+        VWB_DrawPic 112, 184, C_MOUSELBACKPIC
+        DrawStripes 10
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+
+        $If SPEAR = UNDEFINED Then
+            DrawWindow CTL_X - 2, CTL_Y - 6, 280, 13 * 7, BKGDCOLOR
+        $Else
+            DrawWindow CTL_X - 2, CTL_Y - 26, 280, 13 * 10, BKGDCOLOR
+        $End If
+
+        For i = 0 To MusicItems.amount - 1
+            shown(i) = MusicMenu(start + i)
+        Next i
+        DrawMenu MusicItems, shown()
+
+        SETFONTCOLOR READHCOLOR, BKGDCOLOR
+        PrintY = 15
+        WindowX = 0
+        WindowY = 320 ' (sic, the original sets WindowY, not WindowW)
+        US_CPrint "Robert's Jukebox"
+
+        SETFONTCOLOR TEXTCOLOR, BKGDCOLOR
+        VW_UpdateScreen
+        MenuFadeIn
+
+        Do
+            which = HandleMenu(MusicItems, shown(), RTN_NONE)
+            If which >= 0 Then
+                If lastsong >= 0 Then shown(lastsong).active = 1
+
+                StartCPMusic jukesongs(start + which)
+                shown(which).active = 2
+                DrawMenu MusicItems, shown()
+                VW_UpdateScreen
+                lastsong = which
+            End If
+        Loop While which >= 0
+
+        MenuFadeOut
+        IN_ClearKeysDown
+        $If SPEAR = DEFINED Then
+            UnCacheLump BACKDROP_LUMP_START, BACKDROP_LUMP_END
+        $Else
+            UnCacheLump CONTROLS_LUMP_START, CONTROLS_LUMP_END
+        $End If
+    End Sub
+$End If
+
+
 ' Subroutines
 '=====================
 '=
@@ -614,6 +751,17 @@ Sub InitGame
     CA_CacheGrChunk STARTFONT
 
     LoadLatchMem
+
+    '
+    ' HOLDING DOWN 'M' KEY?
+    ' (C: here, else IntroScreen; the port showed IntroScreen already, in SignonScreen)
+    '
+    $If SPEARDEMO = UNDEFINED Then
+        ' (IN_Startup cleared the keys; in DOS the typematic repeat of a held key set
+        ' Keyboard[sc_M] again at once, here _KeyDown tells if M is held)
+        INL_KeyService
+        If Keyboard(sc_M) Or _KeyDown(Asc("m")) Or _KeyDown(Asc("M")) Then DoJukebox
+    $End If
 
     InitDigiMap
 

@@ -1021,7 +1021,7 @@ Commit 5120d75.
 
 ## 2026-11-05: The debug keys (WL_DEBUG.C) and PicturePause
 
-Not committed yet.
+Commit 13ce04a.
 
 - **Ported: WL_DEBUG.BM (new, WL_DEBUG.C).** ViewMap / OverheadRefresh are left out, as they are `#if 0` in the original.
   - **Opening the debug keys** (CheckKeys, WL_PLAY.C): Backspace + LShift + Alt, with `goobers` on the command line (Spear: `debugmode`). It shows "Debugging keys are now available!" and sets DebugOk.
@@ -1068,3 +1068,20 @@ Not committed yet.
   - C read whatever was at address 0 there; the port indexed objlist(-1). Died now skips the swing when there is no attacker.
   - **Tested:** Tab + H pressed 7 times took health 100 to 4 to 0, then the red fizzle; a life was lost (3 to 2) and the level restarted.
   - H clears the keys (IN_ClearKeysDown, as in C), so Tab must be pressed again for each hit.
+
+## 2026-11-05: The jukebox
+
+Committed as "The jukebox (DoJukebox)" (this commit).
+
+- **Ported: DoJukebox (WL_MAIN.C)**, "Robert's Jukebox", in all builds but SPEARDEMO (as in C).
+  - **Wolfenstein:** 18 songs, shown 6 at a time. The page is picked by the hundredths of the time (_dos_gettime); WL1 (UPLOAD) always shows the first page.
+  - **Spear:** 9 songs.
+  - Enter plays a song and highlights it (active 2); Esc leaves. The screen uses the control panel's backdrop, stripes and window. The title keeps C's `WindowY = 320` (sic: WindowW was meant).
+- **The call:** in InitGame after LoadLatchMem.
+  - C checked Keyboard[sc_M] there, else IntroScreen. The port showed IntroScreen earlier, in SignonScreen.
+  - IN_Startup has just cleared the keys. In DOS the typematic repeat of a held M set Keyboard[sc_M] again at once; here the check also asks `_KeyDown` whether M is held.
+- **Bug found by your test** (pressing M quit the game): DoJukebox's local `songs()` clashed with the shared `songs()` of WL_PLAY.BI (the level music), runtime error 10 "Duplicate definition". The held M dismissed the error screen. The local array is now `jukesongs()`.
+- **Tested** with a temporary `dbgjukebox` parameter (removed) that opened the jukebox without keys, checked with screenshots only:
+  - WOLF3D showed the second page ("Nazi Anthem" ... "Ultimate Conquest"); SPEAR showed its 9 songs.
+  - Playing songs and holding M at start-up were left for you to check by hand. The test script's key presses can land in another window while the game starts.
+  - **Builds:** 15 / 15 / 23 / 24 warnings as before. The formatter changes nothing.
