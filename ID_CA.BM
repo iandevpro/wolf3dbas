@@ -7,7 +7,6 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     $Let INCLUDE_ID_CA_BM = 1
 
     Sub CAL_SetupMapFile ()
-        Print "Setting up map file..."
         Dim i As Integer
         Dim handle As Long
         Dim length As Long
@@ -270,7 +269,6 @@ $If INCLUDE_ID_CA_BM = UNDEFINED Then
     End Function
 
     Sub CAL_SetupGrFile ()
-        Print "Setting up graphics file..."
         Dim fname As String * 13
         Dim handle As Integer
         Dim compseg As _MEM, picseg As _MEM
