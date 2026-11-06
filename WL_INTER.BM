@@ -242,7 +242,9 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
 
             IN_Ack
 
-            ' TODO: PicturePause (Keyboard[sc_P] with the "goobers" parameter)
+            $If SPEAR = UNDEFINED Then
+                If Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+            $End If
 
             VW_FadeOut
 
@@ -599,7 +601,9 @@ $If INCLUDE_WL_INTER_BM = UNDEFINED Then
                 IN_Ack
             End If
         $End If
-        ' TODO: PicturePause (Keyboard[sc_P] with the "goobers" parameter)
+        $If SPEAR = UNDEFINED Then
+            If Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+        $End If
 
         VW_FadeOut
         DrawPlayBorder ' (the original drew it into all three screen pages)

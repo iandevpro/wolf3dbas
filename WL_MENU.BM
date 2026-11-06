@@ -1107,7 +1107,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                     End If
             End Select
 
-            ' TODO: screen capture (Tab + P with "goobers" parameter)
+            $If SPEAR = UNDEFINED Then
+                If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+            $Else
+                If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("debugmode") Then PicturePause
+            $End If
 
             If ci.button0 Or Keyboard(sc_Space) Or Keyboard(sc_Enter) Then
                 xit = 1
@@ -1823,7 +1827,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                     TicDelay 10
             End Select
 
-            ' TODO: screen capture (Tab + P with "goobers" parameter)
+            $If SPEAR = UNDEFINED Then
+                If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+            $Else
+                If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("debugmode") Then PicturePause
+            $End If
 
             If ci.button0 Or Keyboard(sc_Enter) Then
                 xit = 1
@@ -2444,7 +2452,11 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
             If ky Then
                 ok = 0
 
-                ' TODO: screen capture (Tab + P with "goobers" parameter)
+                $If SPEAR = UNDEFINED Then
+                    If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+                $Else
+                    If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("debugmode") Then PicturePause
+                $End If
 
                 If ky >= Asc("a") Then ky = ky - (Asc("a") - Asc("A"))
 
@@ -2801,7 +2813,9 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 TimeCount = 0
             End If
 
-            ' TODO: screen capture (Tab + P with "goobers" parameter)
+            $If SPEAR = UNDEFINED Then
+                If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+            $End If
         Loop Until Keyboard(yesKey) Or Keyboard(sc_N) Or Keyboard(sc_Escape)
 
         If Keyboard(yesKey) Then

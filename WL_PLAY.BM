@@ -368,6 +368,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
     '=
     '=====================
     Sub CheckKeys ()
+        Dim debugopen As Integer, i As Integer
         Dim scan As Integer
         $If SPEAR = DEFINED Then
             Dim played As Integer
@@ -433,7 +434,30 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         '
         ' OPEN UP DEBUG KEYS
         '
-        ' TODO: Backspace + LShift + Alt with the "goobers" parameter (DebugOk, WL_DEBUG.C)
+        $If SPEAR = UNDEFINED Then
+            If Keyboard(sc_BackSpace) And Keyboard(sc_LShift) And Keyboard(sc_Alt) And MS_CheckParm("goobers") Then
+                debugopen = TRUE
+            End If
+        $Else
+            If Keyboard(sc_BackSpace) And Keyboard(sc_LShift) And Keyboard(sc_Alt) And MS_CheckParm("debugmode") Then
+                debugopen = TRUE
+            End If
+        $End If
+        If debugopen Then
+            ClearMemory
+            CA_CacheGrChunk STARTFONT + 1
+            ClearSplitVWB
+            ' VW_ScreenToScreen (displayofs,bufferofs,80,160): one screen buffer in the port
+
+            Message "Debugging keys are" + Chr$(10) + "now available!"
+            UNCACHEGRCHUNK STARTFONT + 1
+            ' PM_CheckMainMem - memory management, not needed in QB64
+            IN_ClearKeysDown
+            IN_Ack
+
+            DrawAllPlayBorderSides
+            DebugOk = 1
+        End If
 
         '
         ' TRYING THE KEEN CHEAT CODE!
@@ -507,7 +531,15 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
         '
         ' TAB-? debug keys
         '
-        ' TODO: DebugKeys (WL_DEBUG.C)
+        If Keyboard(sc_Tab) And DebugOk Then
+            CA_CacheGrChunk STARTFONT
+            fontnumber = 0
+            SETFONTCOLOR 0, 15
+            i = DebugKeys
+            If MousePresent Then IN_ClearMouseDelta ' Clear accumulated mouse movement
+            lasttimecount = TimeCount
+            Exit Sub
+        End If
     End Sub
 
     '
@@ -799,7 +831,14 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
 
             CheckKeys
 
-            ' TODO: debug aids (singlestep, extravbls)
+            '
+            ' debug aids
+            '
+            If singlestep Then
+                VL_WaitVBL 14
+                lasttimecount = TimeCount
+            End If
+            If extravbls Then VL_WaitVBL extravbls
 
             If demoplayback Then
                 If IN_CheckAck Then

@@ -190,6 +190,7 @@ $End If
 '$INCLUDE:'WL_DRAW.BM'
 '$INCLUDE:'WL_SCALE.BM'
 '$INCLUDE:'WL_STATE.BM'
+'$INCLUDE:'WL_DEBUG.BM'
 
 '==========================
 '=

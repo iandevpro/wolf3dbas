@@ -1018,3 +1018,53 @@ Commit 5120d75.
    - After New Game, that new game starts next.
 
 **To watch it:** `WOLF3D.exe /playdemo 5` (a port option; the game itself only plays the built-in T_DEMO chunks). It plays DEMO5.WL6, writes how it ended to DEMOTEST.TXT, and exits.
+
+## 2026-11-05: The debug keys (WL_DEBUG.C) and PicturePause
+
+Not committed yet.
+
+- **Ported: WL_DEBUG.BM (new, WL_DEBUG.C).** ViewMap / OverheadRefresh are left out, as they are `#if 0` in the original.
+  - **Opening the debug keys** (CheckKeys, WL_PLAY.C): Backspace + LShift + Alt, with `goobers` on the command line (Spear: `debugmode`). It shows "Debugging keys are now available!" and sets DebugOk.
+  - **DebugKeys:** Tab + key, once DebugOk is set.
+    - **B:** border color (VW_ColorBorder only keeps the value: a window has no overscan border).
+    - **C:** count the objects.
+    - **E:** end the level (quit with TEDLEVEL).
+    - **F:** the player's x / y / angle.
+    - **G:** god mode.
+    - **H:** hurt yourself.
+    - **I:** free items (100000 points, health, the next weapon, 50 ammo).
+    - **M:** memory info, shown as n/a: the port has no memory manager.
+    - **N:** no clipping, Spear only. Read before the ElseIf chain, as a `$If` inside the chain breaks it.
+    - **P:** PicturePause.
+    - **Q:** quit.
+    - **S:** slow motion.
+    - **T:** ShapeTest.
+    - **V:** extra VBLs (0-8).
+    - **W:** warp to a level (1-10, Spear 1-21).
+    - **X:** "Extra stuff!".
+  - **PlayLoop's debug aids:** slow motion waits 14 VBLs a frame, and extravbls adds VBLs.
+  - **ShapeTest** browses the VSWAP pages with the arrows and W / S / D / I, as in C.
+    - The port has no paging, so a page shows its file offset and length instead of the XMS / EMS / main pages and the last hit.
+    - A wall is drawn unscaled (64x64), and a sprite with SimpleScaleShape 32 rows lower, as in C.
+    - The sound pages show the sound and segment number and the waveform, and the info page shows the totals.
+  - **PicturePause:** waits for a key with the screen frozen (for a screen grab). Enter shows the frame with the game palette (C switched to mode 13h). The next key then quits with the order screen; any other key goes on.
+    - Called by Tab + P in the menus (MouseSensitivity, CP_ChangeView, HandleMenu; Confirm and the help text with `goobers` only, as in C), and by P on the intermission screens (Wolfenstein only).
+  - **Helpers:** IN_ClearKey and VW_ColorBorder, kept in vgabordercolor. The constant BORDERCOLOR has the same name in QB64's case-insensitive names.
+- **Tested** in WOLF3D (`goobers nowait`, New Game):
+  - The unlock message appeared.
+  - **Tab + F, I, C, T, W and S:**
+    - F: X 1933312, Y 3768320, A 0.
+    - I: "Free items!" with the chaingun and 99 ammo.
+    - C: 121 statics, 22 doors, 21 actors, 7 active.
+    - T: wall pages 0 and 1 drawn; S jumped to page 106, the first sprite (the Demo sprite).
+    - W: warp to 3 went to floor 3.
+    - S: "Slow motion ON".
+  - **Tab + P (PicturePause):** froze the screen. Enter showed the frame, and a key quit to the order screen.
+  - Keys held over several frames repeat, as with the typematic in DOS. A held Tab + I gave the items 7 times, and a held Tab typed tab characters into the warp prompt.
+  - **Demos:** SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before. The first WL6 run had 3 aborts from desktop input; the rerun matched.
+  - **Builds:** 15 / 15 / 23 / 24 warnings (WOLF3D / WOLF1 / SPEAR / SPEARDEMO): one fewer each, as singlestep and noclip are now used. The formatter changes nothing after formatting the new file.
+- **Fixed after your test: Tab + H crashed when it killed BJ** ("Subscript out of range", WL_GAME.BM Died).
+  - TakeDamage (16, NULL) leaves killerobj NULL (-1 here). Died then swings BJ around to face objlist(killerobj).
+  - C read whatever was at address 0 there; the port indexed objlist(-1). Died now skips the swing when there is no attacker.
+  - **Tested:** Tab + H pressed 7 times took health 100 to 4 to 0, then the red fizzle; a life was lost (3 to 2) and the level restarted.
+  - H clears the keys (IN_ClearKeysDown, as in C), so Tab must be pressed again for each hit.

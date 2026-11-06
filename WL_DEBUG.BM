@@ -1,0 +1,418 @@
+' WL_DEBUG.C - the debug keys (Tab + key, after Backspace + LShift + Alt with the
+' "goobers" parameter, "debugmode" in Spear) and PicturePause
+'
+' ViewMap / OverheadRefresh (#if 0 in the original) are not ported.
+$If INCLUDE_WL_DEBUG_BM = UNDEFINED Then
+    $Let INCLUDE_WL_DEBUG_BM = 1
+
+    ' The VGA overscan border (VW_ColorBorder). A window has no border, so the color is
+    ' only kept
+    Sub VW_ColorBorder (c As Integer)
+        vgabordercolor = c
+    End Sub
+
+    ' IN_ClearKey: clears one key and LastScan if it is that key
+    Sub IN_ClearKey (code As Integer)
+        Keyboard(code) = FALSE
+        If code = LastScan Then LastScan = sc_None
+    End Sub
+
+    '==================
+    '=
+    '= DebugMemory
+    '=
+    '==================
+    Sub DebugMemory ()
+        CenterWindow 16, 7
+
+        US_CPrint "Memory Usage"
+        US_CPrint "------------"
+        ' (C: the total, free and purgable memory of the memory manager; the port has
+        ' none, the data lives in _MEM blocks and arrays)
+        US_Print "Total     :n/a" + Chr$(10) + "Free      :n/a" + Chr$(10) + "With purge:n/a" + Chr$(10)
+        VW_UpdateScreen
+        IN_Ack
+    End Sub
+
+    '==================
+    '=
+    '= CountObjects
+    '=
+    '==================
+    Sub CountObjects ()
+        Dim i As Integer, total As Integer, count As Integer, active As Integer, inactive As Integer, doors As Integer
+        Dim o As Integer
+
+        CenterWindow 16, 7
+        active = 0: inactive = 0: count = 0: doors = 0
+
+        US_Print "Total statics :"
+        total = laststatobj ' laststatobj-&statobjlist[0]
+        US_PrintUnsigned total
+
+        US_Print Chr$(10) + "In use statics:"
+        For i = 0 To total - 1
+            If statobjlist(i).shapenum <> -1 Then
+                count = count + 1
+            Else
+                doors = doors + 1 ' debug
+            End If
+        Next i
+        US_PrintUnsigned count
+
+        US_Print Chr$(10) + "Doors         :"
+        US_PrintUnsigned doornum
+
+        o = objlist(player).nextobj
+        Do While o <> -1
+            If objlist(o).active Then
+                active = active + 1
+            Else
+                inactive = inactive + 1
+            End If
+            o = objlist(o).nextobj
+        Loop
+
+        US_Print Chr$(10) + "Total actors  :"
+        US_PrintUnsigned active + inactive
+
+        US_Print Chr$(10) + "Active actors :"
+        US_PrintUnsigned active
+
+        VW_UpdateScreen
+        IN_Ack
+    End Sub
+
+    '================
+    '=
+    '= PicturePause
+    '=
+    '= Freezes the screen for a screen grab: any key goes on, Enter shows the
+    '= frame with the game palette (the original switched to mode 13h), then a key
+    '= quits
+    '=
+    '================
+    Sub PicturePause ()
+        VW_ColorBorder 15
+        FinishPaletteShifts
+
+        LastScan = sc_None
+        Do
+            _Limit TickBase
+            INL_KeyService
+        Loop While LastScan = sc_None
+        If LastScan <> sc_Enter Then
+            VW_ColorBorder 0
+            Exit Sub
+        End If
+
+        VW_ColorBorder 1
+        ' VW_SetScreen (0,0), the planes copied to mode 13h: the port's screen is
+        ' already the 320x200 frame
+        ClearMemory
+
+        VL_SetPalette gamepal()
+        VW_UpdateScreen
+
+        IN_Shutdown
+
+        VL_WaitVBL 70
+        Do While InKey$ = "" ' bioskey(0)
+            _Limit TickBase
+        Loop
+        VL_WaitVBL 70
+        Quit ""
+    End Sub
+
+    '================
+    '=
+    '= ShapeTest
+    '=
+    '= Browses the VSWAP pages. The port has no paging, so a page shows its file
+    '= offset and length instead of the XMS / EMS / main memory pages and the
+    '= last hit; a wall is drawn unscaled
+    '=
+    '================
+    Sub ShapeTest ()
+        Dim done As Integer, scan As Integer
+        Dim i As Integer, j As Long, k As Long, x As Long, y As Long
+        Dim l As Long, addr As Long, v2 As Long
+
+        CenterWindow 20, 16
+        VW_UpdateScreen
+        i = 0: done = FALSE
+        Do While Not done
+            US_ClearWindow
+
+            US_Print " Page #"
+            US_PrintUnsigned i
+            If i < PMSpriteStart Then
+                US_Print " (Wall)"
+            ElseIf i < PMSoundStart Then
+                US_Print " (Sprite)"
+            ElseIf i = ChunksInFile - 1 Then
+                US_Print " (Sound Info)"
+            Else
+                US_Print " (Sound)"
+            End If
+
+            US_Print Chr$(10) + " File offset: "
+            US_PrintUnsigned PMPageOffset(i)
+
+            US_Print Chr$(10) + " Length: "
+            US_PrintUnsigned PMPageLength(i)
+
+            US_Print Chr$(10) + " Address: "
+            If PMPageOffset(i) <> 0 Then addr = PM_GetPage(i) Else addr = 0
+            US_Print "0x" + Hex$(addr)
+
+            If addr <> 0 Then
+                If i < PMSpriteStart Then
+                    '
+                    ' draw the wall (64 columns of 64 pixels)
+                    '
+                    For x = 0 To 63
+                        For y = 0 To 63
+                            PSet (128 + x, 72 + y), _MemGet(PMData, PMData.OFFSET + addr + x * 64 + y, _Unsigned _Byte)
+                        Next y
+                    Next x
+                ElseIf i < PMSoundStart Then
+                    '
+                    ' draw the sprite (C: 32 rows lower, bufferofs += 32*SCREENWIDTH)
+                    '
+                    viewscreeny = viewscreeny + 32
+                    SimpleScaleShape 160, i - PMSpriteStart, 64
+                    viewscreeny = viewscreeny - 32
+                ElseIf i = ChunksInFile - 1 Then
+                    US_Print Chr$(10) + Chr$(10) + " Number of sounds: "
+                    US_PrintUnsigned NumDigi
+                    l = 0: k = 0
+                    For j = 0 To NumDigi - 1
+                        l = l + DigiListLen(j)
+                        k = k + (DigiListLen(j) + (PMPageSize - 1)) \ PMPageSize
+                    Next j
+                    US_Print Chr$(10) + " Total bytes: "
+                    US_PrintUnsigned l
+                    US_Print Chr$(10) + " Total pages: "
+                    US_PrintUnsigned k
+                Else
+                    For j = 0 To NumDigi - 1
+                        k = (DigiListLen(j) + (PMPageSize - 1)) \ PMPageSize
+                        If i >= PMSoundStart + DigiListPage(j) And i < PMSoundStart + DigiListPage(j) + k Then Exit For
+                    Next j
+                    If j < NumDigi Then
+                        US_Print Chr$(10) + " Sound #"
+                        US_PrintUnsigned j
+                        US_Print Chr$(10) + " Segment #"
+                        US_PrintUnsigned i - PMSoundStart - DigiListPage(j)
+                    End If
+                    For j = 0 To PMPageLength(i) - 1 Step 32
+                        v2 = _MemGet(PMData, PMData.OFFSET + addr + j, _Unsigned _Byte)
+                        v2 = v2 - 128
+                        v2 = Fix(v2 / 4) ' (C: int division)
+                        If v2 < 0 Then
+                            VWB_Vlin WindowY + WindowH - 32 + v2, WindowY + WindowH - 32, WindowX + 8 + (j \ 32), 0 ' BLACK
+                        Else
+                            VWB_Vlin WindowY + WindowH - 32, WindowY + WindowH - 32 + v2, WindowX + 8 + (j \ 32), 0
+                        End If
+                    Next j
+                End If
+            End If
+
+            VW_UpdateScreen
+
+            Do
+                _Limit TickBase
+                INL_KeyService
+                scan = LastScan
+            Loop While scan = sc_None
+
+            IN_ClearKey scan
+            Select Case scan
+                Case sc_LeftArrow
+                    If i Then i = i - 1
+                Case sc_RightArrow
+                    i = i + 1
+                    If i >= ChunksInFile Then i = i - 1
+                Case sc_W ' Walls
+                    i = 0
+                Case sc_S ' Sprites
+                    i = PMSpriteStart
+                Case sc_D ' Digitized
+                    i = PMSoundStart
+                Case sc_I ' Digitized info
+                    i = ChunksInFile - 1
+                Case sc_L ' Load all pages (all loaded in the port)
+                Case sc_P
+                    ' (sound playing was commented out in the original)
+                Case sc_Escape
+                    done = TRUE
+                Case sc_Enter
+                    ' PM_GetPage (i): (all loaded in the port)
+            End Select
+        Loop
+        SD_StopDigitized
+    End Sub
+
+    '================
+    '=
+    '= DebugKeys
+    '=
+    '================
+    Function DebugKeys% ()
+        Dim esc As Integer, level As Integer, inputstr As String, nkey As Integer
+
+        DebugKeys% = 1
+        ' (#ifdef SPEAR around the N key: a $If inside the ElseIf chain breaks it)
+        nkey = FALSE
+        $If SPEAR = DEFINED Then
+            nkey = Keyboard(sc_N)
+        $End If
+
+        If Keyboard(sc_B) Then ' B = border color
+            CenterWindow 24, 3
+            PrintY = PrintY + 6
+            US_Print " Border color (0-15):"
+            VW_UpdateScreen
+            esc = Not US_LineInput(px, py, inputstr, "", TRUE, 2, 0)
+            If Not esc Then
+                level = Val(inputstr)
+                If level >= 0 And level <= 15 Then VW_ColorBorder level
+            End If
+            Exit Function
+        End If
+
+        If Keyboard(sc_C) Then ' C = count objects
+            CountObjects
+            Exit Function
+        End If
+
+        If Keyboard(sc_E) Then ' E = quit level
+            If tedlevel Then Quit ""
+            playstate = ex_completed
+            ' gamestate.mapon++;
+        End If
+
+        If Keyboard(sc_F) Then ' F = facing spot
+            CenterWindow 14, 4
+            US_Print "X:"
+            US_PrintUnsigned objlist(player).x
+            US_Print Chr$(10) + "Y:"
+            US_PrintUnsigned objlist(player).y
+            US_Print Chr$(10) + "A:"
+            US_PrintUnsigned objlist(player).angle
+            VW_UpdateScreen
+            IN_Ack
+            Exit Function
+        End If
+
+        If Keyboard(sc_G) Then ' G = god mode
+            CenterWindow 12, 2
+            If godmode Then
+                US_PrintCentered "God mode OFF"
+            Else
+                US_PrintCentered "God mode ON"
+            End If
+            VW_UpdateScreen
+            IN_Ack
+            godmode = godmode Xor 1
+            Exit Function
+        End If
+
+        If Keyboard(sc_H) Then ' H = hurt self
+            IN_ClearKeysDown
+            TakeDamage 16, -1
+        ElseIf Keyboard(sc_I) Then ' I = item cheat
+            CenterWindow 12, 3
+            US_PrintCentered "Free items!"
+            VW_UpdateScreen
+            GivePoints 100000
+            HealSelf 99
+            If gamestate.bestweapon < wp_chaingun Then GiveWeapon gamestate.bestweapon + 1
+            gamestate.ammo = gamestate.ammo + 50
+            If gamestate.ammo > 99 Then gamestate.ammo = 99
+            DrawAmmo
+            IN_Ack
+            Exit Function
+        ElseIf Keyboard(sc_M) Then ' M = memory info
+            DebugMemory
+            Exit Function
+        ElseIf nkey Then ' N = no clip (Spear only)
+            noclip = noclip Xor 1
+            CenterWindow 18, 3
+            If noclip Then
+                US_PrintCentered "No clipping ON"
+            Else
+                US_PrintCentered "No clipping OFF"
+            End If
+            VW_UpdateScreen
+            IN_Ack
+            Exit Function
+        ElseIf Keyboard(sc_P) Then ' P = pause with no screen disruptioon
+            PicturePause
+            Exit Function
+        ElseIf Keyboard(sc_Q) Then ' Q = fast quit
+            Quit ""
+        ElseIf Keyboard(sc_S) Then ' S = slow motion
+            singlestep = singlestep Xor 1
+            CenterWindow 18, 3
+            If singlestep Then
+                US_PrintCentered "Slow motion ON"
+            Else
+                US_PrintCentered "Slow motion OFF"
+            End If
+            VW_UpdateScreen
+            IN_Ack
+            Exit Function
+        ElseIf Keyboard(sc_T) Then ' T = shape test
+            ShapeTest
+            Exit Function
+        ElseIf Keyboard(sc_V) Then ' V = extra VBLs
+            CenterWindow 30, 3
+            PrintY = PrintY + 6
+            US_Print "  Add how many extra VBLs(0-8):"
+            VW_UpdateScreen
+            esc = Not US_LineInput(px, py, inputstr, "", TRUE, 2, 0)
+            If Not esc Then
+                level = Val(inputstr)
+                If level >= 0 And level <= 8 Then extravbls = level
+            End If
+            Exit Function
+        ElseIf Keyboard(sc_W) Then ' W = warp to level
+            CenterWindow 26, 3
+            PrintY = PrintY + 6
+            $If SPEAR = UNDEFINED Then
+                US_Print "  Warp to which level(1-10):"
+            $Else
+                US_Print "  Warp to which level(1-21):"
+            $End If
+            VW_UpdateScreen
+            esc = Not US_LineInput(px, py, inputstr, "", TRUE, 2, 0)
+            If Not esc Then
+                level = Val(inputstr)
+                $If SPEAR = UNDEFINED Then
+                    If level > 0 And level < 11 Then
+                        gamestate.mapon = level - 1
+                        playstate = ex_warped
+                    End If
+                $Else
+                    If level > 0 And level < 22 Then
+                        gamestate.mapon = level - 1
+                        playstate = ex_warped
+                    End If
+                $End If
+            End If
+            Exit Function
+        ElseIf Keyboard(sc_X) Then ' X = item cheat
+            CenterWindow 12, 3
+            US_PrintCentered "Extra stuff!"
+            VW_UpdateScreen
+            ' DEBUG: put stuff here
+            IN_Ack
+            Exit Function
+        End If
+
+        DebugKeys% = 0
+    End Function
+
+$End If

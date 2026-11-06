@@ -757,58 +757,62 @@ Sub Died ()
     '
     ' swing around to face attacker
     '
-    dx = objlist(killerobj).x - objlist(player).x
-    dy = objlist(player).y - objlist(killerobj).y
+    ' (C: killerobj is NULL after Tab+H, TakeDamage (16,NULL), and the swing read
+    ' whatever was at address 0; here there is no swing without an attacker)
+    If killerobj <> -1 Then
+        dx = objlist(killerobj).x - objlist(player).x
+        dy = objlist(player).y - objlist(killerobj).y
 
-    fangle = _Atan2(dy, dx) ' returns -pi to pi
-    If fangle < 0 Then fangle = _Pi * 2 + fangle
+        fangle = _Atan2(dy, dx) ' returns -pi to pi
+        If fangle < 0 Then fangle = _Pi * 2 + fangle
 
-    iangle = Fix(fangle / (_Pi * 2) * ANGLES)
+        iangle = Fix(fangle / (_Pi * 2) * ANGLES)
 
-    If objlist(player).angle > iangle Then
-        counter = objlist(player).angle - iangle
-        clockwise = ANGLES - objlist(player).angle + iangle
-    Else
-        clockwise = iangle - objlist(player).angle
-        counter = objlist(player).angle + ANGLES - iangle
+        If objlist(player).angle > iangle Then
+            counter = objlist(player).angle - iangle
+            clockwise = ANGLES - objlist(player).angle + iangle
+        Else
+            clockwise = iangle - objlist(player).angle
+            counter = objlist(player).angle + ANGLES - iangle
+        End If
+
+        curangle = objlist(player).angle
+
+        If clockwise < counter Then
+            '
+            ' rotate clockwise
+            '
+            If curangle > iangle Then curangle = curangle - ANGLES
+            Do
+                change = tics * DEATHROTATE
+                If curangle + change > iangle Then change = iangle - curangle
+
+                curangle = curangle + change
+                objlist(player).angle = objlist(player).angle + change
+                If objlist(player).angle >= ANGLES Then objlist(player).angle = objlist(player).angle - ANGLES
+
+                ThreeDRefresh
+                CalcTics
+            Loop While curangle <> iangle
+        Else
+            '
+            ' rotate counterclockwise
+            '
+            If curangle < iangle Then curangle = curangle + ANGLES
+            Do
+                change = -tics * DEATHROTATE
+                If curangle + change < iangle Then change = iangle - curangle
+
+                curangle = curangle + change
+                objlist(player).angle = objlist(player).angle + change
+                If objlist(player).angle < 0 Then objlist(player).angle = objlist(player).angle + ANGLES
+
+                ThreeDRefresh
+                CalcTics
+            Loop While curangle <> iangle
+        End If
+
     End If
-
-    curangle = objlist(player).angle
-
-    If clockwise < counter Then
-        '
-        ' rotate clockwise
-        '
-        If curangle > iangle Then curangle = curangle - ANGLES
-        Do
-            change = tics * DEATHROTATE
-            If curangle + change > iangle Then change = iangle - curangle
-
-            curangle = curangle + change
-            objlist(player).angle = objlist(player).angle + change
-            If objlist(player).angle >= ANGLES Then objlist(player).angle = objlist(player).angle - ANGLES
-
-            ThreeDRefresh
-            CalcTics
-        Loop While curangle <> iangle
-    Else
-        '
-        ' rotate counterclockwise
-        '
-        If curangle < iangle Then curangle = curangle + ANGLES
-        Do
-            change = -tics * DEATHROTATE
-            If curangle + change < iangle Then change = iangle - curangle
-
-            curangle = curangle + change
-            objlist(player).angle = objlist(player).angle + change
-            If objlist(player).angle < 0 Then objlist(player).angle = objlist(player).angle + ANGLES
-
-            ThreeDRefresh
-            CalcTics
-        Loop While curangle <> iangle
-    End If
-
     '
     ' fade to red
     '

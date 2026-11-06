@@ -507,7 +507,9 @@ $If INCLUDE_WL_TEXT_BM = UNDEFINED Then
                     End If
             End Select
 
-            ' TODO: screen capture (Tab + P with "goobers" parameter)
+            $If SPEAR = UNDEFINED Then
+                If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+            $End If
         Loop While LastScan <> sc_Escape
 
         IN_ClearKeysDown

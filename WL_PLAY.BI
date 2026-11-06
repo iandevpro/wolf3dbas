@@ -19,6 +19,9 @@ $If INCLUDE_WL_PLAY_BI = UNDEFINED Then
     Const MAXDEMOSIZE = 8192 ' (WL_GAME.C)
     Dim Shared demofromfile As Integer ' port: PlayDemo loads DEMO?.ext (C without DEMOSEXTERN)
     Dim Shared singlestep As Integer, godmode As Integer, noclip As Integer
+    Dim Shared DebugOk As Integer ' the Tab debug keys are open (WL_DEBUG.BM)
+    Dim Shared extravbls As Integer
+    Dim Shared vgabordercolor As Integer ' VW_ColorBorder (no border in a window)
     Dim Shared buttonheld(0 To NUMBUTTONS - 1) As Integer
     Dim Shared controlx As Integer, controly As Integer ' range from -100 to 100 per tic
 
