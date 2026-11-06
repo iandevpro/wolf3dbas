@@ -990,8 +990,9 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
                 Case CTL_JOYENABLE
                     joystickenabled = joystickenabled Xor 1
-                    ' TODO: CalibrateJoystick - joystick is not ported
-                    If joystickenabled Then joystickenabled = 0
+                    If joystickenabled Then
+                        If CalibrateJoystick = 0 Then joystickenabled = 0 ' (QB64 Not is bitwise: Not 1 is true)
+                    End If
                     DrawCtlScreen
                     CusItems.curpos = -1
                     CP_ShootSnd
@@ -1254,6 +1255,94 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
         allowed(1) = 1: allowed(2) = 1: allowed(3) = 1
         EnterCtrlData 2, allowed(), CTRL_MOUSE
     End Sub
+
+    '////////////////////////////////////////////////////////////////////
+    '//
+    '// CALIBRATE JOYSTICK
+    '//
+    '////////////////////////////////////////////////////////////////////
+    Function CalibrateJoystick% ()
+        Const CALX = 85
+        Const CALY = 40
+        Const CALW = 158
+        Const CALH = 140
+        Dim xmin As Long, ymin As Long, xmax As Long, ymax As Long, jb As Integer, played As Integer
+
+        CalibrateJoystick% = 0
+
+        DrawWindow CALX - 5, CALY - 5, CALW, CALH, TEXTCOLOR
+        DrawOutline CALX - 5, CALY - 5, CALW, CALH, 0, HIGHLIGHT
+        SETFONTCOLOR 0, TEXTCOLOR
+
+        PrintX = CALX: WindowX = CALX
+        WindowW = CALW
+        WindowH = CALH
+        PrintY = CALY: WindowY = CALY
+        US_Print "    Calibrate" + Chr$(10) + "    Joystick" + Chr$(10) ' STR_CALIB, STR_JOYST
+        $If APOGEE_1_0 = UNDEFINED Then
+            VWB_DrawPic CALX + 40, CALY + 30, C_JOY1PIC
+        $End If
+        PrintY = CALY + 80
+        US_Print "Move joystick to" + Chr$(10) + "upper left and" + Chr$(10) + "press button 0" + Chr$(10) ' STR_MOVEJOY
+        SETFONTCOLOR BKGDCOLOR, TEXTCOLOR
+        US_Print "   ESC to exit" ' STR_ESCEXIT
+        VW_UpdateScreen
+
+        Do
+            _Limit TickBase
+            jb = IN_JoyButtons
+            If Keyboard(sc_Escape) Then Exit Function
+            $If SPEAR = UNDEFINED Then
+                If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+            $End If
+        Loop While (jb And 1) = 0
+
+        played = SD_PlaySound(SHOOTSND)
+        IN_GetJoyAbs joystickport, xmin, ymin
+
+        DrawWindow CALX - 5, CALY - 5, CALW, CALH, TEXTCOLOR
+        DrawOutline CALX - 5, CALY - 5, CALW, CALH, 0, HIGHLIGHT
+        SETFONTCOLOR 0, TEXTCOLOR
+
+        PrintX = CALX
+        PrintY = CALY
+        US_Print "    Calibrate" + Chr$(10) + "    Joystick" + Chr$(10)
+        $If APOGEE_1_0 = UNDEFINED Then
+            VWB_DrawPic CALX + 40, CALY + 30, C_JOY2PIC
+        $End If
+        PrintY = CALY + 80
+        US_Print "Move joystick to" + Chr$(10) + "lower right and" + Chr$(10) + "press button 1" + Chr$(10) ' STR_MOVEJOY2
+        SETFONTCOLOR BKGDCOLOR, TEXTCOLOR
+        US_Print "   ESC to exit"
+        VW_UpdateScreen
+
+        Do
+            _Limit TickBase
+            jb = IN_JoyButtons
+            If Keyboard(sc_Escape) Then Exit Function
+            $If SPEAR = UNDEFINED Then
+                If Keyboard(sc_Tab) And Keyboard(sc_P) And MS_CheckParm("goobers") Then PicturePause
+            $End If
+        Loop While (jb And 2) = 0
+
+        IN_GetJoyAbs joystickport, xmax, ymax
+        played = SD_PlaySound(SHOOTSND)
+
+        Do While IN_JoyButtons
+            _Limit TickBase
+        Loop
+
+        '
+        ' ASSIGN ACTUAL VALUES HERE
+        '
+        If xmin <> xmax And ymin <> ymax Then
+            IN_SetupJoy joystickport, xmin, xmax, ymin, ymax
+        Else
+            Exit Function
+        End If
+
+        CalibrateJoystick% = 1
+    End Function
 
     '////////////////////////
     '//
@@ -2732,6 +2821,7 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
     '////////////////////////////////////////////////////////////////////
     Sub ReadAnyControl (ci As ControlInfo)
         Dim buttons As Integer, mousex As Integer, mousey As Integer
+        Dim mouseactive As Integer, jx As Integer, jy As Integer, jb As Integer
 
         IN_ReadControl 0, ci
 
@@ -2746,18 +2836,18 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
 
             If mousey < CENTER - SENSITIVE Then
                 ci.dir = dir_North
-                IN_SetMousePos CENTER, CENTER ' Mouse(4)
+                IN_SetMousePos CENTER, CENTER: mouseactive = 1 ' Mouse(4)
             ElseIf mousey > CENTER + SENSITIVE Then
                 ci.dir = dir_South
-                IN_SetMousePos CENTER, CENTER
+                IN_SetMousePos CENTER, CENTER: mouseactive = 1
             End If
 
             If mousex < CENTER - SENSITIVE Then
                 ci.dir = dir_West
-                IN_SetMousePos CENTER, CENTER
+                IN_SetMousePos CENTER, CENTER: mouseactive = 1
             ElseIf mousex > CENTER + SENSITIVE Then
                 ci.dir = dir_East
-                IN_SetMousePos CENTER, CENTER
+                IN_SetMousePos CENTER, CENTER: mouseactive = 1
             End If
 
             buttons = IN_MouseButtons%
@@ -2766,10 +2856,36 @@ $If INCLUDE_WL_MENU_BM = UNDEFINED Then
                 ci.button1 = (buttons And 2) <> 0
                 ci.button2 = (buttons And 4) <> 0
                 ci.button3 = FALSE
+                mouseactive = 1
             End If
         End If
 
-        ' TODO: joystick
+        If joystickenabled <> 0 And mouseactive = 0 Then
+            INL_GetJoyDelta joystickport, jx, jy
+            If jy < -SENSITIVE Then
+                ci.dir = dir_North
+            ElseIf jy > SENSITIVE Then
+                ci.dir = dir_South
+            End If
+
+            If jx < -SENSITIVE Then
+                ci.dir = dir_West
+            ElseIf jx > SENSITIVE Then
+                ci.dir = dir_East
+            End If
+
+            jb = IN_JoyButtons
+            If jb Then
+                ci.button0 = (jb And 1) <> 0
+                ci.button1 = (jb And 2) <> 0
+                If joypadenabled Then
+                    ci.button2 = (jb And 4) <> 0
+                    ci.button3 = (jb And 8) <> 0
+                Else
+                    ci.button2 = FALSE: ci.button3 = FALSE
+                End If
+            End If
+        End If
     End Sub
 
     '////////////////////////////////////////////////////////////////////

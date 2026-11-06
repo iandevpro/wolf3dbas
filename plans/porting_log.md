@@ -1085,3 +1085,42 @@ Committed as "The jukebox (DoJukebox)" (this commit).
   - WOLF3D showed the second page ("Nazi Anthem" ... "Ultimate Conquest"); SPEAR showed its 9 songs.
   - Playing songs and holding M at start-up were left for you to check by hand. The test script's key presses can land in another window while the game starts.
   - **Builds:** 15 / 15 / 23 / 24 warnings as before. The formatter changes nothing.
+
+## 2026-11-05: Joystick and Gravis GamePad
+
+Not committed yet.
+
+- **The joysticks are QB64 game controllers** (`_DEVICES`). Joystick 1 / 2 (`joystickport` 0 / 1) are the first and second `[CONTROLLER]` devices.
+  - The stick is the controller's first two axes, and the buttons are its buttons 1-4.
+  - INL_JoyService reads the waiting input of a controller (`_DeviceInput`, then `_Axis` / `_Button`) into the last-state arrays.
+- **Ported (ID_IN.C):** IN_GetJoyAbs, INL_GetJoyDelta, INL_GetJoyButtons, IN_GetJoyButtonsDB, IN_JoyButtons, INL_SetJoyScale, IN_SetupJoy, INL_StartJoy, and the detection in IN_Startup (with the `nojoys` parameter).
+  - **The axes:** the game port measured the stick as timing counts. IN_GetJoyAbs turns an axis (-1 to 1) into the count 0 to JOYCOUNTS (1000). So INL_StartJoy's auto-setup (center x 2), the calibration and C's threshold / scale arithmetic work unchanged.
+  - **The buttons:** IN_JoyButtons gives the four lines of the port. Bits 0-1 are the buttons of joystick 1, and bits 2-3 those of joystick 2, or buttons 3-4 of the first controller (the Gravis GamePad used all four lines).
+  - IN_StartAck / IN_CheckAck count the joystick buttons too, as in C.
+- **WL_PLAY.BM:** PollJoystickButtons and PollJoystickMove, called by PollControls when joystickenabled.
+  - Progressive mode keeps the original's `controlx` for a stick pushed down (sic).
+- **WL_MENU.BM:**
+  - CalibrateJoystick: upper left + button 0, then lower right + button 1, Esc to leave. WL1 v1.0 has no C_JOY1PIC / C_JOY2PIC, so it shows the text only.
+  - "Joystick enabled" in the control menu calibrates and stays off if that's cancelled.
+  - ReadAnyControl reads the joystick when the mouse didn't move or click (mouseactive, as in C).
+  - The joystick menu items were already ported and stay inactive without a controller (JoysPresent).
+- **The start-up screen** (IntroScreen) lights JOYSTICK, as C does for JoysPresent[0] || JoysPresent[1].
+  - The port shows IntroScreen before IN_Startup, so it looks for a `[CONTROLLER]` device directly (not with `nojoys`).
+  - The box was never drawn before ("not present in our simplified version").
+- **Tested** with a Thrustmaster T.Flight Hotas X (`_DEVICES`: `[CONTROLLER][[NAME][T.Flight Hotas X]]`, 12 buttons, 7 axes):
+  - **A logging program** (outside the game) read the stick on axes 1 / 2, from -1 to 1 in every corner (rest about -0.01), and buttons 1 and 2.
+  - **The logic,** with a temporary hook (removed) that set the axes and buttons directly:
+    - IN_SetupJoy 0..1000 gives the thresholds 167 / 833 and multipliers 196, as C would.
+    - An axis of -1 / -0.8 / -0.6..0.6 / 0.8 / 1 gives -127 / -51 / 0 / 51 / 127, y the same.
+    - Buttons 1-4 give the bits 1, 2, 4, 8.
+  - **At start-up** (a temporary log, removed): joystick 1 is device 3, centred (500 / 500), so JoysPresent(0) is TRUE and a saved "Joystick enabled" stays on.
+  - **The Control screen** shows Joystick Enabled checked after your calibration; SPEAR shows the JOYSTICK light at start-up.
+  - **Bugs found by your tests:**
+    - **The calibration** seemed to pass, but "Joystick enabled" stayed off. `If Not CalibrateJoystick Then joystickenabled = 0`: the function returns 1 as in C, and QB64's Not is bitwise, so `Not 1` is -2, which is true. Now `If CalibrateJoystick = 0`.
+    - **The same 0/1 trap** is fixed in PollJoystickButtons (`joystickport <> 0 And joypadenabled = 0`) and ReadAnyControl (`joystickenabled <> 0 And mouseactive = 0`), which only worked by chance.
+    - **God mode, the same kind of bug:** godmode is toggled 0/1 (Tab + G, Spear's Tab-G-F10, `godmode Xor 1` as C's `^= 1`). So TakeDamage's `If Not godmode` was still true with god mode ON, and BJ took damage. Now `If godmode = 0` (both checks).
+    - **The JOYSTICK light** on the start-up screen was off (see above).
+  - **Buttons b2 / b3 in Customize controls** are recognised only with "Gravis GamePad Enabled", as in C. Without it ReadAnyControl gives a joystick buttons 0 and 1 only (a 2-button joystick).
+- **A note for gamepads:** PollJoystickMove moves only past a delta of 64, about 85% of the stick's travel. That is fine pushed straight. A round-gated modern stick pushed diagonally reaches only ~71% on each axis, so it moves along one axis or not at all; the old joysticks had square gates.
+- **Demos** (with the Hotas connected): SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before. An earlier run had aborts from input while the joystick was being connected.
+- **Builds:** 15 / 15 / 23 / 24 warnings as before. The formatter changes nothing.

@@ -226,7 +226,7 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         pts = points
         If gamestate.difficulty = gd_baby Then pts = SarL(pts, 2)
 
-        If Not godmode Then gamestate.health = gamestate.health - pts
+        If godmode = 0 Then gamestate.health = gamestate.health - pts ' (godmode is 0/1: QB64 Not 1 is true)
 
         If gamestate.health <= 0 Then
             gamestate.health = 0
@@ -245,7 +245,7 @@ $If INCLUDE_WL_AGENT_BM = UNDEFINED Then
         ' MAKE BJ'S EYES BUG IF MAJOR DAMAGE!
         '
         $If SPEAR = DEFINED Then
-            If pts > 30 And gamestate.health <> 0 And Not godmode Then
+            If pts > 30 And gamestate.health <> 0 And godmode = 0 Then
                 StatusDrawPic 17, 4, BJOUCHPIC
                 facecount = 0
             End If

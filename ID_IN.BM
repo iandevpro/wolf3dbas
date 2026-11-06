@@ -2,7 +2,7 @@
 ' The original read the keyboard, mouse and joystick from its own interrupt handlers.
 ' Here INL_KeyService runs from ON TIMER (it fires between statements, so busy-wait loops
 ' like "while (Keyboard[sc_Y]);" keep working) and turns QB64 _KeyHit codes into scan codes.
-' Joystick is not ported.
+' The joysticks are QB64 game controllers (_DEVICES), see INL_JoyService.
 
 $If INCLUDE_ID_IN_BM = UNDEFINED Then
     $Let INCLUDE_ID_IN_BM = 1
@@ -131,10 +131,216 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
 
     '///////////////////////////////////////////////////////////////////////////
     '//
+    '//  The joysticks. The original read the game port (0x201): the stick
+    '//  position as timing counts, and the buttons in the high bits. Here a
+    '//  joystick is a QB64 game controller (_DEVICES): its first two axes are the
+    '//  stick, its buttons 1-4 the buttons.
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+
+    ' Reads the waiting input of the joystick's controller into inJoyAxisX/Y and
+    ' inJoyButton (the axes and buttons of a controller are read after _DeviceInput)
+    Sub INL_JoyService (joy As Integer)
+        Dim dev As Integer, b As Integer
+
+        dev = inJoyDevice(joy)
+        If dev = 0 Then Exit Sub
+        Do While _DeviceInput(dev)
+            If _LastAxis(dev) >= 2 Then
+                inJoyAxisX(joy) = _Axis(1)
+                inJoyAxisY(joy) = _Axis(2)
+            End If
+            For b = 1 To 4
+                If b <= _LastButton(dev) Then inJoyButton(joy, b) = _Button(b)
+            Next b
+        Loop
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  IN_GetJoyAbs() - Reads the absolute position of the specified joystick
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub IN_GetJoyAbs (joy As Integer, xp As Long, yp As Long)
+        INL_JoyService joy
+        If inJoyDevice(joy) = 0 Then xp = 0: yp = 0: Exit Sub ' (nothing on the port)
+        xp = CLng((inJoyAxisX(joy) + 1) * JOYCOUNTS / 2)
+        yp = CLng((inJoyAxisY(joy) + 1) * JOYCOUNTS / 2)
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  INL_GetJoyDelta() - Returns the relative movement of the specified
+    '//      joystick (from +/-127)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub INL_GetJoyDelta (joy As Integer, dx As Integer, dy As Integer)
+        Dim x As Long, y As Long
+
+        IN_GetJoyAbs joy, x, y
+
+        If x < JoyDefs(joy).threshMinX Then
+            If x < JoyDefs(joy).joyMinX Then x = JoyDefs(joy).joyMinX
+
+            x = -(x - JoyDefs(joy).threshMinX)
+            x = x * JoyDefs(joy).joyMultXL
+            x = x \ (2 ^ JoyScaleShift)
+            If x > 127 Then dx = -127 Else dx = -x
+        ElseIf x > JoyDefs(joy).threshMaxX Then
+            If x > JoyDefs(joy).joyMaxX Then x = JoyDefs(joy).joyMaxX
+
+            x = x - JoyDefs(joy).threshMaxX
+            x = x * JoyDefs(joy).joyMultXH
+            x = x \ (2 ^ JoyScaleShift)
+            If x > 127 Then dx = 127 Else dx = x
+        Else
+            dx = 0
+        End If
+
+        If y < JoyDefs(joy).threshMinY Then
+            If y < JoyDefs(joy).joyMinY Then y = JoyDefs(joy).joyMinY
+
+            y = -(y - JoyDefs(joy).threshMinY)
+            y = y * JoyDefs(joy).joyMultYL
+            y = y \ (2 ^ JoyScaleShift)
+            If y > 127 Then dy = -127 Else dy = -y
+        ElseIf y > JoyDefs(joy).threshMaxY Then
+            If y > JoyDefs(joy).joyMaxY Then y = JoyDefs(joy).joyMaxY
+
+            y = y - JoyDefs(joy).threshMaxY
+            y = y * JoyDefs(joy).joyMultYH
+            y = y \ (2 ^ JoyScaleShift)
+            If y > 127 Then dy = 127 Else dy = y
+        Else
+            dy = 0
+        End If
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  INL_GetJoyButtons() - Returns the button status of the specified
+    '//      joystick (bits 0-1)
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function INL_GetJoyButtons% (joy As Integer)
+        Dim result As Integer
+
+        INL_JoyService joy
+        If inJoyButton(joy, 1) Then result = result Or 1
+        If inJoyButton(joy, 2) Then result = result Or 2
+        INL_GetJoyButtons% = result
+    End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  IN_GetJoyButtonsDB() - Returns the de-bounced button status of the
+    '//      specified joystick
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function IN_GetJoyButtonsDB% (joy As Integer)
+        Dim lasttime As Long, result1 As Integer, result2 As Integer
+
+        Do
+            result1 = INL_GetJoyButtons(joy)
+            lasttime = TimeCount
+            Do While TimeCount = lasttime
+                _Limit 1000
+            Loop
+            result2 = INL_GetJoyButtons(joy)
+        Loop While result1 <> result2
+        IN_GetJoyButtonsDB% = result1
+    End Function
+
+    '===================
+    '=
+    '= IN_JoyButtons
+    '=
+    '= The four button lines of the game port, 1 = pressed: bits 0-1 the buttons
+    '= of joystick 1, bits 2-3 those of joystick 2. The Gravis GamePad used all
+    '= four lines, so buttons 3-4 of the first controller are bits 2-3 too
+    '=
+    '===================
+    Function IN_JoyButtons% ()
+        Dim joybits As Integer
+
+        INL_JoyService 0
+        INL_JoyService 1
+        If inJoyButton(0, 1) Then joybits = joybits Or 1
+        If inJoyButton(0, 2) Then joybits = joybits Or 2
+        If inJoyButton(1, 1) Or inJoyButton(0, 3) Then joybits = joybits Or 4
+        If inJoyButton(1, 2) Or inJoyButton(0, 4) Then joybits = joybits Or 8
+        IN_JoyButtons% = joybits
+    End Function
+
+    ' INL_SetJoyScale() - Sets up scaling values for the specified joystick
+    Sub INL_SetJoyScale (joy As Integer)
+        JoyDefs(joy).joyMultXL = JoyScaleMax \ (JoyDefs(joy).threshMinX - JoyDefs(joy).joyMinX)
+        JoyDefs(joy).joyMultXH = JoyScaleMax \ (JoyDefs(joy).joyMaxX - JoyDefs(joy).threshMaxX)
+        JoyDefs(joy).joyMultYL = JoyScaleMax \ (JoyDefs(joy).threshMinY - JoyDefs(joy).joyMinY)
+        JoyDefs(joy).joyMultYH = JoyScaleMax \ (JoyDefs(joy).joyMaxY - JoyDefs(joy).threshMaxY)
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  IN_SetupJoy() - Sets up thresholding values and calls INL_SetJoyScale()
+    '//      to set up scaling values
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Sub IN_SetupJoy (joy As Integer, minx As Long, maxx As Long, miny As Long, maxy As Long)
+        Dim d As Long, r As Long
+
+        JoyDefs(joy).joyMinX = minx
+        JoyDefs(joy).joyMaxX = maxx
+        r = maxx - minx
+        d = r \ 3
+        JoyDefs(joy).threshMinX = ((r \ 2) - d) + minx
+        JoyDefs(joy).threshMaxX = ((r \ 2) + d) + minx
+
+        JoyDefs(joy).joyMinY = miny
+        JoyDefs(joy).joyMaxY = maxy
+        r = maxy - miny
+        d = r \ 3
+        JoyDefs(joy).threshMinY = ((r \ 2) - d) + miny
+        JoyDefs(joy).threshMaxY = ((r \ 2) + d) + miny
+
+        INL_SetJoyScale joy
+    End Sub
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
+    '//  INL_StartJoy() - Detects & auto-configures the specified joystick
+    '//      The auto-config assumes the joystick is centered
+    '//
+    '///////////////////////////////////////////////////////////////////////////
+    Function INL_StartJoy% (joy As Integer)
+        Dim x As Long, y As Long, i As Integer, n As Integer
+
+        ' the joy-th game controller
+        inJoyDevice(joy) = 0
+        For i = 1 To _Devices
+            If InStr(_Device$(i), "[CONTROLLER]") Then
+                If n = joy Then inJoyDevice(joy) = i: Exit For
+                n = n + 1
+            End If
+        Next i
+
+        IN_GetJoyAbs joy, x, y
+
+        If x = 0 Or x > MaxJoyValue - 10 Or y = 0 Or y > MaxJoyValue - 10 Then
+            INL_StartJoy% = FALSE
+        Else
+            IN_SetupJoy joy, 0, x * 2, 0, y * 2
+            INL_StartJoy% = TRUE
+        End If
+    End Function
+
+    '///////////////////////////////////////////////////////////////////////////
+    '//
     '//  IN_Startup() - Starts up the Input Mgr
     '//
     '///////////////////////////////////////////////////////////////////////////
     Sub IN_Startup ()
+        Dim i As Integer
         If inTimer <> 0 Then Exit Sub
 
         ' KbdDefs = {0x1d,0x38,0x47,0x48,0x49,0x4b,0x4d,0x4f,0x50,0x51}
@@ -152,6 +358,11 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
         MousePresent = TRUE
         mouseenabled = 1 ' 0/1 like the C boolean, CP_Control toggles it with Xor 1 (ReadConfig sets it)
         joystickenabled = 0
+
+        ' (C: the "nojoys" parameter skips the joysticks)
+        For i = 0 To MaxJoys - 1
+            If MS_CheckParm("nojoys") Then JoysPresent(i) = FALSE Else JoysPresent(i) = INL_StartJoy(i)
+        Next i
         ' Mouse(MReset): the cursor goes to the middle, hidden (the game draws no mouse pointer)
         inMouseX = 320: inMouseY = 200
         _MouseHide
@@ -350,6 +561,7 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
     Sub IN_StartAck ()
         IN_ClearKeysDown
         inAckButtons = IN_MouseButtons%
+        inAckJoyButtons = IN_JoyButtons%
     End Sub
 
     '///////////////////////////////////////////////////////////////////////////
@@ -367,6 +579,10 @@ $If INCLUDE_ID_IN_BM = UNDEFINED Then
         buttons = IN_MouseButtons%
         If buttons And Not inAckButtons Then IN_CheckAck% = TRUE: Exit Function
         inAckButtons = inAckButtons And buttons ' released buttons count again
+
+        buttons = IN_JoyButtons%
+        If buttons And Not inAckJoyButtons Then IN_CheckAck% = TRUE: Exit Function
+        inAckJoyButtons = inAckJoyButtons And buttons
     End Function
 
     ' IN_Ack - waits for a key or mouse button press

@@ -165,6 +165,75 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
     '= PollMouseButtons
     '=
     '===================
+    '===================
+    '=
+    '= PollJoystickButtons
+    '=
+    '===================
+    Sub PollJoystickButtons ()
+        Dim buttons As Integer
+
+        buttons = IN_JoyButtons
+
+        If joystickport <> 0 And joypadenabled = 0 Then
+            If buttons And 4 Then buttonstate(buttonjoy(0)) = TRUE
+            If buttons And 8 Then buttonstate(buttonjoy(1)) = TRUE
+        Else
+            If buttons And 1 Then buttonstate(buttonjoy(0)) = TRUE
+            If buttons And 2 Then buttonstate(buttonjoy(1)) = TRUE
+            If joypadenabled Then
+                If buttons And 4 Then buttonstate(buttonjoy(2)) = TRUE
+                If buttons And 8 Then buttonstate(buttonjoy(3)) = TRUE
+            End If
+        End If
+    End Sub
+
+    '===================
+    '=
+    '= PollJoystickMove
+    '=
+    '===================
+    Sub PollJoystickMove ()
+        Dim joyx As Integer, joyy As Integer
+
+        INL_GetJoyDelta joystickport, joyx, joyy
+
+        If joystickprogressive Then
+            If joyx > 64 Then
+                controlx = controlx + (joyx - 64) * JOYSCALE * tics
+            ElseIf joyx < -64 Then
+                controlx = controlx - (-joyx - 64) * JOYSCALE * tics
+            End If
+            If joyy > 64 Then
+                controlx = controlx + (joyy - 64) * JOYSCALE * tics ' (sic, controlx in the original)
+            ElseIf joyy < -64 Then
+                controly = controly - (-joyy - 64) * JOYSCALE * tics
+            End If
+        ElseIf buttonstate(bt_run) Then
+            If joyx > 64 Then
+                controlx = controlx + RUNMOVE * tics
+            ElseIf joyx < -64 Then
+                controlx = controlx - RUNMOVE * tics
+            End If
+            If joyy > 64 Then
+                controly = controly + RUNMOVE * tics
+            ElseIf joyy < -64 Then
+                controly = controly - RUNMOVE * tics
+            End If
+        Else
+            If joyx > 64 Then
+                controlx = controlx + BASEMOVE * tics
+            ElseIf joyx < -64 Then
+                controlx = controlx - BASEMOVE * tics
+            End If
+            If joyy > 64 Then
+                controly = controly + BASEMOVE * tics
+            ElseIf joyy < -64 Then
+                controly = controly - BASEMOVE * tics
+            End If
+        End If
+    End Sub
+
     Sub PollMouseButtons ()
         Dim buttons As Integer
 
@@ -290,7 +359,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
 
         If mouseenabled Then PollMouseButtons
 
-        ' TODO: joystick (PollJoystickButtons)
+        If joystickenabled Then PollJoystickButtons
 
         '
         ' get movements
@@ -299,7 +368,7 @@ $If INCLUDE_WL_PLAY_BM = UNDEFINED Then
 
         If mouseenabled Then PollMouseMove
 
-        ' TODO: joystick (PollJoystickMove)
+        If joystickenabled Then PollJoystickMove
 
         '
         ' bound movement to a maximum

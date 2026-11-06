@@ -378,7 +378,14 @@ Sub IntroScreen
     ' Mouse
     Line (164, 82)-(175, 83), FILLCOLOR, BF
 
-    ' Joystick (not present in our simplified version)
+    ' Joystick: if (JoysPresent[0] || JoysPresent[1]). IntroScreen runs before IN_Startup
+    ' here, so the game controllers that INL_StartJoy will use are counted directly
+    For i = 1 To _Devices
+        If InStr(_Device$(i), "[CONTROLLER]") And MS_CheckParm("nojoys") = 0 Then
+            Line (164, 105)-(175, 106), FILLCOLOR, BF
+            Exit For
+        End If
+    Next i
 
     ' Sound Blaster
     Line (164, 151)-(175, 152), FILLCOLOR, BF
