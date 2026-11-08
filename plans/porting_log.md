@@ -1088,7 +1088,7 @@ Committed as "The jukebox (DoJukebox)" (this commit).
 
 ## 2026-11-05: Joystick and Gravis GamePad
 
-Not committed yet.
+Commit 030d11b.
 
 - **The joysticks are QB64 game controllers** (`_DEVICES`). Joystick 1 / 2 (`joystickport` 0 / 1) are the first and second `[CONTROLLER]` devices.
   - The stick is the controller's first two axes, and the buttons are its buttons 1-4.
@@ -1124,3 +1124,24 @@ Not committed yet.
 - **A note for gamepads:** PollJoystickMove moves only past a delta of 64, about 85% of the stick's travel. That is fine pushed straight. A round-gated modern stick pushed diagonally reaches only ~71% on each axis, so it moves along one axis or not at all; the old joysticks had square gates.
 - **Demos** (with the Hotas connected): SDM 2900/13; SOD 2900/13, 1000/10, 3000/12, 7300/13; WL6 3900/15, 13600/51, 7100/27, 5600/21, as before. An earlier run had aborts from input while the joystick was being connected.
 - **Builds:** 15 / 15 / 23 / 24 warnings as before. The formatter changes nothing.
+
+## 2026-11-08: NonShareware, a stale TODO
+
+Not committed yet.
+
+- NonShareware (WL_INTER.C 1272) was already ported (WL_INTER.BM): the "Attention / This game is NOT shareware" screen.
+  - DemoLoop calls it unless NOWAIT, only in WL6 (not UPLOAD, GOODTIMES, SPEAR or JAPAN), as in WL_MAIN.C 1463.
+- SignonScreen still had "TODO - other calls in NonShareware" and a commented-out call. C's SignonScreen doesn't call it, so both lines are removed. WOLF3D.BAS has no TODO left.
+- **The sign-on, now as in C** (WL_MAIN.C SignonScreen / InitGame / FinishSignon):
+  - **SignonScreen** only draws the picture. The port's own `_Delay 1`, the key wait before IntroScreen (WL6 / WL1) and the waits after it are gone.
+  - **IntroScreen** (the memory bars and hardware lights) comes after ReadConfig, in the Else of the jukebox check (`M ? DoJukebox : IntroScreen`).
+    - The JOYSTICK light is now `JoysPresent(0) Or JoysPresent(1)`, as in C: IN_Startup has run by then.
+  - **FinishSignon (new)** ends InitGame.
+    - Wolfenstein: "Press a key" (14 on 4) on a bar of the top left pixel's color, IN_Ack unless NOWAIT, then "Working..." (10 on 4).
+    - Spear: the 3 second wait, unless NOWAIT.
+  - **Tested** (screenshots only):
+    - WL6 and WL1 show the bars and lights with "Press a key", without a key before. The JOYSTICK light is off with the controller unplugged.
+    - SPEAR keeps "One moment..." and goes on to the PC-13 screen after 3 seconds.
+    - WL6 with NOWAIT goes straight to the menu.
+    - The SDM /demotest still ends 2900/13 at frame 1954.
+    - Builds: 15 / 15 / 23 / 24 warnings as before. The formatter changes nothing.

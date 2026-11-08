@@ -290,8 +290,6 @@ Sub SignonScreen
 
     ' Load the game palette
     LoadGamePalette
-    ' TODO - other calls in NonShareware
-    ' NonShareware
     If Not virtualreality Then
         ' The signon screen of the build (SIGNON.OBJ, linked into the exe of the original)
         LoadSignonScreen introscn()
@@ -304,27 +302,55 @@ Sub SignonScreen
         Call VL_MemToScreen(introscn(), 320, 200, 0, 0)
     End If
 
-    ' Wait a bit to show the screen
-    _Delay 1
+    ' (IntroScreen and FinishSignon come later in InitGame, as in C)
+End Sub
+
+'==========================
+'=
+'= FinishSignon
+'=
+'= The bar under the sign-on picture: "Press a key", then "Working..." while the
+'= game starts (Spear waits 3 seconds instead)
+'=
+'==========================
+Sub FinishSignon
     $If SPEAR = UNDEFINED Then
-        If Not NoWait Then
-            Do: Loop Until InKey$ <> ""
-        End If
-    $End If
-    'VL_FadeOut 200,255,100,100,100,30
-    IntroScreen
-    'Do: Loop Until InKey$ <> ""
-    'ClearMScreen
-    $If SPEAR = UNDEFINED Then
-        ' FinishSignon: if (!NoWait) IN_Ack ();
-        If Not NoWait Then
-            Do: Loop Until InKey$ <> ""
-        End If
+        VW_Bar 0, 189, 300, 11, Point(0, 0) ' peekb(0xa000,0): the color of the top left pixel
+        WindowX = 0
+        WindowW = 320
+        PrintY = 190
+
+        $If JAPAN = UNDEFINED Then
+            SETFONTCOLOR 14, 4
+
+            $If SPANISH = DEFINED Then
+                    US_CPrint "Oprima una tecla"
+            $Else
+                US_CPrint "Press a key"
+            $End If
+        $End If
+        VW_UpdateScreen
+
+        If Not NoWait Then IN_Ack
+
+        $If JAPAN = UNDEFINED Then
+            VW_Bar 0, 189, 300, 11, Point(0, 0)
+
+            PrintY = 190
+            SETFONTCOLOR 10, 4
+
+            $If SPANISH = DEFINED Then
+                    US_CPrint "pensando..."
+            $Else
+                US_CPrint "Working..."
+            $End If
+        $End If
+        VW_UpdateScreen
+
+        SETFONTCOLOR 0, 15
     $Else
-        ' FinishSignon (Spear): no "Press a key", if (!NoWait) VW_WaitVBL(3*70);
         If Not NoWait Then VL_WaitVBL 3 * 70
     $End If
-    'VL_FadeOut 0,255,0,0,0,30
 End Sub
 
 ' IntroScreen - Displays memory bars and hardware detection
@@ -378,14 +404,8 @@ Sub IntroScreen
     ' Mouse
     Line (164, 82)-(175, 83), FILLCOLOR, BF
 
-    ' Joystick: if (JoysPresent[0] || JoysPresent[1]). IntroScreen runs before IN_Startup
-    ' here, so the game controllers that INL_StartJoy will use are counted directly
-    For i = 1 To _Devices
-        If InStr(_Device$(i), "[CONTROLLER]") And MS_CheckParm("nojoys") = 0 Then
-            Line (164, 105)-(175, 106), FILLCOLOR, BF
-            Exit For
-        End If
-    Next i
+    ' Joystick
+    If JoysPresent(0) Or JoysPresent(1) Then Line (164, 105)-(175, 106), FILLCOLOR, BF
 
     ' Sound Blaster
     Line (164, 151)-(175, 152), FILLCOLOR, BF
@@ -761,13 +781,18 @@ Sub InitGame
 
     '
     ' HOLDING DOWN 'M' KEY?
-    ' (C: here, else IntroScreen; the port showed IntroScreen already, in SignonScreen)
     '
     $If SPEARDEMO = UNDEFINED Then
         ' (IN_Startup cleared the keys; in DOS the typematic repeat of a held key set
         ' Keyboard[sc_M] again at once, here _KeyDown tells if M is held)
         INL_KeyService
-        If Keyboard(sc_M) Or _KeyDown(Asc("m")) Or _KeyDown(Asc("M")) Then DoJukebox
+        If Keyboard(sc_M) Or _KeyDown(Asc("m")) Or _KeyDown(Asc("M")) Then
+            DoJukebox
+        Else
+            IntroScreen
+        End If
+    $Else
+        IntroScreen
     $End If
 
     InitDigiMap
@@ -776,6 +801,7 @@ Sub InitGame
     ' initialize variables
     '
     InitRedShifts
+    If Not virtualreality Then FinishSignon
 End Sub
 
 '==================
