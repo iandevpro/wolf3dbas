@@ -1,6 +1,7 @@
 """Generates the data headers of each game version from the C headers in origsrc/:
 
-  GFXV_*.BI   graphics chunk numbers, lumps and counts  (GFXV_WL6.H, GFXV_SOD.H, GFXV_SDM.H, GFXV_WL1.H)
+  GFXV_*.BI   graphics chunk numbers, lumps and counts  (GFXV_WL6.H, GFXV_SOD.H, GFXV_SDM.H, GFXV_WL1.H;
+              GFXV_S14.BI, the v1.4 shareware data, from GFXV_WL6.H and GFXV_WL1.H)
   AUDIO*.BI   sound and music numbers                     (AUDIOWL6.H, AUDIOSOD.H, AUDIOSDM.H)
   MAPS*.BI    map names                                    (MAPSWL6.H, MAPSSOD.H, MAPSSDM.H)
 
@@ -10,6 +11,10 @@ with the header's section comments. ID_HEADS.BI includes the files of the versio
 The v1.0 shareware data (*.WL1, APOGEE_1_0) does not fit its headers, so its two files get
 fixes (see V10_*): GFXV_WL1.H fits the pictures but not the chunks after them, and the audio
 is the WL6 list with fewer sounds (AUDIOWL1.H, April 1992, is older than that data).
+
+No header fits the v1.4 shareware data (*.WL1 of WOLFS14.BAS) either: its graphics are the
+WL6 list with the help pictures of GFXV_WL1.H and one more (see S14_*); its sounds are the WL6
+list (AUDIOHED.WL1 has the 288 chunks of AUDIOHED.WL6), so that build uses AUDIOWL6.BI.
 
 python tools/gen_headers.py   (writes the .BI files in the source directory)
 """
@@ -132,6 +137,46 @@ V10_AUDIO_NOTES = [
     "later sounds stay, SD_PlaySound ignores the sounds from NUMSOUNDS on"]
 
 
+# --- v1.4 shareware fixes ---
+
+# VGAHEAD.WL1 v1.4 has 156 chunks. Its pictures are those of GFXV_WL6.H, but the help pictures
+# (3-9 there) are the 18 of GFXV_WL1.H (3-20) and a Spear of Destiny advert (21, 256x144,
+# page 23 of the help text). So everything after them is 12 higher, and only T_ENDART1 is
+# there (the shareware has one episode). Checked against the picture sizes of the data.
+S14_SHIFT = 12
+S14_COUNTS = {'NUMCHUNKS': 156, 'NUMPICS': 144, 'NUMEXTERNS': 8, 'README_LUMP_END': 21, 'ENUMEND': 156}
+S14_DROP = {'T_ENDART2', 'T_ENDART3', 'T_ENDART4', 'T_ENDART5', 'T_ENDART6'}
+S14_GFX_NOTES = [
+    "The v1.4 shareware data (VGAGRAPH.WL1, 156 chunks). No header of the source fits it: the",
+    "pictures are those of GFXV_WL6.H, but the help pictures are the 18 of GFXV_WL1.H and a",
+    "Spear of Destiny advert (H_SPEARADPIC, a name of the port, page 23 of the help text), so",
+    "everything after them is 12 higher. Only T_ENDART1 (one episode). Checked against the",
+    "picture sizes of the data"]
+
+
+def s14_items():
+    created, items = parse('GFXV_WL6.H')
+    _, wl1 = parse('GFXV_WL1.H')
+    helppics = [it for it in wl1 if it[0] == 'const' and it[1].startswith('H_')]
+    assert helppics[0] == ('const', 'H_BJPIC', 3) and helppics[-1] == ('const', 'H_BOTTOMINFOPIC', 20)
+    out = []
+    for it in items:
+        if it[0] == 'const':
+            name, val = it[1], it[2]
+            if name in S14_DROP or (name.startswith('H_') and name != 'H_BJPIC'):
+                continue
+            if name == 'H_BJPIC':
+                out += helppics + [('const', 'H_SPEARADPIC', 21)]
+                continue
+            if name in S14_COUNTS:
+                val = S14_COUNTS[name]
+            elif not name.startswith('NUM') and val >= 10:
+                val += S14_SHIFT
+            it = ('const', name, val)
+        out.append(it)
+    return created, out
+
+
 def main():
     for ver in ('WL6', 'SOD', 'SDM'):
         for kind in ('GFXV_', 'AUDIO', 'MAPS'):
@@ -152,6 +197,9 @@ def main():
 
     created, items = parse('AUDIOWL6.H')
     write('AUDIOWL1.BI', 'AUDIOWL6.H', created, replace_consts(items, V10_AUDIO_COUNTS), V10_AUDIO_NOTES)
+
+    created, items = s14_items()
+    write('GFXV_S14.BI', 'GFXV_WL6.H', created, items, S14_GFX_NOTES)
 
 
 if __name__ == '__main__':

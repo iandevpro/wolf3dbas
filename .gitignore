@@ -27,3 +27,6 @@ __pycache__/
 
 # test screenshots of the port (tools runs)
 /_*.png
+
+# the v1.4 shareware data and WOLFS14.exe (tests, the start scripts)
+/wolfs14/

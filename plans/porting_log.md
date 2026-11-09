@@ -1127,7 +1127,7 @@ Commit 030d11b.
 
 ## 2026-11-08: NonShareware, a stale TODO
 
-Not committed yet.
+Commit 5f90f4e.
 
 - NonShareware (WL_INTER.C 1272) was already ported (WL_INTER.BM): the "Attention / This game is NOT shareware" screen.
   - DemoLoop calls it unless NOWAIT, only in WL6 (not UPLOAD, GOODTIMES, SPEAR or JAPAN), as in WL_MAIN.C 1463.
@@ -1145,3 +1145,38 @@ Not committed yet.
     - WL6 with NOWAIT goes straight to the menu.
     - The SDM /demotest still ends 2900/13 at frame 1954.
     - Builds: 15 / 15 / 23 / 24 warnings as before. The formatter changes nothing.
+
+## 2026-11-08: WOLFS14, the v1.4 shareware build
+
+Not committed yet.
+
+- **Why:** the shareware on archive.org (wolf3dsw.zip, "Wolfenstein 3D (Shareware, v1.4)") is v1.4. WOLF1.BAS reads only the v1.0 data.
+  - VGAHEAD.WL1 is 471 bytes (156 chunks) in v1.4, against 447 bytes (148 chunks) in v1.0.
+  - VGAGRAPH is 326568 against 295394 bytes, and VSWAP 742912 against 707072.
+  - One exe for both is not practical: the chunk numbers are compile-time Consts.
+- **WOLFS14.BAS (new):** `$Let UPLOAD = 1`, without APOGEE_1_0, so the code follows the C source, which is v1.4. WOLF1.BAS stays for v1.0.
+- **The data, analysed** from the zip's *.WL1 files (unpacked into wolfs14/, gitignored):
+  - **Graphics:** no header in origsrc fits (GFXV_WL1.H says 556 chunks). The picture table (chunk 0, 144 pictures) is the GFXV_WL6.H list with two changes:
+    - the help pictures are the 18 of GFXV_WL1.H (3-20), plus a 256x144 Spear of Destiny advert at 21. Page 23 of the help text shows it (`^G16,16,21`); the port names it H_SPEARADPIC.
+    - so everything after them is 12 higher: C_OPTIONSPIC 22, KNIFEPIC 103, GETPSYCHEDPIC 146.
+    - Then the 8x8 tiles (147), ORDERSCREEN / ERRORSCREEN (148-149, 4008 bytes each), T_HELPART (150, `^PAGE 1`), T_DEMO0-3 (151-154) and T_ENDART1 (155): 156 chunks.
+  - **Sounds:** AUDIOHED.WL1 is 1156 bytes, the 288 chunks of AUDIOHED.WL6, so AUDIOWL6.BI.
+  - **Sprites:** VSWAP.WL1 has the layout of VSWAP.WL6 (663 chunks, sprites from 106, sounds from 542), so the WL6 sprite numbers, without the v1.0 shifts.
+- **tools/gen_headers.py** writes GFXV_S14.BI from GFXV_WL6.H with those fixes (S14_*); the other generated files are unchanged.
+- **ID_HEADS.BI:** UPLOAD without APOGEE_1_0 includes GFXV_S14.BI and AUDIOWL6.BI.
+- **The UPLOAD code paths** follow C:
+  - the death screams;
+  - the time and score codes, which are left out;
+  - the first jukebox page;
+  - the episode check;
+  - the digitized sounds of the other episodes, which are not mapped.
+
+  The v1.0 special cases stay behind APOGEE_1_0.
+- **tools/ide_format.py** formats WOLFS14.BAS as a fifth build.
+- **Tested** in wolfs14/ (WOLFS14.exe copied there):
+  - **/demotest:** demos 1-3 (maps 2, 4, 6) end exactly on their last frame (2000/20 at 3856, 2500/13 at 2017, 1500/7 at 1903), so the game stays in sync.
+    - **Demo 0 (map 0) desyncs:** BJ dies at frame 3169 of 3460, with 1600/16, 97 frames early.
+    - It is the same with sound off, the PC speaker or AdLib, so it is not UpdateFace's GETGATLINGSND check.
+    - Screenshots every 6 s show a normal fight to the end, with no wall running. The difference is not found yet.
+  - **Screens:** the sign-on ("Press a key", the lights), PC-13, the title, the menu, the help text (pg 1 of 41 with its border pictures), E1M1 (`tedlevel 0`), and the v1.4 order screen on Quit (with the Hint Book).
+  - **Builds:** WOLFS14 has 15 warnings; the other four are unchanged (15 / 15 / 23 / 24). The formatter changes nothing (64 files, two passes).

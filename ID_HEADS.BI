@@ -19,6 +19,10 @@ $If INCLUDE_ID_HEADS_BI = UNDEFINED Then
                 ' the v1.0 shareware data (WOLF1.BAS)
                 '$INCLUDE:'GFXV_WL1.BI'
                 '$INCLUDE:'AUDIOWL1.BI'
+            $ElseIf UPLOAD = DEFINED Then
+                ' the v1.4 shareware data (WOLFS14.BAS): the WL6 sounds
+                '$INCLUDE:'GFXV_S14.BI'
+                '$INCLUDE:'AUDIOWL6.BI'
             $Else
                 '$INCLUDE:'GFXV_WL6.BI'
                 '$INCLUDE:'AUDIOWL6.BI'

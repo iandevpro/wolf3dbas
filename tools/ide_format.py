@@ -3,7 +3,7 @@
 The QB64 IDE only formats the code it can parse. A .BM / .BI file opened on its own is not a
 complete program, so the IDE stops at the first use of something defined in another file. So:
 
-  merge  builds one complete program per build (the entry files WOLF3D.BAS, WOLF1.BAS, SPEAR.BAS,
+  merge  builds one complete program per build (the entry files WOLF3D.BAS, WOLF1.BAS, WOLFS14.BAS, SPEAR.BAS,
          SPEARDEMO.BAS, with every include inlined once, at its first active occurrence, like
          the include guards do), with marker comments around each file
   ide    opens each merged program in the QB64 IDE, jumps to the end, saves and exits
@@ -26,7 +26,7 @@ import tempfile
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 WORK = os.path.join(tempfile.gettempdir(), 'wolf3d-ide-format')
-ENTRIES = ['WOLF3D.BAS', 'WOLF1.BAS', 'SPEAR.BAS', 'SPEARDEMO.BAS']  # one per build
+ENTRIES = ['WOLF3D.BAS', 'WOLF1.BAS', 'WOLFS14.BAS', 'SPEAR.BAS', 'SPEARDEMO.BAS']  # one per build
 MARK = "'@@IDEFMT "
 
 INCLUDE_RE = re.compile(r"^\s*'\$INCLUDE\s*:\s*'([^']+)'", re.I)
