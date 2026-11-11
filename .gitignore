@@ -30,3 +30,7 @@ __pycache__/
 
 # the v1.4 shareware data and WOLFS14.exe (tests, the start scripts)
 /wolfs14/
+
+# start scripts (startsrc): QB64 and the source it installs
+/qb64/
+/wolf3dbas/

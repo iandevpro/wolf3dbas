@@ -1148,7 +1148,7 @@ Commit 5f90f4e.
 
 ## 2026-11-08: WOLFS14, the v1.4 shareware build
 
-Not committed yet.
+Commit 413bc0b.
 
 - **Why:** the shareware on archive.org (wolf3dsw.zip, "Wolfenstein 3D (Shareware, v1.4)") is v1.4. WOLF1.BAS reads only the v1.0 data.
   - VGAHEAD.WL1 is 471 bytes (156 chunks) in v1.4, against 447 bytes (148 chunks) in v1.0.
@@ -1180,3 +1180,33 @@ Not committed yet.
     - Screenshots every 6 s show a normal fight to the end, with no wall running. The difference is not found yet.
   - **Screens:** the sign-on ("Press a key", the lights), PC-13, the title, the menu, the help text (pg 1 of 41 with its border pictures), E1M1 (`tedlevel 0`), and the v1.4 order screen on Quit (with the Hint Book).
   - **Builds:** WOLFS14 has 15 warnings; the other four are unchanged (15 / 15 / 23 / 24). The formatter changes nothing (64 files, two passes).
+
+## 2026-11-10: The start scripts startbin and startsrc
+
+Not committed yet.
+
+- **Two scripts in the repository root,** each a `.bat` to double-click and a `.ps1` with the logic. The `.bat` runs `powershell -NoProfile -ExecutionPolicy Bypass -File` and pauses on an error.
+  - They install next to themselves, into `wolfs14\` (and `qb64\`, `wolf3dbas\` for startsrc). So a run inside the checkout never overwrites the v1.0 *.WL1 files of the root; those folders are gitignored.
+  - A step whose result is there is skipped. With the exe and all 8 *.WL1 files there, the script starts the game at once.
+  - A status line per step (OK / skipped / FAILED and why), then "All steps went OK." and the game starts, or the number of failed steps and exit code 1.
+  - **Downloads:** `curl.exe -L -f --retry 2` (it follows the archive.org redirect), with Invoke-WebRequest (TLS 1.2) as the fallback.
+  - **The shareware:** only the *.WL1 files of wolf3dsw.zip are unpacked (.NET ZipFile), not its DOS WOLF3D.EXE; the zip is deleted afterwards.
+  - **Invoke-Native** runs curl, git, tar, 7zr and qb64. In PowerShell 5.1, with `$ErrorActionPreference = 'Stop'`, their stderr output (git's "Cloning into...") would stop the script.
+- **startbin:** WOLFS14.exe from `-ReleaseUrl`. Its default is the placeholder `https://github.com/iandevpro/wolf3dbas/releases/download/<TAG>/WOLFS14.exe`, which is reported as FAILED until it's filled in. Then the shareware, then the game.
+- **startsrc:**
+  - **The source:** run in a checkout, it uses it. Else `git clone --depth 1` over HTTPS, then over SSH (`git@github.com:...`), then the zip of main.
+    - The clones can't prompt (GIT_TERMINAL_PROMPT=0, GCM_INTERACTIVE=never, no credential helper, ssh BatchMode), so a clone that needs a password fails at once instead of waiting.
+    - A failed clone's folder is removed.
+  - **QB64 2.1:** the .7z unpacked with Windows' own `System32	ar.exe` (Git's tar reads "C:" as a host), else with 7zr.exe from 7-zip.org.
+  - **Compile:** `qb64 -x WOLFS14.BAS -o wolfs14\WOLFS14.exe`.
+- **Tested** in empty folders under the job's temp dir:
+  - **startbin:**
+    - with the placeholder: FAILED with the message, and the data was still downloaded and unpacked;
+    - with a `file:///` URL in place of the release: the exe was downloaded, the data skipped, and the game started;
+    - again: it started at once.
+  - **startsrc:**
+    - **The first run** got QB64 (Git's tar failed there and the 7zr fallback unpacked it, which led to the System32 tar), and the data.
+      - Its HTTPS clone of the private repository waited for a GitHub sign-in until it was stopped. That led to the no-prompt settings.
+    - **The second run** (HTTPS failing at once, then SSH) cloned, compiled in 83 s and started the game.
+    - **The third run** started it at once.
+- **The repository is private:** HTTPS clones, the source zip and release downloads need it public. Until then startsrc works over SSH for an account with access, and startbin needs the exe hosted publicly.
