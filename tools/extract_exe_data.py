@@ -4,7 +4,7 @@ The original builds linked SIGNON.OBJ (the 320x200 sign-on screen, 64000 bytes, 
 GAMEPAL.OBJ (the palette, 768 bytes of 6-bit VGA values, gamepal) into the exe, next to each
 other: in the Spear of Destiny exes the screen is right before the palette, in the v1.0
 shareware exe (WOLF3D-SHARE-ORIG.EXE) right after it. The source release only has the v1.4
-Wolfenstein ones (OBJ/signon.bin, OBJ/gamepal.bin); the others are only in their exes. Those
+Wolfenstein ones (basicsrc/OBJ/signon.bin, basicsrc/OBJ/gamepal.bin); the others are only in their exes. Those
 exes are packed with LZEXE 0.91, so this
 unpacks the load image, finds the palette (it starts with the standard colours 0, 1, 2:
 0,0,0 0,0,42 0,42,0, all values below 64) and takes the 64000 bytes before or after it that
@@ -14,7 +14,7 @@ look like a picture: many pixels the same as their left neighbour, and not mostl
 python tools/extract_exe_data.py SPEAR-ORIG.EXE sod
 python tools/extract_exe_data.py SPEAR-DEMO-ORIG.EXE sdm
 python tools/extract_exe_data.py WOLF3D-SHARE-ORIG.EXE wl1
-    writes OBJ/signon_<name>.bin and OBJ/gamepal_<name>.bin; then run tools/gen_signon.py
+    writes basicsrc/OBJ/signon_<name>.bin and basicsrc/OBJ/gamepal_<name>.bin; then run tools/gen_signon.py
 """
 import os
 import struct
@@ -106,8 +106,8 @@ def main():
         raise SystemExit('no sign-on screen next to the palette')
     signon = img[sides[side]:sides[side] + 64000]
     for fname, block in (('signon_%s.bin' % name, signon), ('gamepal_%s.bin' % name, pal)):
-        open(os.path.join(ROOT, 'OBJ', fname), 'wb').write(block)
-        print('wrote OBJ/%s (%d bytes)' % (fname, len(block)))
+        open(os.path.join(ROOT, 'basicsrc', 'OBJ', fname), 'wb').write(block)
+        print('wrote basicsrc/OBJ/%s (%d bytes)' % (fname, len(block)))
     print('(%s: %d bytes unpacked, the palette at %d, the screen %s it at %d)' % (exe, len(img), p, side, sides[side]))
 
 

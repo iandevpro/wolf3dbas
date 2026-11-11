@@ -16,13 +16,14 @@ No header fits the v1.4 shareware data (*.WL1 of WOLFS14.BAS) either: its graphi
 WL6 list with the help pictures of GFXV_WL1.H and one more (see S14_*); its sounds are the WL6
 list (AUDIOHED.WL1 has the 288 chunks of AUDIOHED.WL6), so that build uses AUDIOWL6.BI.
 
-python tools/gen_headers.py   (writes the .BI files in the source directory)
+python tools/gen_headers.py   (writes the .BI files in basicsrc/)
 """
 import os
 import re
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 SRC = os.path.join(ROOT, 'origsrc')
+BASICSRC = os.path.join(ROOT, 'basicsrc')  # the QB64 sources
 
 
 def parse(hname):
@@ -90,7 +91,7 @@ def write(bname, hname, created, items, notes=()):
     while out[-1] == '':
         out.pop()
     out += ['', '$End If']
-    path = os.path.join(ROOT, bname)
+    path = os.path.join(BASICSRC, bname)
     new = '\r\n'.join(out) + '\r\n'
     old = open(path, encoding='latin-1', newline='').read() if os.path.exists(path) else None
     if old is None or old.replace('\r\n', '\n') != new.replace('\r\n', '\n'):

@@ -76,7 +76,7 @@ def main():
         else:
             out.append("        Const %s = %d" % (n, v))
     out += ["    $End If", "", "$End If"]
-    open(os.path.join(ROOT, 'WL_SPR.BI'), 'w', encoding='latin-1', newline='').write('\r\n'.join(out) + '\r\n')
+    open(os.path.join(ROOT, 'basicsrc', 'WL_SPR.BI'), 'w', encoding='latin-1', newline='').write('\r\n'.join(out) + '\r\n')
     print('WL_SPR.BI: %d Spear sprites, %d Wolfenstein sprites' % (len(spear), len(wolf)))
 
 

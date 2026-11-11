@@ -25,6 +25,7 @@ import sys
 import tempfile
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+BASICSRC = os.path.join(ROOT, 'basicsrc')  # the QB64 sources
 WORK = os.path.join(tempfile.gettempdir(), 'wolf3d-ide-format')
 ENTRIES = ['WOLF3D.BAS', 'WOLF1.BAS', 'WOLFS14.BAS', 'SPEAR.BAS', 'SPEARDEMO.BAS']  # one per build
 MARK = "'@@IDEFMT "
@@ -33,7 +34,7 @@ INCLUDE_RE = re.compile(r"^\s*'\$INCLUDE\s*:\s*'([^']+)'", re.I)
 
 
 def read_lines(name):
-    s = open(os.path.join(ROOT, name), encoding='latin-1', newline='').read().replace('\r\n', '\n')
+    s = open(os.path.join(BASICSRC, name), encoding='latin-1', newline='').read().replace('\r\n', '\n')
     if s.endswith('\n'):
         s = s[:-1]  # (blank lines at the end are kept)
     return s.split('\n')
@@ -189,7 +190,7 @@ def split():
         for k in range(len(versions[0])):
             # the line from a build that compiles it, else from the first build
             body.append(next((v[k][0] for v in versions if v[k][1]), versions[0][k][0]))
-        path = os.path.join(ROOT, name)
+        path = os.path.join(BASICSRC, name)
         new = '\r\n'.join(body) + '\r\n'
         old = open(path, encoding='latin-1', newline='').read()
         if old.replace('\r\n', '\n') != new.replace('\r\n', '\n'):

@@ -1183,7 +1183,7 @@ Commit 413bc0b.
 
 ## 2026-11-10: The start scripts startbin and startsrc
 
-Not committed yet.
+Commit a64de6e (the CRLF .gitattributes: dae1787).
 
 - **Two scripts in the repository root,** each a `.bat` to double-click and a `.ps1` with the logic. The `.bat` runs `powershell -NoProfile -ExecutionPolicy Bypass -File` and pauses on an error.
   - They install next to themselves, into `wolfs14\` (and `qb64\`, `wolf3dbas\` for startsrc). So a run inside the checkout never overwrites the v1.0 *.WL1 files of the root; those folders are gitignored.
@@ -1210,3 +1210,28 @@ Not committed yet.
     - **The second run** (HTTPS failing at once, then SSH) cloned, compiled in 83 s and started the game.
     - **The third run** started it at once.
 - **The repository is private:** HTTPS clones, the source zip and release downloads need it public. Until then startsrc works over SSH for an account with access, and startbin needs the exe hosted publicly.
+
+## 2026-11-10: The QB64 sources in basicsrc/
+
+Not committed yet.
+
+- **`git mv`** of the 64 `*.BAS / *.BI / *.BM` files from the root into `basicsrc/`; git sees them as renames.
+  - The includes are bare file names (`'$INCLUDE: 'WL_DEF.BI'`), relative to the including file, so they work unchanged.
+  - The data files, `origsrc/`, `tools/` and `plans/` stay where they are.
+  - `OBJ/` (the original SIGNON.OBJ / GAMEPAL.OBJ, their dumps, the .bin files extracted from the exes, and the old converters hex2bin / PALETTE) moved too, to `basicsrc/OBJ/`: 16 files, git mv.
+- **The tools:**
+  - **The generators** write their files into `basicsrc/` (a BASICSRC / B path) and still read `origsrc/` and `OBJ/`: gen_headers (`GFXV_*`, `AUDIO*`, `MAPS*.BI`), gen_sprites (`WL_SPR.BI`), gen_states (`WL_STATE.BI/BM`) and gen_signon (`GAMEPAL.BAS`, `SIGNON_*.BAS`).
+  - **ide_format.py** reads and writes the files in `basicsrc/`.
+  - **func-qb64.sh** greps `basicsrc/*.B*`.
+  - **extract_exe_data.py** writes, and **gen_signon.py** reads, `basicsrc/OBJ/`. The generated GAMEPAL.BAS and SIGNON_*.BAS name it in their header comment, the only line that changed in them.
+- **Where the exes go:**
+  - QB64 writes the exe next to the source (`basicsrc/X.exe`), and a QB64 program runs in the folder of its exe. Such an exe doesn't find the data files in the root: run from the root, it ended at once without a word.
+  - So the exes stay in the root: `qb64 -x basicsrc/X.BAS -o <absolute path>/X.exe`. A relative `-o` is taken from the source folder (`-o ../X.exe` tried to write C:\X.exe).
+  - The **Makefile** (WSL) now builds all five exes that way into the root (`make`), with `wslpath -w` for the absolute path. It is not tested here.
+- **startsrc.ps1:** a checkout is recognised by `basicsrc\WOLF3D.BAS`, and it compiles `basicsrc\WOLFS14.BAS` (the exe goes to `wolfs14\` with an absolute `-o`, as before).
+- **Tested:**
+  - extract_exe_data.py rewrote the six .bin files from the original exes byte for byte. The generators rewrite their files unchanged (gen_signon apart from the comment); gen_sprites / gen_states differ only in CRLF, which git stores as LF anyway.
+  - The formatter reads basicsrc/ and changes nothing (64 files).
+  - All five builds compile from `basicsrc/` with 15 / 15 / 15 / 23 / 24 warnings, as before.
+  - SPEARDEMO built into the root with an absolute `-o` plays its demo as before (2900/13 at frame 1954).
+  - startsrc in a test folder with the new layout compiled `basicsrc\WOLFS14.BAS` into `wolfs14\` and started the game.

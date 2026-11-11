@@ -12,6 +12,7 @@ import re
 # run from anywhere: python tools/gen_states.py (paths are relative to the repository)
 W = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..') + '/'
 O = W + 'origsrc/'
+B = W + 'basicsrc/'  # the QB64 sources
 
 # routines that are ported (the others dispatch to nothing yet)
 PORTED = ['T_Player', 'T_Attack', 'T_Stand', 'T_Path', 'T_Chase', 'T_DogChase', 'T_Shoot', 'T_Bite',
@@ -115,12 +116,12 @@ for i, s in enumerate(names):
 bi.append("")
 # keep the hand-written tables (from the marker line to the end)
 MARKER = "    ' ---- hand-written tables"
-old = open(W + 'WL_STATE.BI', encoding='utf-8', newline='').read().replace('\r\n', '\n')
+old = open(B + 'WL_STATE.BI', encoding='utf-8', newline='').read().replace('\r\n', '\n')
 if MARKER in old:
     bi.append(old[old.index(MARKER):].rstrip('\n'))
 else:
     bi.append("$End If")
-open(W + 'WL_STATE.BI', 'w', encoding='utf-8', newline='\r\n').write('\n'.join(bi) + '\n')
+open(B + 'WL_STATE.BI', 'w', encoding='utf-8', newline='\r\n').write('\n'.join(bi) + '\n')
 
 # ---- InitStates / CallStateRoutine
 init = []
@@ -167,11 +168,11 @@ else:
 init.append("        End Select")
 init.append("    End Sub")
 
-bm = open(W + 'WL_STATE.BM', encoding='utf-8').read().replace('\r\n', '\n')
+bm = open(B + 'WL_STATE.BM', encoding='utf-8').read().replace('\r\n', '\n')
 i = bm.index("    ' The statetype initializers of the C files")
 # the include guard's $End If at the end of the file (the QB64 IDE writes "$End If", earlier "$EndIf")
 j = max(bm.rfind("\n$End If"), bm.rfind("\n$EndIf")) + 1
 assert j > i, "the final $End If of WL_STATE.BM was not found"
 bm = bm[:i] + '\n'.join(init) + '\n\n' + bm[j:]
-open(W + 'WL_STATE.BM', 'w', encoding='utf-8', newline='\r\n').write(bm)
+open(B + 'WL_STATE.BM', 'w', encoding='utf-8', newline='\r\n').write(bm)
 print(len(states), 'states,', len(routines), 'routines; todo:', len(todo))

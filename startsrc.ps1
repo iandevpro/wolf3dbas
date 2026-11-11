@@ -5,7 +5,7 @@
 #      then the zip of the main branch; run inside a checkout, it uses that checkout
 #   2. downloads QB64 2.1 and unpacks it into qb64\
 #   3. downloads the Wolfenstein 3-D v1.4 shareware from archive.org and unpacks its *.WL1 files
-#   4. compiles WOLFS14.BAS into wolfs14\WOLFS14.exe
+#   4. compiles basicsrc\WOLFS14.BAS into wolfs14\WOLFS14.exe
 #   5. reports how it went and starts WOLFS14.exe
 #
 # Everything goes into folders next to this script: wolf3dbas\ (the source), qb64\ and
@@ -27,7 +27,7 @@ $DataFiles = 'AUDIOHED.WL1', 'AUDIOT.WL1', 'GAMEMAPS.WL1', 'MAPHEAD.WL1',
 
 $Root = $PSScriptRoot
 # run inside a checkout of the repository: use it
-if (Test-Path (Join-Path $Root 'WOLF3D.BAS')) { $SrcDir = $Root } else { $SrcDir = Join-Path $Root 'wolf3dbas' }
+if (Test-Path (Join-Path $Root 'basicsrc\WOLF3D.BAS')) { $SrcDir = $Root } else { $SrcDir = Join-Path $Root 'wolf3dbas' }
 $QB64Dir = Join-Path $Root 'qb64'
 $QB64 = Join-Path $QB64Dir 'qb64.exe'
 $GameDir = Join-Path $Root 'wolfs14'
@@ -102,8 +102,8 @@ Write-Host "Building Wolfenstein 3-D (v1.4 shareware) from source in $Root"
 New-Item -ItemType Directory -Force -Path $GameDir | Out-Null
 
 # 1. the source
-$main = Join-Path $SrcDir 'WOLFS14.BAS'
-if (Test-Path (Join-Path $SrcDir 'WOLF3D.BAS')) {
+$main = Join-Path $SrcDir 'basicsrc\WOLFS14.BAS'
+if (Test-Path (Join-Path $SrcDir 'basicsrc\WOLF3D.BAS')) {
     Report 'Get the source' 'skipped' $SrcDir
 } else {
     $how = $null
@@ -116,7 +116,7 @@ if (Test-Path (Join-Path $SrcDir 'WOLF3D.BAS')) {
         foreach ($url in $RepoUrl, $RepoSshUrl) {
             Write-Host "  git clone $url"
             Invoke-Native $git.Source -c credential.helper= clone --depth 1 $url $SrcDir
-            if ($LASTEXITCODE -eq 0 -and (Test-Path (Join-Path $SrcDir 'WOLF3D.BAS'))) { $how = "git clone $url"; break }
+            if ($LASTEXITCODE -eq 0 -and (Test-Path (Join-Path $SrcDir 'basicsrc\WOLF3D.BAS'))) { $how = "git clone $url"; break }
             if (Test-Path $SrcDir) { Remove-Item $SrcDir -Recurse -Force }
         }
     }
