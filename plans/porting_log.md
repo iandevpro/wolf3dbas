@@ -1213,7 +1213,7 @@ Commit a64de6e (the CRLF .gitattributes: dae1787).
 
 ## 2026-11-10: The QB64 sources in basicsrc/
 
-Not committed yet.
+Commit 68f4425.
 
 - **`git mv`** of the 64 `*.BAS / *.BI / *.BM` files from the root into `basicsrc/`; git sees them as renames.
   - The includes are bare file names (`'$INCLUDE: 'WL_DEF.BI'`), relative to the including file, so they work unchanged.
@@ -1235,3 +1235,20 @@ Not committed yet.
   - All five builds compile from `basicsrc/` with 15 / 15 / 15 / 23 / 24 warnings, as before.
   - SPEARDEMO built into the root with an absolute `-o` plays its demo as before (2900/13 at frame 1954).
   - startsrc in a test folder with the new layout compiled `basicsrc\WOLFS14.BAS` into `wolfs14\` and started the game.
+
+## 2026-11-10: Shareware demo 0 ends early in the original too
+
+Not committed yet.
+
+- **The question** (see the WOLFS14 entry): in WOLFS14, shareware v1.4 demo 0 (map 0) ends with BJ's death at frame 3169 of its 3460 bytes, while demos 1-3 end exactly at their data's end.
+- **The original, for comparison:** the v1.4 shareware WOLF3D.EXE from wolf3dsw.zip, run in DOSBox-X (`C:\Games\DOSBox-X`).
+  - It ran from a folder of its own in the job's temp dir, with a config of its own: surface output, so that PrintWindow screenshots work, and `autotype -w 5 space` for "Press a key". So no key went through Windows.
+  - Screenshots were taken every 0.45 s through the title loop and demo 0.
+- **The result: the same death in DOS.** The last game frames show 1600 points, 23% health and ammo 45 down to 42. Then the guard in front fires, the screen flashes red, and the demo fades to the title.
+  - That's the port's end: a 56 hit at frame 3169, with 41-42 ammo.
+  - The timing matches, about 61 s into the demo in DOS against 60.3 s (3169 bytes) in the port.
+  - So the original v1.4 exe doesn't play demo 0 to its end either: the demo was recorded with an earlier version and doesn't stay in sync in v1.4. The port is right; nothing to fix.
+- **How it was narrowed down,** with temporary hooks (removed) that logged each frame's state and each damage, item, kill and pushwall:
+  - every hit BJ takes up to frame 2767 (-36, -60, -5, -7, -4, -1) matches the DOS health readings (64, 40, 35, then 23%), and each damage value comes from the random table;
+  - only demo 0 moves a pushwall (frame 1336). C's CheckLine reads doorposition[] past its end for a moved pushwall tile (0xc0); the port blocks the line there. Making the tile transparent didn't change demo 0, and that test was removed.
+- **Seen on the way:** the original v1.4 shareware sign-on shows the Apogee logo, while WOLFS14 shows the WL6 sign-on picture (the "G" logo). Its SIGNON.OBJ data is in its exe, as with the other versions (tools/extract_exe_data.py). Not done yet.
