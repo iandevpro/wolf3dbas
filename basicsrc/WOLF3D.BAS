@@ -159,6 +159,8 @@ System
 $If SPEAR = UNDEFINED Then
     $If APOGEE_1_0 = DEFINED Then
         '$INCLUDE:'SIGNON_WL1.BAS'
+    $ElseIf UPLOAD = DEFINED Then
+        '$INCLUDE:'SIGNON_S14.BAS'
     $Else
         '$INCLUDE:'SIGNON_WL6.BAS'
     $End If

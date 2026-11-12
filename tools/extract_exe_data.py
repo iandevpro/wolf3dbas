@@ -11,9 +11,15 @@ unpacks the load image, finds the palette (it starts with the standard colours 0
 look like a picture: many pixels the same as their left neighbour, and not mostly zeros
 (after the Spear palette comes zero-filled data).
 
+In the v1.4 shareware exe the screen is not next to the palette: 37162 bytes of other data lie
+between them. Its sign-on has the panels of the WL6 one (basicsrc/OBJ/signon.bin), only the
+logos differ, so the screen is first looked for by rows of signon.bin; if none is found (the
+Spear and v1.0 pictures differ), by the palette as above.
+
 python tools/extract_exe_data.py SPEAR-ORIG.EXE sod
 python tools/extract_exe_data.py SPEAR-DEMO-ORIG.EXE sdm
 python tools/extract_exe_data.py WOLF3D-SHARE-ORIG.EXE wl1
+python tools/extract_exe_data.py <WOLF3D.EXE of wolf3dsw.zip> s14   (v1.4 shareware)
     writes basicsrc/OBJ/signon_<name>.bin and basicsrc/OBJ/gamepal_<name>.bin; then run tools/gen_signon.py
 """
 import os
@@ -100,15 +106,22 @@ def main():
     img = unlzexe(data)
     p = find_palette(img)
     pal = img[p:p + 768]
-    sides = {'before': p - 64000, 'after': p + 768}
-    side = max(sides, key=lambda k: picture_score(img[sides[k]:sides[k] + 64000]))
-    if picture_score(img[sides[side]:sides[side] + 64000]) < 0.3:
-        raise SystemExit('no sign-on screen next to the palette')
+    # rows of the WL6 sign-on (its panels), as in the v1.4 shareware exe
+    ref = open(os.path.join(ROOT, 'basicsrc', 'OBJ', 'signon.bin'), 'rb').read()
+    starts = {img.find(ref[row * 320:(row + 10) * 320]) - row * 320 for row in (100, 150, 190)}
+    if len(starts) == 1 and min(starts) >= 0:
+        side, sides = 'found by the rows of signon.bin', {'found by the rows of signon.bin': min(starts)}
+    else:
+        sides = {'before': p - 64000, 'after': p + 768}
+        side = max(sides, key=lambda k: picture_score(img[sides[k]:sides[k] + 64000]))
+        if picture_score(img[sides[side]:sides[side] + 64000]) < 0.3:
+            raise SystemExit('no sign-on screen next to the palette')
     signon = img[sides[side]:sides[side] + 64000]
     for fname, block in (('signon_%s.bin' % name, signon), ('gamepal_%s.bin' % name, pal)):
         open(os.path.join(ROOT, 'basicsrc', 'OBJ', fname), 'wb').write(block)
         print('wrote basicsrc/OBJ/%s (%d bytes)' % (fname, len(block)))
-    print('(%s: %d bytes unpacked, the palette at %d, the screen %s it at %d)' % (exe, len(img), p, side, sides[side]))
+    print('(%s: %d bytes unpacked, the palette at %d, the screen %s at %d)' % (exe, len(img), p,
+          side if side.startswith('found') else side + ' it', sides[side]))
 
 
 if __name__ == '__main__':

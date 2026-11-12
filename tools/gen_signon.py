@@ -5,11 +5,13 @@
   SIGNON_WL6.BAS    LoadSignonScreen: the sign-on screen, 320x200 bytes (basicsrc/OBJ/signon.bin, WOLF3D)
   SIGNON_WL1.BAS    the same for the v1.0 shareware, with the Apogee logo (basicsrc/OBJ/signon_wl1.bin;
                     its palette, basicsrc/OBJ/gamepal_wl1.bin, is the same as WL6's)
+  SIGNON_S14.BAS    the same for the v1.4 shareware (WOLFS14.BAS), with the Apogee logo
+                    (basicsrc/OBJ/signon_s14.bin; its palette is also WL6's)
   SIGNON_SOD.BAS    the same for Spear of Destiny (basicsrc/OBJ/signon_sod.bin)
   SIGNON_SDM.BAS    the same for the Spear of Destiny demo (basicsrc/OBJ/signon_sdm.bin)
 
 WOLF3D.BAS includes the files of the build, so the exe needs no files besides the game data.
-The Spear and v1.0 .bin files come from the original exes, see tools/extract_exe_data.py.
+The Spear and shareware .bin files come from the original exes, see tools/extract_exe_data.py.
 The screen is written as text, two letters A-P per byte (the high and the low 4 bits).
 
 python tools/gen_signon.py
@@ -83,12 +85,14 @@ def signon(name, src, what):
 
 
 def main():
-    wl1 = open(os.path.join(ROOT, 'basicsrc', 'OBJ', 'gamepal_wl1.bin'), 'rb').read()
-    if wl1 != open(os.path.join(ROOT, 'basicsrc', 'OBJ', 'gamepal.bin'), 'rb').read():
-        raise SystemExit('the v1.0 palette is no longer the WL6 one: GAMEPAL.BAS needs it too')
+    wl6 = open(os.path.join(ROOT, 'basicsrc', 'OBJ', 'gamepal.bin'), 'rb').read()
+    for ver in ('wl1', 's14'):
+        if open(os.path.join(ROOT, 'basicsrc', 'OBJ', 'gamepal_%s.bin' % ver), 'rb').read() != wl6:
+            raise SystemExit('the %s palette is no longer the WL6 one: GAMEPAL.BAS needs it too' % ver)
     gamepal()
     signon('SIGNON_WL6.BAS', 'signon.bin', 'Wolfenstein 3-D')
     signon('SIGNON_WL1.BAS', 'signon_wl1.bin', 'the Wolfenstein 3-D v1.0 shareware')
+    signon('SIGNON_S14.BAS', 'signon_s14.bin', 'the Wolfenstein 3-D v1.4 shareware')
     signon('SIGNON_SOD.BAS', 'signon_sod.bin', 'Spear of Destiny')
     signon('SIGNON_SDM.BAS', 'signon_sdm.bin', 'the Spear of Destiny demo')
 

@@ -1238,7 +1238,7 @@ Commit 68f4425.
 
 ## 2026-11-10: Shareware demo 0 ends early in the original too
 
-Not committed yet.
+Commit 66484d1.
 
 - **The question** (see the WOLFS14 entry): in WOLFS14, shareware v1.4 demo 0 (map 0) ends with BJ's death at frame 3169 of its 3460 bytes, while demos 1-3 end exactly at their data's end.
 - **The original, for comparison:** the v1.4 shareware WOLF3D.EXE from wolf3dsw.zip, run in DOSBox-X (`C:\Games\DOSBox-X`).
@@ -1252,3 +1252,23 @@ Not committed yet.
   - every hit BJ takes up to frame 2767 (-36, -60, -5, -7, -4, -1) matches the DOS health readings (64, 40, 35, then 23%), and each damage value comes from the random table;
   - only demo 0 moves a pushwall (frame 1336). C's CheckLine reads doorposition[] past its end for a moved pushwall tile (0xc0); the port blocks the line there. Making the tile transparent didn't change demo 0, and that test was removed.
 - **Seen on the way:** the original v1.4 shareware sign-on shows the Apogee logo, while WOLFS14 shows the WL6 sign-on picture (the "G" logo). Its SIGNON.OBJ data is in its exe, as with the other versions (tools/extract_exe_data.py). Not done yet.
+
+## 2026-11-11: The v1.4 shareware sign-on (WOLFS14)
+
+Not committed yet.
+
+- **Why:** WOLFS14 showed the WL6 sign-on (the "G" logo). The original v1.4 shareware shows the Apogee logo and "v1.4", as seen in DOSBox-X.
+- **The source:** its SIGNON.OBJ data is in the WOLF3D.EXE of wolf3dsw.zip (LZEXE 0.91, 287040 bytes unpacked). The exe is not in the repository; take it from the zip.
+- **tools/extract_exe_data.py:**
+  - Here the screen is not next to the palette: the palette is at 239242, the screen at 138080, with 37162 bytes of other data between them.
+  - The "64000 bytes before the palette" rule took the wrong block, starting partway down the picture.
+  - The tool now first looks for rows of the WL6 sign-on (signon.bin: rows 100, 150 and 190, 10 rows each); this sign-on has the same panels and differs in 40 rows, the logos.
+  - When they are not found (the Spear and v1.0 pictures differ), it uses the palette rule as before.
+  - `python -I tools/extract_exe_data.py <WOLF3D.EXE of wolf3dsw.zip> s14` writes basicsrc/OBJ/signon_s14.bin and gamepal_s14.bin. That palette is the WL6 one.
+  - Rerunning it for SPEAR-ORIG, SPEAR-DEMO-ORIG and WOLF3D-SHARE-ORIG gives the same files, byte for byte.
+- **tools/gen_signon.py** writes SIGNON_S14.BAS, and checks that the wl1 and s14 palettes are still the WL6 one (GAMEPAL.BAS serves them).
+- **WOLF3D.BAS:** UPLOAD without APOGEE_1_0 (WOLFS14) includes SIGNON_S14.BAS.
+- **Tested:**
+  - The extracted screen, rendered with the palette, is the DOSBox-X sign-on: Apogee logo, v1.4.
+  - WOLFS14 shows it at start-up. A temporary `dbgsig` hook (removed) held the screen, because the test script's Alt tap counts as "Press a key".
+  - All five builds compile with 15 / 15 / 15 / 23 / 24 warnings, as before; the formatter changes nothing (65 files).
