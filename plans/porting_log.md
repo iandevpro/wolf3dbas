@@ -1275,7 +1275,7 @@ Commit b8e5002.
 
 ## 2026-11-11: The early helper scripts and lists in misc_old_tools/
 
-Not committed yet.
+Commit e66768b.
 
 - **Moved (git mv)** from the root into `misc_old_tools/`: TODO.txt, cfuncs.txt, cfuncs_uniq.txt, func-c.sh, func-qb64.sh, mymake.sh, parse-format-qb64-error.awk, qb64subfuncs.txt. Nothing else in the repository used them.
 - **The scripts** now change to the repository root themselves (`cd "$(dirname "$0")/.."`), so they run from anywhere, and write their lists into misc_old_tools/.
@@ -1287,3 +1287,17 @@ Not committed yet.
   - qb64subfuncs.txt now has 575 lines (it had 46, from May 2025) with the basicsrc/ paths.
   - TODO.txt marks the items that are done since. Left: the Japanese version headers (not planned) and OPL2 rhythm mode (Wolf3D's music doesn't use it).
 - **For reference:** 407 of the 555 C functions have a QB64 Sub or Function of the same name. The other 148 are mostly the memory manager and the XMS/EMS paging (MM_*, MML_*, PML_*), the debug and editor helpers, and old drawing code, which are not ported on purpose.
+
+## 2026-11-11: README.md and a demo GIF
+
+Not committed yet.
+
+- **README.md** for GitHub:
+  - what the port is, with links to id-Software/wolf3d and QB64;
+  - the three ways to play the v1.4 shareware: by hand with the release exe, startbin, startsrc;
+  - the builds and how to build them (an absolute `-o`);
+  - the controls (from buttonscan: Right Shift runs), the folders, and the credits.
+- **docs/wolf3dbas-demo.gif** (900x639, 85 frames at 100 ms, 3.6 MB):
+  - WOLFS14 playing demo 0 (8.5 s from its fade-in on: the door, the corridor, the first guard), in a window in front of the QB64 IDE with basicsrc/WL_DRAW.BM.
+  - The IDE screenshot is cropped above its status bar: opened alone, WL_DRAW.BM shows a compile error there, as its includes are missing.
+  - The game frames were taken with PrintWindow ten times a second. The window frame and shadow are drawn by the compositing script (PIL); no keys were sent.
