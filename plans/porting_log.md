@@ -1255,7 +1255,7 @@ Commit 66484d1.
 
 ## 2026-11-11: The v1.4 shareware sign-on (WOLFS14)
 
-Not committed yet.
+Commit b8e5002.
 
 - **Why:** WOLFS14 showed the WL6 sign-on (the "G" logo). The original v1.4 shareware shows the Apogee logo and "v1.4", as seen in DOSBox-X.
 - **The source:** its SIGNON.OBJ data is in the WOLF3D.EXE of wolf3dsw.zip (LZEXE 0.91, 287040 bytes unpacked). The exe is not in the repository; take it from the zip.
@@ -1272,3 +1272,18 @@ Not committed yet.
   - The extracted screen, rendered with the palette, is the DOSBox-X sign-on: Apogee logo, v1.4.
   - WOLFS14 shows it at start-up. A temporary `dbgsig` hook (removed) held the screen, because the test script's Alt tap counts as "Press a key".
   - All five builds compile with 15 / 15 / 15 / 23 / 24 warnings, as before; the formatter changes nothing (65 files).
+
+## 2026-11-11: The early helper scripts and lists in misc_old_tools/
+
+Not committed yet.
+
+- **Moved (git mv)** from the root into `misc_old_tools/`: TODO.txt, cfuncs.txt, cfuncs_uniq.txt, func-c.sh, func-qb64.sh, mymake.sh, parse-format-qb64-error.awk, qb64subfuncs.txt. Nothing else in the repository used them.
+- **The scripts** now change to the repository root themselves (`cd "$(dirname "$0")/.."`), so they run from anywhere, and write their lists into misc_old_tools/.
+  - Their shebangs are fixed: `#/usr/bin/env bash` (no `!`) in func-c.sh and func-qb64.sh, and `#!/bin/env bash` in mymake.sh, are now `#!/usr/bin/env bash`.
+  - func-c.sh also writes cfuncs_uniq.txt: it was the sorted, unique names of cfuncs.txt, made by hand.
+  - mymake.sh is the nvim `makeprg` (see the comments in the awk file): the editor setting is now `./misc_old_tools/mymake.sh`.
+- **The lists, refreshed:**
+  - cfuncs.txt (572 lines) and cfuncs_uniq.txt (555), with Universal Ctags in WSL, are the same as before, since origsrc did not change.
+  - qb64subfuncs.txt now has 575 lines (it had 46, from May 2025) with the basicsrc/ paths.
+  - TODO.txt marks the items that are done since. Left: the Japanese version headers (not planned) and OPL2 rhythm mode (Wolf3D's music doesn't use it).
+- **For reference:** 407 of the 555 C functions have a QB64 Sub or Function of the same name. The other 148 are mostly the memory manager and the XMS/EMS paging (MM_*, MML_*, PML_*), the debug and editor helpers, and old drawing code, which are not ported on purpose.

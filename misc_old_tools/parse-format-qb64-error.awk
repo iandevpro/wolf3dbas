@@ -17,7 +17,7 @@
     # vim.cmd([[
     #   augroup qb64bas
     #       autocmd!
-    #       autocmd FileType qb64 set errorformat=LINE\ %l:%m|set makeprg=./mymake.sh
+    #       autocmd FileType qb64 set errorformat=LINE\ %l:%m|set makeprg=./misc_old_tools/mymake.sh
     #   augroup END
     #   ]])
 
