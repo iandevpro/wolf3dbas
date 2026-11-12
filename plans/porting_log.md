@@ -1290,7 +1290,7 @@ Commit e66768b.
 
 ## 2026-11-11: README.md and a demo GIF
 
-Not committed yet.
+Commit ac3e86f.
 
 - **README.md** for GitHub:
   - what the port is, with links to id-Software/wolf3d and QB64;
@@ -1301,3 +1301,13 @@ Not committed yet.
   - WOLFS14 playing demo 0 (8.5 s from its fade-in on: the door, the corridor, the first guard), in a window in front of the QB64 IDE with basicsrc/WL_DRAW.BM.
   - The IDE screenshot is cropped above its status bar: opened alone, WL_DRAW.BM shows a compile error there, as its includes are missing.
   - The game frames were taken with PrintWindow ten times a second. The window frame and shadow are drawn by the compositing script (PIL); no keys were sent.
+
+## 2026-11-11: startbin uses the latest release
+
+Not committed yet.
+
+- **startbin.ps1:** the default `-ReleaseUrl` is now `https://github.com/iandevpro/wolf3dbas/releases/latest/download/WOLFS14.exe` instead of the `<TAG>` placeholder. GitHub redirects `releases/latest/download/<file>` to the newest release, so the script needs no edit for a release.
+- **The executables of the first release** were built from main into `release/`, which holds only *.exe files, already gitignored: WOLFS14, WOLF1, WOLF3D, SPEAR and SPEARDEMO.
+  - Each one started with its data and played its demos.
+  - SPEARDEMO's /demotest aborted at frames 7-19 under the test script. Its Alt tap, which brings the window to the front, lands in the demo of this fast-starting build.
+  - Run without any input (Start-Process and PrintWindow), it plays to the end, 2900/13 at frame 1954, as before.

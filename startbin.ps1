@@ -7,8 +7,9 @@
 # Everything goes into the folder wolfs14\ next to this script. A step whose result is already
 # there is skipped, so later runs just start the game. Run it with startbin.bat.
 param(
-    # The WOLFS14.exe asset of a release on https://github.com/iandevpro/wolf3dbas/releases
-    [string]$ReleaseUrl = 'https://github.com/iandevpro/wolf3dbas/releases/download/<TAG>/WOLFS14.exe'
+    # The WOLFS14.exe asset of the latest release on https://github.com/iandevpro/wolf3dbas/releases
+    # (GitHub redirects releases/latest/download/<file> to the newest release)
+    [string]$ReleaseUrl = 'https://github.com/iandevpro/wolf3dbas/releases/latest/download/WOLFS14.exe'
 )
 
 $ErrorActionPreference = 'Stop'
